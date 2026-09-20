@@ -35,7 +35,7 @@ class PengajuanIzinValidasiController extends Controller
         $supervisedIds = $this->getSupervisedUserIds();
 
         $query = PengajuanIzin::whereIn('pengguna_id', $supervisedIds)
-            ->with(['pengguna.magang', 'pengguna.cs']);
+            ->with(['pengguna.magang.divisi', 'pengguna.cs']);
 
         // Filter status persetujuan
         if ($request->filled('status_approval')) {

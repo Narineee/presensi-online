@@ -116,7 +116,7 @@
                             name="latitude"
                             id="latitude"
                             value="{{ old('latitude') }}"
-                            placeholder="-6.200000"
+                            placeholder="-3.4893886"
                             class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-sm text-slate-800 font-mono"
                         >
                     </div>
@@ -130,7 +130,7 @@
                             name="longitude"
                             id="longitude"
                             value="{{ old('longitude') }}"
-                            placeholder="106.816666"
+                            placeholder="114.8252584"
                             class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-sm text-slate-800 font-mono"
                         >
                     </div>

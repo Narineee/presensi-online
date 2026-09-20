@@ -34,7 +34,7 @@ class AktivitasValidasiController extends Controller
         $supervisedIds = $this->getSupervisedUserIds();
 
         $query = Aktivitas::whereIn('pengguna_id', $supervisedIds)
-            ->with(['pengguna.magang', 'pengguna.cs']);
+            ->with(['pengguna.magang.divisi', 'pengguna.cs']);
 
         // Filter status
         if ($request->filled('status')) {

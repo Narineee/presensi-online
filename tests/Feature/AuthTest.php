@@ -68,7 +68,14 @@ class AuthTest extends TestCase
 
     public function test_admin_dashboard_can_be_accessed_by_admin(): void
     {
-        $admin = Pengguna::where('username', 'admin')->first();
+        $admin = Pengguna::firstOrCreate(
+            ['username' => 'admin'],
+            [
+                'password' => 'admin123',
+                'role' => 'admin',
+                'is_active' => true,
+            ]
+        );
 
         $response = $this->actingAs($admin)->get('/admin/dashboard');
 
@@ -79,7 +86,14 @@ class AuthTest extends TestCase
 
     public function test_user_can_logout(): void
     {
-        $admin = Pengguna::where('username', 'admin')->first();
+        $admin = Pengguna::firstOrCreate(
+            ['username' => 'admin'],
+            [
+                'password' => 'admin123',
+                'role' => 'admin',
+                'is_active' => true,
+            ]
+        );
 
         $response = $this->actingAs($admin)->post('/logout');
 

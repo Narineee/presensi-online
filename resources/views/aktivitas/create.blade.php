@@ -11,11 +11,11 @@
             <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Catat Aktivitas Harian</h1>
             <p class="text-sm text-slate-500 mt-1">Tuliskan rincian tugas yang Anda kerjakan hari ini untuk divalidasi oleh Pembimbing.</p>
         </div>
-        <a href="{{ route('aktivitas.index') }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition">
+        <a href="{{ request('redirect_to') === 'presensi' ? route('presensi.index') : route('aktivitas.index') }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
             </svg>
-            <span>Kembali</span>
+            <span>{{ request('redirect_to') === 'presensi' ? 'Kembali ke Presensi' : 'Kembali' }}</span>
         </a>
     </div>
 
@@ -23,6 +23,9 @@
     <div class="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-8">
         <form action="{{ route('aktivitas.store') }}" method="POST" class="space-y-6">
             @csrf
+            @if(request('redirect_to'))
+                <input type="hidden" name="redirect_to" value="{{ request('redirect_to') }}">
+            @endif
 
             <!-- Tanggal Aktivitas -->
             <div>
@@ -106,7 +109,7 @@
 
             <!-- Tombol Aksi -->
             <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-                <a href="{{ route('aktivitas.index') }}" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition">
+                <a href="{{ request('redirect_to') === 'presensi' ? route('presensi.index') : route('aktivitas.index') }}" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition">
                     Batal
                 </a>
                 <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition cursor-pointer">

@@ -130,13 +130,41 @@
                     @forelse ($pengajuanIzin as $item)
                         <tr class="hover:bg-slate-50/70 transition">
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="font-bold text-slate-900">{{ $item->nama_lengkap }}</div>
-                                <div class="mt-0.5">
-                                    @if($item->pengguna->role === 'magang')
-                                        <span class="inline-flex items-center px-2 py-0.2 rounded text-[10px] font-semibold bg-amber-50 text-amber-700">Magang</span>
-                                    @else
-                                        <span class="inline-flex items-center px-2 py-0.2 rounded text-[10px] font-semibold bg-teal-50 text-teal-700">CS</span>
-                                    @endif
+                                @php
+                                    $role = $item->pengguna->role ?? 'magang';
+                                    $magang = $item->pengguna->magang;
+                                    $cs = $item->pengguna->cs;
+                                    $fotoUrl = ($role === 'magang' && $magang && $magang->foto) ? asset('storage/' . $magang->foto) : '';
+                                    $divisiNama = ($role === 'magang' && $magang && $magang->divisi) ? $magang->divisi->nama_divisi : ($cs ? ($cs->jabatan ?? 'CS') : '-');
+                                    $nomorInduk = ($role === 'magang' && $magang) ? $magang->no_induk : ($cs ? $cs->nik : '-');
+                                @endphp
+                                <div class="flex items-center gap-3">
+                                    <div class="relative shrink-0">
+                                        @if($fotoUrl)
+                                            <img src="{{ $fotoUrl }}" alt="{{ $item->nama_lengkap }}" class="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-xs">
+                                        @else
+                                            <div class="w-10 h-10 rounded-xl {{ $role === 'magang' ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-700' }} flex items-center justify-center font-bold text-xs">
+                                                {{ strtoupper(substr($item->nama_lengkap, 0, 2)) }}
+                                            </div>
+                                        @endif
+                                        <span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold {{ $role === 'magang' ? 'bg-amber-500 text-white' : 'bg-teal-500 text-white' }}">
+                                            {{ $role === 'magang' ? 'M' : 'C' }}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-slate-900 text-sm">{{ $item->nama_lengkap }}</div>
+                                        <div class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 font-medium">
+                                            @if($role === 'magang')
+                                                <span class="inline-flex px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-50 text-amber-700">Magang</span>
+                                                <span class="font-mono text-slate-600">{{ $nomorInduk }}</span>
+                                                &bull; <span class="text-purple-700 font-medium">{{ $divisiNama }}</span>
+                                            @else
+                                                <span class="inline-flex px-1.5 py-0.2 rounded text-[10px] font-semibold bg-teal-50 text-teal-700">CS</span>
+                                                <span class="font-mono text-slate-600">{{ $nomorInduk }}</span>
+                                                &bull; <span class="text-teal-700 font-medium">{{ $divisiNama }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">

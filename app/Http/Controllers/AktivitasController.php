@@ -3,17 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\Aktivitas;
+use App\Models\Divisi;
+use App\Models\Pembimbing;
+use App\Models\Pengaturan;
+use App\Models\Pengguna;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AktivitasController extends Controller
 {
     /**
-     * Menampilkan daftar aktivitas harian milik pengguna yang sedang login.
+     * Menampilkan daftar aktivitas harian milik pengguna yang sedang login (Magang & CS).
      */
     public function index(Request $request)
     {
         $user = Auth::user();
+
         $query = Aktivitas::where('pengguna_id', $user->id);
 
         // Filter berdasarkan status (pending, approve, revisi)
@@ -60,6 +66,7 @@ class AktivitasController extends Controller
      */
     public function store(Request $request)
     {
+
         // Validasi input data
         $request->validate([
             'tanggal' => 'required|date',
@@ -83,6 +90,11 @@ class AktivitasController extends Controller
             'progress' => $request->progress,
             'status' => 'pending',
         ]);
+
+        if ($request->filled('redirect_to') && $request->redirect_to === 'presensi') {
+            return redirect()->route('presensi.index')
+                ->with('success', 'Aktivitas harian berhasil dicatat! Sekarang Anda dapat melakukan presensi pulang.');
+        }
 
         return redirect()->route('aktivitas.index')
             ->with('success', 'Aktivitas harian berhasil dicatat dan menunggu validasi pembimbing.');
@@ -172,5 +184,58 @@ class AktivitasController extends Controller
 
         return redirect()->route('aktivitas.index')
             ->with('success', 'Catatan aktivitas harian berhasil dihapus.');
+    }
+
+    /**
+     * Mencetak laporan rekapitulasi aktivitas harian pribadi (Magang & CS).
+     */
+    public function cetak(Request $request)
+    {
+        /** @var Pengguna $user */
+        $user = Auth::user();
+
+        $user->load(['magang.divisi', 'magang.pembimbing', 'cs.pembimbing']);
+
+        $query = Aktivitas::where('pengguna_id', $user->id)
+            ->with('validator.pembimbing');
+
+        $bulan = $request->input('bulan', Carbon::today()->format('Y-m'));
+        $tanggalMulai = $request->input('tanggal_mulai');
+        $tanggalAkhir = $request->input('tanggal_akhir');
+
+        if ($tanggalMulai && $tanggalAkhir && strtotime($tanggalMulai) && strtotime($tanggalAkhir)) {
+            $query->whereBetween('tanggal', [$tanggalMulai, $tanggalAkhir]);
+            $periodeText = Carbon::parse($tanggalMulai)->isoFormat('D MMMM Y').' s/d '.Carbon::parse($tanggalAkhir)->isoFormat('D MMMM Y');
+        } elseif ($bulan && preg_match('/^\d{4}-\d{2}$/', $bulan)) {
+            $query->whereYear('tanggal', substr($bulan, 0, 4))
+                ->whereMonth('tanggal', substr($bulan, 5, 2));
+            $periodeText = Carbon::createFromFormat('Y-m', $bulan)->isoFormat('MMMM Y');
+        } else {
+            $bulan = Carbon::today()->format('Y-m');
+            $query->whereYear('tanggal', Carbon::today()->year)
+                ->whereMonth('tanggal', Carbon::today()->month);
+            $periodeText = Carbon::today()->isoFormat('MMMM Y');
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $aktivitas = $query->orderBy('tanggal', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $stats = [
+            'total' => $aktivitas->count(),
+            'approve' => $aktivitas->where('status', 'approve')->count(),
+            'pending' => $aktivitas->where('status', 'pending')->count(),
+            'revisi' => $aktivitas->where('status', 'revisi')->count(),
+        ];
+
+        $divisi = $user->magang?->divisi ?? Divisi::first();
+        $pembimbing = $user->magang?->pembimbing ?? ($user->cs?->pembimbing ?? Pembimbing::first());
+        $pengaturan = Pengaturan::getPengaturan();
+
+        return view('aktivitas.cetak', compact('user', 'aktivitas', 'stats', 'periodeText', 'bulan', 'divisi', 'pembimbing', 'pengaturan'));
     }
 }
