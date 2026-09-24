@@ -14,6 +14,7 @@ class Magang extends Model
         'divisi_id',
         'no_induk',
         'nama_lengkap',
+        'jenis_kelamin',
         'jurusan',
         'instansi_pendidikan',
         'no_hp',
@@ -22,6 +23,18 @@ class Magang extends Model
         'tanggal_selesai',
         'status',
     ];
+
+    /**
+     * Label teks jenis kelamin (Laki-laki / Perempuan).
+     */
+    public function getJenisKelaminTeksAttribute(): ?string
+    {
+        return match ($this->jenis_kelamin) {
+            'L' => 'Laki-laki',
+            'P' => 'Perempuan',
+            default => null,
+        };
+    }
 
     protected $casts = [
         'tanggal_mulai' => 'date',

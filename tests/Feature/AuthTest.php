@@ -22,8 +22,7 @@ class AuthTest extends TestCase
         $response = $this->get('/login');
 
         $response->assertStatus(200);
-        $response->assertSee('Presensi Digital');
-        $response->assertSee('admin');
+        $response->assertSee('Sistem Informasi Manajemen Magang');
     }
 
     public function test_guest_cannot_access_admin_dashboard(): void

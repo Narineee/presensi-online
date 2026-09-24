@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Auth;
 class PengajuanIzinValidasiController extends Controller
 {
     /**
-     * Mendapatkan daftar ID akun peserta binaan (Magang & CS).
+     * Mendapatkan daftar ID akun anak magang binaan.
      */
     private function getSupervisedUserIds()
     {
@@ -21,21 +21,18 @@ class PengajuanIzinValidasiController extends Controller
             return collect();
         }
 
-        $magangUserIds = $pembimbing->magang()->pluck('pengguna_id');
-        $csUserIds = $pembimbing->cs()->pluck('pengguna_id');
-
-        return $magangUserIds->merge($csUserIds);
+        return $pembimbing->magang()->pluck('pengguna_id');
     }
 
     /**
-     * Menampilkan daftar permohonan izin/sakit peserta binaan untuk diproses.
+     * Menampilkan daftar permohonan izin/sakit anak magang binaan untuk diproses.
      */
     public function index(Request $request)
     {
         $supervisedIds = $this->getSupervisedUserIds();
 
         $query = PengajuanIzin::whereIn('pengguna_id', $supervisedIds)
-            ->with(['pengguna.magang.divisi', 'pengguna.cs']);
+            ->with(['pengguna.magang.divisi']);
 
         // Filter status persetujuan
         if ($request->filled('status_approval')) {

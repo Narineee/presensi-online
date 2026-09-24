@@ -61,7 +61,14 @@
                                         </div>
                                     @endif
                                     <div>
-                                        <div class="font-bold text-slate-900">{{ $item->nama_lengkap }}</div>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="font-bold text-slate-900">{{ $item->nama_lengkap }}</span>
+                                            @if ($item->jenis_kelamin === 'L')
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60" title="Laki-laki">L</span>
+                                            @elseif ($item->jenis_kelamin === 'P')
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-pink-50 text-pink-700 border border-pink-200/60" title="Perempuan">P</span>
+                                            @endif
+                                        </div>
                                         <div class="text-xs text-slate-400">No. Induk: {{ $item->no_induk ?? '-' }}</div>
                                         @if ($item->no_hp)
                                             <div class="text-[11px] text-slate-500">HP: {{ $item->no_hp }}</div>

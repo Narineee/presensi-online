@@ -9,11 +9,29 @@ use Illuminate\Http\Request;
 class MonitoringPengajuanIzinController extends Controller
 {
     /**
-     * Menampilkan rekap seluruh permohonan izin/sakit (Magang & CS) untuk dipantau oleh Admin.
+     * Menampilkan rekap seluruh permohonan izin/sakit Magang untuk dipantau oleh Admin.
      */
     public function index(Request $request)
     {
-        $query = PengajuanIzin::with(['pengguna.magang', 'pengguna.cs', 'validator.pembimbing']);
+        $query = PengajuanIzin::with(['pengguna.magang', 'validator.pembimbing']);
+
+        // Filter rentang tanggal pengajuan izin (tanggal_mulai & tanggal_akhir)
+        if ($request->filled('tanggal_mulai') && $request->filled('tanggal_akhir')) {
+            $query->where(function ($q) use ($request) {
+                $q->whereBetween('tanggal_mulai', [$request->tanggal_mulai, $request->tanggal_akhir])
+                    ->orWhereBetween('tanggal_selesai', [$request->tanggal_mulai, $request->tanggal_akhir])
+                    ->orWhere(function ($sub) use ($request) {
+                        $sub->where('tanggal_mulai', '<=', $request->tanggal_mulai)
+                            ->where('tanggal_selesai', '>=', $request->tanggal_akhir);
+                    });
+            });
+        } elseif ($request->filled('tanggal_mulai')) {
+            $query->where('tanggal_selesai', '>=', $request->tanggal_mulai);
+        } elseif ($request->filled('tanggal_akhir')) {
+            $query->where('tanggal_mulai', '<=', $request->tanggal_akhir);
+        } elseif ($request->filled('tanggal')) {
+            $query->whereDate('tanggal_mulai', $request->tanggal);
+        }
 
         // Filter status persetujuan
         if ($request->filled('status_approval')) {
@@ -23,13 +41,6 @@ class MonitoringPengajuanIzinController extends Controller
         // Filter jenis izin
         if ($request->filled('jenis_izin')) {
             $query->where('jenis_izin', $request->jenis_izin);
-        }
-
-        // Filter role pengguna
-        if ($request->filled('role')) {
-            $query->whereHas('pengguna', function ($q) use ($request) {
-                $q->where('role', $request->role);
-            });
         }
 
         $pengajuanIzin = $query->orderBy('created_at', 'desc')

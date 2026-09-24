@@ -59,7 +59,7 @@
         aria-hidden="true"
     ></div>
 
-    <!-- Responsive Sidebar (Sesuai PRD tampilan.md "fitur magang / cs (ada sidebar)") -->
+    <!-- Responsive Sidebar (Sesuai PRD tampilan.md) -->
     <aside
         id="user-sidebar"
         class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 flex flex-col shrink-0 transform -translate-x-full md:translate-x-0 md:static md:w-64 transition-transform duration-300 ease-in-out shadow-xl md:shadow-none"
@@ -67,22 +67,15 @@
         <!-- Logo / Brand Header -->
         <div class="h-16 px-5 flex items-center justify-between border-b border-slate-100 bg-white">
             <a href="{{ route('presensi.index') }}" class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl {{ Auth::user()->role === 'cs' ? 'bg-teal-600' : 'bg-blue-600' }} text-white flex items-center justify-center font-bold text-base shadow-sm">
+                <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
                     PD
                 </div>
                 <div>
                     <h2 class="text-sm font-bold text-slate-900 leading-tight">Presensi Digital</h2>
-                    @if(Auth::user()->role === 'magang')
-                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full mt-0.5 border border-amber-200">
-                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                            Peserta Magang
-                        </span>
-                    @elseif(Auth::user()->role === 'cs')
-                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full mt-0.5 border border-teal-200">
-                            <span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
-                            Customer Service
-                        </span>
-                    @endif
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full mt-0.5 border border-amber-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                        Peserta Magang
+                    </span>
                 </div>
             </a>
             <!-- Mobile Close Button -->
@@ -110,10 +103,10 @@
                     <!-- Dashboard & Presensi -->
                     <a
                         href="{{ route('presensi.index') }}"
-                        class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold {{ (request()->routeIs('presensi.index') || request()->is('magang/dashboard') || request()->is('cs/dashboard')) ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }} transition"
+                        class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold {{ (request()->routeIs('presensi.index') || request()->is('magang/dashboard')) ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }} transition"
                     >
                         <span class="flex items-center gap-3">
-                            <svg class="w-4 h-4 {{ (request()->routeIs('presensi.index') || request()->is('magang/dashboard') || request()->is('cs/dashboard')) ? 'text-white' : 'text-blue-600' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 {{ (request()->routeIs('presensi.index') || request()->is('magang/dashboard')) ? 'text-white' : 'text-blue-600' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <span>Presensi Harian</span>
@@ -123,7 +116,7 @@
                         @endif
                     </a>
 
-                    <!-- Jurnal / Aktivitas Harian (Bisa diakses Magang & CS) -->
+                    <!-- Jurnal / Aktivitas Harian -->
                     <a
                         href="{{ route('aktivitas.index') }}"
                         class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold {{ (request()->routeIs('aktivitas.*') && !request()->routeIs('aktivitas.cetak')) ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }} transition"
@@ -165,6 +158,7 @@
                 <nav class="space-y-1">
                     <a
                         href="{{ route('presensi.cetak') }}"
+                        target="_blank"
                         class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold {{ request()->routeIs('presensi.cetak') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }} transition"
                     >
                         <span class="flex items-center gap-3">
@@ -178,6 +172,7 @@
 
                     <a
                         href="{{ route('aktivitas.cetak') }}"
+                        target="_blank"
                         class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold {{ request()->routeIs('aktivitas.cetak') ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }} transition"
                     >
                         <span class="flex items-center gap-3">
@@ -241,10 +236,10 @@
 
         </div>
 
-        <!-- Sidebar Bottom: Info Profil Peserta / CS -->
+        <!-- Sidebar Bottom: Info Profil Peserta -->
         <div class="p-3.5 border-t border-slate-200 bg-slate-50/80">
             <a href="{{ route('profil.edit') }}" class="flex items-center gap-3 p-1 rounded-xl hover:bg-white transition group" title="Klik untuk edit profil">
-                <div class="w-10 h-10 rounded-xl {{ Auth::user()->role === 'cs' ? 'bg-teal-600' : 'bg-blue-600' }} text-white font-bold flex items-center justify-center text-xs shadow-xs shrink-0 overflow-hidden group-hover:ring-2 group-hover:ring-blue-400">
+                <div class="w-10 h-10 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center text-xs shadow-xs shrink-0 overflow-hidden group-hover:ring-2 group-hover:ring-blue-400">
                     @if(Auth::user()->magang && Auth::user()->magang->foto)
                         <img src="{{ asset('storage/' . Auth::user()->magang->foto) }}" alt="Foto" class="w-full h-full object-cover">
                     @else
@@ -253,7 +248,7 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-xs font-bold text-slate-900 truncate group-hover:text-blue-600 transition">
-                        {{ Auth::user()->magang->nama_lengkap ?? Auth::user()->cs->nama_lengkap ?? Auth::user()->username }}
+                        {{ Auth::user()->magang->nama_lengkap ?? Auth::user()->username }}
                     </p>
                     <p class="text-[10px] text-slate-500 font-medium truncate flex items-center gap-1">
                         <span>Edit Profil</span>
@@ -285,17 +280,10 @@
                 <!-- Role Badge & Portal Info -->
                 <div class="flex items-center gap-2">
                     <span class="text-xs font-bold text-slate-800 hidden sm:inline">Portal Presensi &amp; Aktivitas</span>
-                    @if(Auth::user()->role === 'magang')
-                        <span class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                            Peserta Magang
-                        </span>
-                    @elseif(Auth::user()->role === 'cs')
-                        <span class="inline-flex items-center gap-1 text-[11px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
-                            <span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
-                            Customer Service
-                        </span>
-                    @endif
+                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                        Peserta Magang
+                    </span>
                 </div>
             </div>
 
@@ -303,10 +291,10 @@
             <div class="flex items-center gap-3">
                 <div class="text-right hidden sm:block">
                     <div class="text-xs font-bold text-slate-800">
-                        {{ Auth::user()->magang->nama_lengkap ?? Auth::user()->cs->nama_lengkap ?? Auth::user()->username }}
+                        {{ Auth::user()->magang->nama_lengkap ?? Auth::user()->username }}
                     </div>
                     <div class="text-[10px] text-slate-400 font-medium">
-                        {{ Auth::user()->magang->divisi->nama_divisi ?? Auth::user()->cs->jabatan ?? 'Sistem Presensi Digital' }}
+                        {{ Auth::user()->magang->divisi->nama_divisi ?? 'Peserta Magang' }}
                     </div>
                 </div>
 

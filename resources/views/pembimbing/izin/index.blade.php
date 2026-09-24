@@ -117,7 +117,7 @@
             <table class="w-full text-left text-sm text-slate-600">
                 <thead class="bg-slate-50 border-b border-slate-200/80 text-xs font-bold uppercase tracking-wider text-slate-500">
                     <tr>
-                        <th class="px-6 py-4">Peserta Binaan</th>
+                        <th class="px-6 py-4">Peserta Magang</th>
                         <th class="px-6 py-4">Jenis Izin</th>
                         <th class="px-6 py-4">Rentang Waktu</th>
                         <th class="px-6 py-4">Alasan</th>
@@ -131,38 +131,26 @@
                         <tr class="hover:bg-slate-50/70 transition">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 @php
-                                    $role = $item->pengguna->role ?? 'magang';
                                     $magang = $item->pengguna->magang;
-                                    $cs = $item->pengguna->cs;
-                                    $fotoUrl = ($role === 'magang' && $magang && $magang->foto) ? asset('storage/' . $magang->foto) : '';
-                                    $divisiNama = ($role === 'magang' && $magang && $magang->divisi) ? $magang->divisi->nama_divisi : ($cs ? ($cs->jabatan ?? 'CS') : '-');
-                                    $nomorInduk = ($role === 'magang' && $magang) ? $magang->no_induk : ($cs ? $cs->nik : '-');
+                                    $fotoUrl = ($magang && $magang->foto) ? asset('storage/' . $magang->foto) : '';
+                                    $divisiNama = ($magang && $magang->divisi) ? $magang->divisi->nama_divisi : 'Peserta Magang';
+                                    $nomorInduk = $magang ? $magang->no_induk : ($item->pengguna->username ?? '-');
                                 @endphp
                                 <div class="flex items-center gap-3">
-                                    <div class="relative shrink-0">
+                                    <div class="shrink-0">
                                         @if($fotoUrl)
                                             <img src="{{ $fotoUrl }}" alt="{{ $item->nama_lengkap }}" class="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-xs">
                                         @else
-                                            <div class="w-10 h-10 rounded-xl {{ $role === 'magang' ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-700' }} flex items-center justify-center font-bold text-xs">
+                                            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs">
                                                 {{ strtoupper(substr($item->nama_lengkap, 0, 2)) }}
                                             </div>
                                         @endif
-                                        <span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold {{ $role === 'magang' ? 'bg-amber-500 text-white' : 'bg-teal-500 text-white' }}">
-                                            {{ $role === 'magang' ? 'M' : 'C' }}
-                                        </span>
                                     </div>
                                     <div>
                                         <div class="font-bold text-slate-900 text-sm">{{ $item->nama_lengkap }}</div>
                                         <div class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 font-medium">
-                                            @if($role === 'magang')
-                                                <span class="inline-flex px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-50 text-amber-700">Magang</span>
-                                                <span class="font-mono text-slate-600">{{ $nomorInduk }}</span>
-                                                &bull; <span class="text-purple-700 font-medium">{{ $divisiNama }}</span>
-                                            @else
-                                                <span class="inline-flex px-1.5 py-0.2 rounded text-[10px] font-semibold bg-teal-50 text-teal-700">CS</span>
-                                                <span class="font-mono text-slate-600">{{ $nomorInduk }}</span>
-                                                &bull; <span class="text-teal-700 font-medium">{{ $divisiNama }}</span>
-                                            @endif
+                                            <span class="font-mono text-slate-600">NIM: {{ $nomorInduk }}</span>
+                                            &bull; <span class="text-purple-700 font-medium">{{ $divisiNama }}</span>
                                         </div>
                                     </div>
                                 </div>

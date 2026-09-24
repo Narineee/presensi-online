@@ -41,11 +41,6 @@ class Pengguna extends Authenticatable
         return $this->hasOne(Magang::class);
     }
 
-    public function cs()
-    {
-        return $this->hasOne(Cs::class);
-    }
-
     public function presensi()
     {
         return $this->hasMany(Presensi::class);

@@ -59,7 +59,6 @@ class AuthController extends Controller
             'admin' => redirect()->route('admin.dashboard'),
             'pembimbing' => redirect()->route('pembimbing.dashboard'),
             'magang' => redirect()->route('magang.dashboard'),
-            'cs' => redirect()->route('cs.dashboard'),
             default => redirect('/'),
         };
     }

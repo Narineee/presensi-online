@@ -1,98 +1,9 @@
-@extends('layouts.user')
+@extends('layouts.print')
 
 @section('title', 'Cetak Rekap Presensi Pribadi')
 
-@section('styles')
-<style>
-    @media print {
-        header, footer, .no-print, nav, .btn-print-group {
-            display: none !important;
-        }
-
-        body {
-            background-color: white !important;
-            color: #0f172a !important;
-            font-size: 10.5pt;
-            margin: 0;
-            padding: 0;
-        }
-
-        main {
-            max-width: 100% !important;
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-
-        .print-sheet {
-            border: none !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-            width: 100% !important;
-        }
-
-        table {
-            page-break-inside: auto;
-            border-collapse: collapse !important;
-        }
-
-        tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
-        }
-
-        thead {
-            display: table-header-group;
-        }
-
-        tfoot {
-            display: table-footer-group;
-        }
-    }
-</style>
-@endsection
-
 @section('content')
-<div class="max-w-4xl mx-auto space-y-6">
-
-    <!-- Top Action Bar (Hanya tampil di layar monitor) -->
-    <div class="no-print bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-                <div class="flex items-center gap-2 text-xs text-slate-500 mb-1">
-                    <a href="{{ route('presensi.index') }}" class="hover:text-blue-600 transition flex items-center gap-1 font-semibold">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-                        </svg>
-                        Kembali ke Halaman Presensi
-                    </a>
-                    <span>/</span>
-                    <span class="text-slate-800 font-semibold">Cetak Rekap Presensi</span>
-                </div>
-                <h1 class="text-lg font-bold text-slate-900">Rekapitulasi Kehadiran Pribadi</h1>
-                <p class="text-xs text-slate-500">Pilih periode bulan yang ingin dicetak, lalu klik tombol cetak.</p>
-            </div>
-
-            <div class="flex items-center gap-2">
-                <button type="button" onclick="window.print()" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition flex items-center gap-2 cursor-pointer">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.75A2.25 2.25 0 0015 1.5H9a2.25 2.25 0 00-2.25 2.25v3.456" />
-                    </svg>
-                    <span>Cetak / Simpan PDF</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Filter Cepat Bulan -->
-        <form action="{{ route('presensi.cetak') }}" method="GET" class="pt-3 border-t border-slate-100 flex flex-wrap items-center gap-3 text-xs">
-            <div class="flex items-center gap-2">
-                <label for="bulan" class="font-semibold text-slate-700">Pilih Bulan:</label>
-                <input type="month" name="bulan" id="bulan" value="{{ request('bulan', $bulan) }}" class="px-3 py-1.5 rounded-xl border border-slate-300 text-xs">
-            </div>
-            <button type="submit" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold transition cursor-pointer">
-                Tampilkan
-            </button>
-        </form>
-    </div>
+<div class="max-w-4xl mx-auto">
 
     <!-- Printable Official Sheet -->
     <div class="print-sheet bg-white p-8 sm:p-12 rounded-3xl border border-slate-200/80 shadow-sm text-slate-800 space-y-6">
@@ -106,7 +17,7 @@
                 <div class="text-left">
                     <h2 class="text-base font-black uppercase tracking-wider text-slate-900 leading-tight">SISTEM PRESENSI & MANAJEMEN DIGITAL</h2>
                     <p class="text-[11px] text-slate-500 font-medium">
-                        {{ $user->role === 'magang' && $user->magang && $user->magang->divisi ? 'Divisi ' . $user->magang->divisi->nama_divisi : 'Divisi Operasional & Layanan Pelanggan' }}
+                        {{ $user->magang && $user->magang->divisi ? 'Divisi ' . $user->magang->divisi->nama_divisi : 'Divisi Penempatan Magang' }}
                     </p>
                 </div>
             </div>
@@ -125,47 +36,36 @@
                 <div class="flex">
                     <span class="w-32 text-slate-500">Nama Lengkap:</span>
                     <span class="font-bold text-slate-900">
-                        {{ $user->magang?->nama_lengkap ?? ($user->cs?->nama_lengkap ?? $user->username) }}
+                        {{ $user->magang?->nama_lengkap ?? $user->username }}
                     </span>
                 </div>
                 <div class="flex">
-                    <span class="w-32 text-slate-500">{{ $user->role === 'magang' ? 'Nomor Induk / NIM:' : 'NIK Karyawan:' }}</span>
+                    <span class="w-32 text-slate-500">Nomor Induk / NIM:</span>
                     <span class="font-semibold text-slate-800">
-                        {{ $user->magang?->no_induk ?? ($user->cs?->nik ?? '-') }}
+                        {{ $user->magang?->no_induk ?? '-' }}
                     </span>
                 </div>
                 <div class="flex">
                     <span class="w-32 text-slate-500">Peran / Kategori:</span>
                     <span class="font-semibold text-slate-800 uppercase">
-                        {{ $user->role === 'magang' ? 'Peserta Magang' : 'Customer Service (CS)' }}
+                        Peserta Magang
                     </span>
                 </div>
             </div>
 
             <div class="space-y-1.5">
-                @if($user->role === 'magang' && $user->magang)
-                    <div class="flex">
-                        <span class="w-32 text-slate-500">Divisi Penempatan:</span>
-                        <span class="font-semibold text-slate-800">{{ $user->magang?->divisi?->nama_divisi ?? '-' }}</span>
-                    </div>
-                    <div class="flex">
-                        <span class="w-32 text-slate-500">Instansi Pendidikan:</span>
-                        <span class="font-semibold text-slate-800">{{ $user->magang?->instansi_pendidikan ?? '-' }}</span>
-                    </div>
-                    <div class="flex">
-                        <span class="w-32 text-slate-500">Pembimbing:</span>
-                        <span class="font-semibold text-slate-800">{{ $user->magang?->pembimbing?->nama_lengkap ?? '-' }}</span>
-                    </div>
-                @else
-                    <div class="flex">
-                        <span class="w-32 text-slate-500">Jabatan:</span>
-                        <span class="font-semibold text-slate-800">{{ $user->cs?->jabatan ?? 'Customer Service' }}</span>
-                    </div>
-                    <div class="flex">
-                        <span class="w-32 text-slate-500">Supervisor / Validator:</span>
-                        <span class="font-semibold text-slate-800">{{ $user->cs?->pembimbing?->nama_lengkap ?? '-' }}</span>
-                    </div>
-                @endif
+                <div class="flex">
+                    <span class="w-32 text-slate-500">Divisi Penempatan:</span>
+                    <span class="font-semibold text-slate-800">{{ $user->magang?->divisi?->nama_divisi ?? '-' }}</span>
+                </div>
+                <div class="flex">
+                    <span class="w-32 text-slate-500">Instansi Pendidikan:</span>
+                    <span class="font-semibold text-slate-800">{{ $user->magang?->instansi_pendidikan ?? '-' }}</span>
+                </div>
+                <div class="flex">
+                    <span class="w-32 text-slate-500">Pembimbing:</span>
+                    <span class="font-semibold text-slate-800">{{ $user->magang?->pembimbing?->nama_lengkap ?? '-' }}</span>
+                </div>
             </div>
         </div>
 
@@ -186,41 +86,41 @@
         </div>
 
         <!-- TABEL RINCIAN PRESENSI -->
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs border border-slate-300">
+        <div class="w-full">
+            <table class="w-full table-fixed text-left text-[11px] border border-slate-300">
                 <thead class="bg-slate-100 border-b border-slate-300 font-bold uppercase text-slate-700 text-[10px]">
                     <tr>
-                        <th class="p-2.5 border-r border-slate-300 w-10 text-center">No</th>
-                        <th class="p-2.5 border-r border-slate-300">Hari / Tanggal</th>
-                        <th class="p-2.5 border-r border-slate-300 text-center">Mode Kerja</th>
-                        <th class="p-2.5 border-r border-slate-300 text-center">Jam Masuk</th>
-                        <th class="p-2.5 border-r border-slate-300 text-center">Jam Pulang</th>
-                        <th class="p-2.5 border-r border-slate-300 text-center">Status</th>
-                        <th class="p-2.5">Keterangan</th>
+                        <th class="w-[5%] p-1.5 border-r border-slate-300 text-center">No</th>
+                        <th class="w-[20%] p-1.5 border-r border-slate-300">Hari / Tanggal</th>
+                        <th class="w-[11%] p-1.5 border-r border-slate-300 text-center">Mode Kerja</th>
+                        <th class="w-[13%] p-1.5 border-r border-slate-300 text-center">Jam Masuk</th>
+                        <th class="w-[13%] p-1.5 border-r border-slate-300 text-center">Jam Pulang</th>
+                        <th class="w-[12%] p-1.5 border-r border-slate-300 text-center">Status</th>
+                        <th class="w-[26%] p-1.5">Keterangan</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200">
                     @forelse ($presensi as $index => $item)
                         <tr class="{{ $loop->even ? 'bg-slate-50/50' : 'bg-white' }}">
-                            <td class="p-2 border-r border-slate-200 text-center font-semibold text-slate-500">{{ $index + 1 }}</td>
-                            <td class="p-2 border-r border-slate-200 whitespace-nowrap font-medium text-slate-900">
+                            <td class="p-1.5 border-r border-slate-200 text-center font-semibold text-slate-500 break-words">{{ $index + 1 }}</td>
+                            <td class="p-1.5 border-r border-slate-200 font-medium text-slate-900 break-words">
                                 {{ \Carbon\Carbon::parse($item->tanggal)->isoFormat('dddd, D MMMM Y') }}
                             </td>
-                            <td class="p-2 border-r border-slate-200 text-center uppercase font-semibold text-[10px]">
+                            <td class="p-1.5 border-r border-slate-200 text-center uppercase font-semibold text-[10px] break-words">
                                 {{ $item->mode_kerja }}
                             </td>
-                            <td class="p-2 border-r border-slate-200 text-center font-mono font-medium">
+                            <td class="p-1.5 border-r border-slate-200 text-center font-mono font-medium text-[10px] break-words">
                                 {{ $item->jam_masuk ? substr($item->jam_masuk, 0, 5) . ' WITA' : '-' }}
                             </td>
-                            <td class="p-2 border-r border-slate-200 text-center font-mono font-medium">
+                            <td class="p-1.5 border-r border-slate-200 text-center font-mono font-medium text-[10px] break-words">
                                 {{ $item->jam_keluar ? substr($item->jam_keluar, 0, 5) . ' WITA' : '-' }}
                             </td>
-                            <td class="p-2 border-r border-slate-200 text-center">
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase {{ $item->status === 'hadir' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800' }}">
+                            <td class="p-1.5 border-r border-slate-200 text-center break-words">
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase {{ $item->status === 'hadir' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800' }}">
                                     {{ $item->status }}
                                 </span>
                             </td>
-                            <td class="p-2 text-slate-600 max-w-xs truncate">
+                            <td class="p-1.5 text-slate-600 break-words text-[10px]">
                                 {{ $item->keterangan ?? '-' }}
                             </td>
                         </tr>
@@ -245,13 +145,13 @@
                 </div>
                 <div>
                     <p class="font-bold text-slate-900 underline text-xs sm:text-sm">
-                        {{ $pembimbing->nama_lengkap ?? ($user->magang?->pembimbing?->nama_lengkap ?? ($user->cs?->pembimbing?->nama_lengkap ?? '( .................................................. )')) }}
+                        {{ $pembimbing->nama_lengkap ?? ($user->magang?->pembimbing?->nama_lengkap ?? '( .................................................. )') }}
                     </p>
                     <p class="text-slate-500 text-[11px] mt-0.5">
-                        NIP. {{ $pembimbing->nip ?? ($user->magang?->pembimbing?->nip ?? ($user->cs?->pembimbing?->nip ?? '-')) }}
+                        NIP. {{ $pembimbing->nip ?? ($user->magang?->pembimbing?->nip ?? '-') }}
                     </p>
                     <p class="text-slate-400 text-[10px]">
-                        {{ $pembimbing->jabatan ?? ($user->magang?->pembimbing?->jabatan ?? ($user->cs?->pembimbing?->jabatan ?? 'Pembimbing Lapangan')) }}
+                        {{ $pembimbing->jabatan ?? ($user->magang?->pembimbing?->jabatan ?? 'Pembimbing Lapangan') }}
                     </p>
                 </div>
             </div>

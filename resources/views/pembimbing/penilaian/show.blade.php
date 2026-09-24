@@ -10,12 +10,29 @@
             display: none !important;
         }
 
-        body {
+        *, *::before, *::after {
+            box-shadow: none !important;
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+        }
+
+        *::-webkit-scrollbar,
+        ::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+
+        html, body {
             background-color: white !important;
             color: black !important;
             font-size: 12pt;
             margin: 0;
             padding: 0;
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow: visible !important;
+            overflow-x: clip !important;
         }
 
         main {
@@ -29,6 +46,16 @@
             box-shadow: none !important;
             padding: 0 !important;
             width: 100% !important;
+        }
+
+        table {
+            border-collapse: collapse !important;
+            width: 100% !important;
+        }
+
+        th, td {
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
         }
 
         .page-break {

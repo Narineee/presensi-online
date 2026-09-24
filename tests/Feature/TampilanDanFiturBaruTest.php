@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Aktivitas;
-use App\Models\Cs;
 use App\Models\Divisi;
 use App\Models\Magang;
 use App\Models\Pembimbing;
@@ -18,16 +17,17 @@ class TampilanDanFiturBaruTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_login_screen_displays_official_notice_that_accounts_are_created_by_admin(): void
+    public function test_login_screen_displays_magang_title_and_does_not_display_removed_notices(): void
     {
         $response = $this->get('/login');
 
         $response->assertStatus(200);
-        $response->assertSee('Seluruh akun login (Magang, CS, Pembimbing, dan Admin) dibuatkan dan diterbitkan langsung oleh');
-        $response->assertSee('Administrator Sistem');
+        $response->assertSee('Sistem Informasi Manajemen Magang');
+        $response->assertDontSee('Ketentuan Akses Pengguna:');
+        $response->assertDontSee('Bantuan Akun Default Super Admin');
     }
 
-    public function test_pembimbing_dashboard_displays_supervised_interns_and_cs(): void
+    public function test_pembimbing_dashboard_displays_supervised_interns(): void
     {
         $divisi = Divisi::create([
             'nama_divisi' => 'Teknologi Informasi',
@@ -70,31 +70,11 @@ class TampilanDanFiturBaruTest extends TestCase
             'status' => 'aktif',
         ]);
 
-        $userCs = Pengguna::create([
-            'username' => 'cs_budi',
-            'password' => 'secret123',
-            'role' => 'cs',
-            'is_active' => true,
-        ]);
-
-        $cs = Cs::create([
-            'pengguna_id' => $userCs->id,
-            'pembimbing_id' => $pembimbing->id,
-            'nik' => '3201010101010001',
-            'nama_lengkap' => 'Budi CS Santoso',
-            'jabatan' => 'Petugas Front Office CS',
-            'no_hp' => '081122334455',
-            'tanggal_bergabung' => Carbon::now()->subMonths(3),
-            'status' => 'aktif',
-        ]);
-
         $response = $this->actingAs($userPembimbing)->get(route('pembimbing.dashboard'));
 
         $response->assertStatus(200);
         $response->assertSee('Ani Lestari');
         $response->assertSee('2023001');
-        $response->assertSee('Budi CS Santoso');
-        $response->assertSee('3201010101010001');
         $response->assertSee('Pantau Kehadiran Binaan Hari Ini');
     }
 
@@ -155,7 +135,7 @@ class TampilanDanFiturBaruTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Citra Handayani');
         $response->assertSee('Mengembangkan modul validasi presensi');
-        $response->assertSee('Foto &amp; Peserta Binaan', false);
+        $response->assertSee('Foto &amp; Peserta Magang', false);
     }
 
     public function test_magang_can_view_and_update_their_profile(): void

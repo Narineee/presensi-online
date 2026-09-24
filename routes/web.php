@@ -1,9 +1,7 @@
 <?php
 
-use App\Http\Controllers\Admin\CsController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DivisiController;
-use App\Http\Controllers\Admin\JadwalShiftCsController;
 use App\Http\Controllers\Admin\KriteriaPenilaianController;
 use App\Http\Controllers\Admin\MagangController;
 use App\Http\Controllers\Admin\MonitoringAktivitasController;
@@ -12,7 +10,6 @@ use App\Http\Controllers\Admin\MonitoringPenilaianController;
 use App\Http\Controllers\Admin\MonitoringPresensiController;
 use App\Http\Controllers\Admin\PembimbingController;
 use App\Http\Controllers\Admin\PengaturanController;
-use App\Http\Controllers\Admin\ShiftController;
 use App\Http\Controllers\AktivitasController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Magang\PenilaianSayaController;
@@ -65,26 +62,17 @@ Route::middleware(['auth', 'role:admin'])
         // CRUD Pembimbing
         Route::resource('pembimbing', PembimbingController::class);
 
-        // CRUD Magang
+        // CRUD Magang & Plotting
         Route::resource('magang', MagangController::class);
-
-        // CRUD Master Shift
-        Route::resource('shift', ShiftController::class);
-
-        // CRUD CS (Customer Service)
-        Route::resource('cs', CsController::class);
-
-        // CRUD Jadwal Shift CS
-        Route::resource('jadwal-shift', JadwalShiftCsController::class);
 
         // CRUD Master Kriteria Penilaian
         Route::resource('kriteria', KriteriaPenilaianController::class);
 
-        // Monitoring Presensi Magang & CS
+        // Monitoring Presensi Magang
         Route::get('presensi/cetak', [MonitoringPresensiController::class, 'cetak'])->name('presensi.cetak');
         Route::get('presensi', [MonitoringPresensiController::class, 'index'])->name('presensi.index');
 
-        // Monitoring Aktivitas Harian Magang & CS
+        // Monitoring Aktivitas Harian Magang
         Route::get('aktivitas/cetak', [MonitoringAktivitasController::class, 'cetak'])->name('aktivitas.cetak');
         Route::get('aktivitas', [MonitoringAktivitasController::class, 'index'])->name('aktivitas.index');
 
@@ -92,6 +80,7 @@ Route::middleware(['auth', 'role:admin'])
         Route::get('izin', [MonitoringPengajuanIzinController::class, 'index'])->name('izin.index');
 
         // Monitoring & Rekap Penilaian Akhir Magang
+        Route::get('penilaian/cetak', [MonitoringPenilaianController::class, 'cetak'])->name('penilaian.cetak');
         Route::get('penilaian', [MonitoringPenilaianController::class, 'index'])->name('penilaian.index');
         Route::get('penilaian/{id}', [MonitoringPenilaianController::class, 'show'])->name('penilaian.show');
         Route::delete('penilaian/{id}', [MonitoringPenilaianController::class, 'destroy'])->name('penilaian.destroy');
@@ -103,10 +92,10 @@ Route::middleware(['auth', 'role:admin'])
     });
 
 // ==============================
-// PRESENSI, AKTIVITAS & IZIN (MAGANG & CS)
+// PRESENSI, AKTIVITAS & IZIN (MAGANG)
 // ==============================
 
-Route::middleware(['auth', 'role:magang,cs'])->group(function () {
+Route::middleware(['auth', 'role:magang'])->group(function () {
     // Presensi
     Route::get('/presensi/cetak', [PresensiController::class, 'cetak'])->name('presensi.cetak');
     Route::get('/presensi', [PresensiController::class, 'index'])->name('presensi.index');
@@ -120,7 +109,7 @@ Route::middleware(['auth', 'role:magang,cs'])->group(function () {
     // CRUD Pengajuan Izin & Sakit
     Route::resource('izin', PengajuanIzinController::class);
 
-    // Profil Peserta (Edit & Lengkapi Profil Sesuai PRD)
+    // Profil Peserta Magang
     Route::get('/profil', [ProfileController::class, 'edit'])->name('profil.edit');
     Route::put('/profil', [ProfileController::class, 'update'])->name('profil.update');
 });
@@ -164,20 +153,5 @@ Route::middleware(['auth', 'role:magang'])
 
         // Lembar Penilaian Akhir
         Route::get('/penilaian', [PenilaianSayaController::class, 'index'])->name('penilaian.index');
-
-    });
-
-// ==============================
-// CS
-// ==============================
-
-Route::middleware(['auth', 'role:cs'])
-    ->prefix('cs')
-    ->name('cs.')
-    ->group(function () {
-
-        Route::get('/dashboard', function () {
-            return redirect()->route('presensi.index');
-        })->name('dashboard');
 
     });

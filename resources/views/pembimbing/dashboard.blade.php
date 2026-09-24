@@ -87,7 +87,7 @@
         <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
                 <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Kehadiran Hari Ini</p>
-                <p class="text-2xl font-black text-emerald-600 mt-1">{{ $stats['hadir_hari_ini'] }} <span class="text-xs font-semibold text-slate-400">/ {{ $stats['total_binaan'] }}</span></p>
+                <p class="text-2xl font-black text-emerald-600 mt-1">{{ $stats['hadir_hari_ini'] }} <span class="text-xs font-semibold text-slate-400">/ {{ $stats['total_magang'] }}</span></p>
                 <span class="text-[11px] font-medium text-emerald-600">Presensi tercatat</span>
             </div>
             <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold">
@@ -99,9 +99,9 @@
         <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
                 <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Binaan Diampu</p>
-                <p class="text-2xl font-black text-purple-600 mt-1">{{ $stats['total_binaan'] }} <span class="text-xs font-semibold text-slate-400">Orang</span></p>
+                <p class="text-2xl font-black text-purple-600 mt-1">{{ $stats['total_magang'] }} <span class="text-xs font-semibold text-slate-400">Orang</span></p>
                 <div class="flex items-center gap-2 mt-1 text-[11px] text-slate-500 font-medium">
-                    <span>{{ $stats['total_magang'] }} Magang</span> &bull; <span>{{ $stats['total_cs'] }} CS</span>
+                    <span>{{ $stats['total_magang'] }} Peserta Magang</span>
                 </div>
             </div>
             <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl font-bold">
@@ -143,42 +143,26 @@
         </a>
     </div>
 
-    <!-- SECTION 1: DAFTAR MAGANG & CS YANG DIAMPU (Sesuai PRD tampilan.md) -->
+    <!-- SECTION 1: DAFTAR MAGANG YANG DIAMPU -->
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
         <div class="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
-                    <h2 class="text-base font-bold text-slate-900 tracking-tight">Daftar Peserta Binaan yang Diampu</h2>
+                    <h2 class="text-base font-bold text-slate-900 tracking-tight">Daftar Peserta Magang yang Diampu</h2>
                 </div>
                 <p class="text-xs text-slate-500 mt-1">
-                    Seluruh peserta Magang dan Customer Service yang berada di bawah bimbingan &amp; pengawasan Anda.
+                    Seluruh peserta Magang yang berada di bawah bimbingan &amp; pengawasan Anda.
                 </p>
             </div>
 
-            <!-- Tabs Switcher -->
-            <div class="inline-flex p-1 bg-slate-100 rounded-xl">
-                <button
-                    type="button"
-                    onclick="switchTab('magang')"
-                    id="tab-btn-magang"
-                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition bg-white text-purple-700 shadow-xs"
-                >
-                    🎓 Anak Magang ({{ $magangList->count() }})
-                </button>
-                <button
-                    type="button"
-                    onclick="switchTab('cs')"
-                    id="tab-btn-cs"
-                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 hover:text-slate-900"
-                >
-                    🎧 CS Binaan ({{ $csList->count() }})
-                </button>
+            <div class="inline-flex items-center px-3.5 py-1.5 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200">
+                🎓 Total {{ $magangList->count() }} Peserta
             </div>
         </div>
 
-        <!-- TAB CONTENT: MAGANG BINAAN -->
-        <div id="content-magang" class="p-5 sm:p-6 space-y-4">
+        <!-- CONTENT: MAGANG BINAAN -->
+        <div class="p-5 sm:p-6 space-y-4">
             @if($magangList->isEmpty())
                 <div class="text-center py-12">
                     <div class="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xl mb-3">
@@ -256,66 +240,6 @@
                 </div>
             @endif
         </div>
-
-        <!-- TAB CONTENT: CS BINAAN -->
-        <div id="content-cs" class="p-5 sm:p-6 space-y-4 hidden">
-            @if($csList->isEmpty())
-                <div class="text-center py-12">
-                    <div class="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xl mb-3">
-                        🎧
-                    </div>
-                    <p class="text-sm font-bold text-slate-700">Belum ada staf CS yang dibimbing</p>
-                    <p class="text-xs text-slate-400 mt-1">Administrator dapat menetapkan Anda sebagai validator untuk staf Customer Service.</p>
-                </div>
-            @else
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    @foreach($csList as $cs)
-                        <div class="p-5 rounded-2xl border border-slate-200/90 hover:border-teal-300 hover:shadow-md transition bg-gradient-to-b from-white to-slate-50/50 flex flex-col justify-between">
-                            <div>
-                                <!-- Header CS: Avatar & Status -->
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center font-extrabold text-sm border-2 border-teal-200 shrink-0 shadow-xs">
-                                            {{ strtoupper(substr($cs->nama_lengkap, 0, 2)) }}
-                                        </div>
-                                        <div>
-                                            <h3 class="text-sm font-bold text-slate-900 leading-tight">{{ $cs->nama_lengkap }}</h3>
-                                            <p class="text-[11px] font-mono text-slate-500 font-semibold mt-0.5">NIK: {{ $cs->nik }}</p>
-                                        </div>
-                                    </div>
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold {{ $cs->status === 'aktif' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600' }}">
-                                        {{ ucfirst($cs->status) }}
-                                    </span>
-                                </div>
-
-                                <!-- Detail Info -->
-                                <div class="mt-4 pt-3 border-t border-slate-100 space-y-2 text-xs">
-                                    <div class="flex items-center justify-between text-slate-600">
-                                        <span class="text-slate-400 text-[11px]">Jabatan / Posisi:</span>
-                                        <span class="font-semibold text-slate-800 text-right">{{ $cs->jabatan ?? 'Petugas CS' }}</span>
-                                    </div>
-                                    <div class="flex items-center justify-between text-slate-600">
-                                        <span class="text-slate-400 text-[11px]">No. Kontak:</span>
-                                        <span class="font-mono text-slate-700">{{ $cs->no_hp ?? '-' }}</span>
-                                    </div>
-                                    <div class="flex items-center justify-between text-slate-600">
-                                        <span class="text-slate-400 text-[11px]">Tanggal Bergabung:</span>
-                                        <span class="font-mono text-slate-700">{{ $cs->tanggal_bergabung ? $cs->tanggal_bergabung->format('d/m/Y') : '-' }}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Footer Aksi CS -->
-                            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end">
-                                <a href="{{ route('pembimbing.aktivitas.index') }}" class="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-xl transition">
-                                    <span>Tinjau Aktivitas &rarr;</span>
-                                </a>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
-        </div>
     </div>
 
     <!-- SECTION 2: PANTAU KEHADIRAN HARI INI (Live Attendance Monitor Sesuai PRD tampilan.md) -->
@@ -331,7 +255,7 @@
                 </p>
             </div>
             <div class="text-xs font-semibold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/80">
-                Total Hadir: <span class="font-bold text-emerald-600">{{ $presensiHariIni->count() }}</span> dari {{ $stats['total_binaan'] }} peserta
+                Total Hadir: <span class="font-bold text-emerald-600">{{ $presensiHariIni->count() }}</span> dari {{ $stats['total_magang'] }} peserta
             </div>
         </div>
 
@@ -339,7 +263,7 @@
             <table class="w-full text-left text-sm text-slate-600">
                 <thead class="bg-slate-50 border-b border-slate-200/80 text-xs font-bold uppercase tracking-wider text-slate-500">
                     <tr>
-                        <th class="px-6 py-4">Peserta Binaan</th>
+                        <th class="px-6 py-4">Peserta Magang</th>
                         <th class="px-6 py-4">Jam Masuk</th>
                         <th class="px-6 py-4">Jam Pulang</th>
                         <th class="px-6 py-4">Status Kehadiran</th>
@@ -356,22 +280,16 @@
                                     @if($presensi->pengguna->magang && $presensi->pengguna->magang->foto)
                                         <img src="{{ asset('storage/' . $presensi->pengguna->magang->foto) }}" alt="{{ $presensi->pengguna->magang->nama_lengkap }}" class="w-10 h-10 rounded-xl object-cover border border-slate-200 shadow-xs">
                                     @else
-                                        <div class="w-10 h-10 rounded-xl {{ $presensi->pengguna->role === 'magang' ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-700' }} flex items-center justify-center font-bold text-xs">
-                                            {{ strtoupper(substr($presensi->pengguna->magang->nama_lengkap ?? $presensi->pengguna->cs->nama_lengkap ?? $presensi->pengguna->username, 0, 2)) }}
+                                        <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs">
+                                            {{ strtoupper(substr($presensi->pengguna->magang->nama_lengkap ?? $presensi->pengguna->username, 0, 2)) }}
                                         </div>
                                     @endif
                                     <div>
                                         <div class="font-bold text-slate-900 text-sm">
-                                            {{ $presensi->pengguna->magang->nama_lengkap ?? $presensi->pengguna->cs->nama_lengkap ?? $presensi->pengguna->username }}
+                                            {{ $presensi->pengguna->magang->nama_lengkap ?? $presensi->pengguna->username }}
                                         </div>
                                         <div class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5">
-                                            @if($presensi->pengguna->role === 'magang')
-                                                <span class="inline-flex px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-50 text-amber-700">Magang</span>
-                                                <span>{{ $presensi->pengguna->magang->divisi->nama_divisi ?? '-' }}</span>
-                                            @else
-                                                <span class="inline-flex px-1.5 py-0.2 rounded text-[10px] font-semibold bg-teal-50 text-teal-700">CS</span>
-                                                <span>{{ $presensi->pengguna->cs->jabatan ?? 'CS' }}</span>
-                                            @endif
+                                            <span>{{ $presensi->pengguna->magang->divisi->nama_divisi ?? '-' }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -402,20 +320,29 @@
                             <!-- Status Kehadiran -->
                             <td class="px-6 py-4 whitespace-nowrap">
                                 @if($presensi->status === 'hadir')
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        &check; Tepat Waktu
-                                    </span>
-                                @elseif($presensi->status === 'terlambat')
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                                        &excl; Terlambat
-                                    </span>
+                                    @if($presensi->keterangan && str_contains(strtolower($presensi->keterangan), 'terlambat'))
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                            &excl; Terlambat
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            &check; Tepat Waktu
+                                        </span>
+                                    @endif
+
                                 @elseif(in_array($presensi->status, ['izin', 'sakit', 'cuti']))
                                     <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                                         {{ ucfirst($presensi->status) }}
                                     </span>
+
+                                @elseif($presensi->status === 'alpa')
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                                        Alpa
+                                    </span>
+
                                 @else
                                     <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
-                                        {{ ucfirst($presensi->status ?? 'Alpha') }}
+                                        {{ ucfirst($presensi->status ?? 'Alpa') }}
                                     </span>
                                 @endif
                             </td>
@@ -438,7 +365,7 @@
                                 @if($presensi->foto_masuk)
                                     <button
                                         type="button"
-                                        onclick="showPhotoPreview('{{ asset('storage/' . $presensi->foto_masuk) }}', '{{ $presensi->pengguna->magang->nama_lengkap ?? $presensi->pengguna->cs->nama_lengkap ?? 'Peserta' }} - Masuk')"
+                                        onclick="showPhotoPreview('{{ asset('storage/' . $presensi->foto_masuk) }}', '{{ $presensi->pengguna->magang->nama_lengkap ?? 'Peserta' }} - Masuk')"
                                         class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 font-semibold transition cursor-pointer"
                                     >
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/></svg>
@@ -486,25 +413,6 @@
 
 @section('scripts')
 <script>
-function switchTab(tab) {
-    const magangBtn = document.getElementById('tab-btn-magang');
-    const csBtn = document.getElementById('tab-btn-cs');
-    const magangContent = document.getElementById('content-magang');
-    const csContent = document.getElementById('content-cs');
-
-    if (tab === 'magang') {
-        magangBtn.className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition bg-white text-purple-700 shadow-xs';
-        csBtn.className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 hover:text-slate-900';
-        magangContent.classList.remove('hidden');
-        csContent.classList.add('hidden');
-    } else {
-        csBtn.className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition bg-white text-purple-700 shadow-xs';
-        magangBtn.className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-600 hover:text-slate-900';
-        csContent.classList.remove('hidden');
-        magangContent.classList.add('hidden');
-    }
-}
-
 function showPhotoPreview(url, title) {
     document.getElementById('photo-modal-img').src = url;
     document.getElementById('photo-modal-title').textContent = title;

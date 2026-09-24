@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Auth;
 class AktivitasController extends Controller
 {
     /**
-     * Menampilkan daftar aktivitas harian milik pengguna yang sedang login (Magang & CS).
+     * Menampilkan daftar aktivitas harian milik pengguna yang sedang login (Magang).
      */
     public function index(Request $request)
     {
@@ -187,14 +187,14 @@ class AktivitasController extends Controller
     }
 
     /**
-     * Mencetak laporan rekapitulasi aktivitas harian pribadi (Magang & CS).
+     * Mencetak laporan rekapitulasi aktivitas harian pribadi (Magang).
      */
     public function cetak(Request $request)
     {
         /** @var Pengguna $user */
         $user = Auth::user();
 
-        $user->load(['magang.divisi', 'magang.pembimbing', 'cs.pembimbing']);
+        $user->load(['magang.divisi', 'magang.pembimbing']);
 
         $query = Aktivitas::where('pengguna_id', $user->id)
             ->with('validator.pembimbing');
@@ -233,7 +233,7 @@ class AktivitasController extends Controller
         ];
 
         $divisi = $user->magang?->divisi ?? Divisi::first();
-        $pembimbing = $user->magang?->pembimbing ?? ($user->cs?->pembimbing ?? Pembimbing::first());
+        $pembimbing = $user->magang?->pembimbing ?? Pembimbing::first();
         $pengaturan = Pengaturan::getPengaturan();
 
         return view('aktivitas.cetak', compact('user', 'aktivitas', 'stats', 'periodeText', 'bulan', 'divisi', 'pembimbing', 'pengaturan'));

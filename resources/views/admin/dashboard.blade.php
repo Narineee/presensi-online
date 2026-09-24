@@ -17,7 +17,7 @@
                     Selamat Datang, {{ Auth::user()->username }}!
                 </h1>
                 <p class="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
-                    Anda mengelola sistem presensi, monitoring aktivitas harian, perizinan, dan plotting penempatan peserta magang serta customer service secara terpusat.
+                    Anda mengelola sistem presensi, monitoring aktivitas harian, perizinan, dan plotting penempatan peserta magang secara terpusat.
                 </p>
             </div>
 
@@ -116,7 +116,7 @@
         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
             Ringkasan Master Data yang Dikelola
         </h2>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             <!-- 1. Data Pembimbing -->
             <a href="{{ route('admin.pembimbing.index') }}" class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-purple-300 hover:shadow-md transition">
                 <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold mb-3">
@@ -165,19 +165,7 @@
                 <span class="text-[11px] text-indigo-600 font-semibold mt-1 inline-block">Kelola &rarr;</span>
             </a>
 
-            <!-- 5. Data Customer Service -->
-            <a href="{{ route('admin.cs.index') }}" class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-teal-300 hover:shadow-md transition">
-                <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold mb-3">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
-                    </svg>
-                </div>
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Customer Service</p>
-                <p class="text-xl font-black text-slate-900 mt-0.5">{{ $stats['total_cs'] }}</p>
-                <span class="text-[11px] text-teal-600 font-semibold mt-1 inline-block">Kelola CS &rarr;</span>
-            </a>
-
-            <!-- 6. Total Seluruh Akun Login -->
+            <!-- 5. Total Seluruh Akun Login -->
             <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
                 <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold mb-3">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -202,7 +190,7 @@
             <p class="text-xs text-slate-500 leading-relaxed">
                 Admin menambahkan akun, menentukan divisi penempatan, pembimbing lapangan, dan periode pelaksanaan. Rincian profil lainnya dilengkapi mandiri oleh peserta magang.
             </p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                 <a href="{{ route('admin.magang.create') }}" class="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 hover:bg-amber-100/60 transition flex items-center gap-3 text-xs font-bold text-amber-900">
                     <span class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-base">+</span>
                     <span>Tambah Magang &amp; Plotting</span>
@@ -210,10 +198,6 @@
                 <a href="{{ route('admin.pembimbing.create') }}" class="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200/80 hover:bg-purple-100/60 transition flex items-center gap-3 text-xs font-bold text-purple-900">
                     <span class="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center text-base">+</span>
                     <span>Tambah Pembimbing</span>
-                </a>
-                <a href="{{ route('admin.cs.create') }}" class="p-3.5 rounded-2xl bg-teal-50/70 border border-teal-200/80 hover:bg-teal-100/60 transition flex items-center gap-3 text-xs font-bold text-teal-900">
-                    <span class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center text-base">+</span>
-                    <span>Tambah Petugas CS</span>
                 </a>
                 <a href="{{ route('admin.divisi.create') }}" class="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/80 hover:bg-blue-100/60 transition flex items-center gap-3 text-xs font-bold text-blue-900">
                     <span class="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center text-base">+</span>
@@ -232,7 +216,7 @@
                 Akses dokumen cetak rekap kehadiran &amp; aktivitas, serta atur nama pejabat pimpinan instansi untuk tanda tangan resmi.
             </p>
             <div class="space-y-2.5 pt-1">
-                <a href="{{ route('admin.presensi.cetak') }}" class="p-3 rounded-2xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 transition flex items-center justify-between text-xs">
+                <a href="{{ route('admin.presensi.cetak') }}" target="_blank" class="p-3 rounded-2xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 transition flex items-center justify-between text-xs">
                     <div class="flex items-center gap-3">
                         <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">📄</span>
                         <span class="font-semibold text-slate-800">Cetak Rekapitulasi Presensi Seluruh Peserta</span>
@@ -240,7 +224,7 @@
                     <span class="text-blue-600 font-bold">&rarr;</span>
                 </a>
 
-                <a href="{{ route('admin.aktivitas.cetak') }}" class="p-3 rounded-2xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/40 transition flex items-center justify-between text-xs">
+                <a href="{{ route('admin.aktivitas.cetak') }}" target="_blank" class="p-3 rounded-2xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/40 transition flex items-center justify-between text-xs">
                     <div class="flex items-center gap-3">
                         <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">📋</span>
                         <span class="font-semibold text-slate-800">Cetak Rekapitulasi Log Aktivitas Harian</span>

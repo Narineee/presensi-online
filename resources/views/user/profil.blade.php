@@ -65,63 +65,76 @@
             @method('PUT')
 
             <!-- Foto Profil Section -->
-            @if($user->role === 'magang')
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">
-                        Pasfoto Resmi Peserta
-                    </label>
-                    <div class="flex flex-col sm:flex-row items-center gap-5">
-                        <div class="relative shrink-0">
-                            @if($magang && $magang->foto)
-                                <img id="preview-foto" src="{{ asset('storage/' . $magang->foto) }}" alt="{{ $magang->nama_lengkap }}" class="w-24 h-24 rounded-2xl object-cover border-2 border-blue-200 shadow-sm">
-                            @else
-                                <div id="preview-foto-placeholder" class="w-24 h-24 rounded-2xl bg-blue-100 text-blue-700 border-2 border-blue-200 flex items-center justify-center font-extrabold text-2xl shadow-sm">
-                                    {{ strtoupper(substr($magang->nama_lengkap ?? $user->username, 0, 2)) }}
-                                </div>
-                                <img id="preview-foto" src="" alt="Preview" class="w-24 h-24 rounded-2xl object-cover border-2 border-blue-200 shadow-sm hidden">
-                            @endif
-                        </div>
-                        <div class="flex-1 text-center sm:text-left space-y-2">
-                            <input
-                                type="file"
-                                name="foto"
-                                id="input-foto"
-                                accept="image/jpeg,image/png,image/jpg"
-                                class="text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer"
-                                onchange="previewImage(this)"
-                            >
-                            <p class="text-[11px] text-slate-400">
-                                Format JPG atau PNG, ukuran maksimal 2MB. Disarankan pasfoto formal setengah badan dengan latar rapi.
-                            </p>
-                        </div>
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">
+                    Pasfoto Resmi Peserta
+                </label>
+                <div class="flex flex-col sm:flex-row items-center gap-5">
+                    <div class="relative shrink-0">
+                        @if($magang && $magang->foto)
+                            <img id="preview-foto" src="{{ asset('storage/' . $magang->foto) }}" alt="{{ $magang->nama_lengkap }}" class="w-24 h-24 rounded-2xl object-cover border-2 border-blue-200 shadow-sm">
+                        @else
+                            <div id="preview-foto-placeholder" class="w-24 h-24 rounded-2xl bg-blue-100 text-blue-700 border-2 border-blue-200 flex items-center justify-center font-extrabold text-2xl shadow-sm">
+                                {{ strtoupper(substr($magang->nama_lengkap ?? $user->username, 0, 2)) }}
+                            </div>
+                            <img id="preview-foto" src="" alt="Preview" class="w-24 h-24 rounded-2xl object-cover border-2 border-blue-200 shadow-sm hidden">
+                        @endif
+                    </div>
+                    <div class="flex-1 text-center sm:text-left space-y-2">
+                        <input
+                            type="file"
+                            name="foto"
+                            id="input-foto"
+                            accept="image/jpeg,image/png,image/jpg"
+                            class="text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer"
+                            onchange="previewImage(this)"
+                        >
+                        <p class="text-[11px] text-slate-400">
+                            Format JPG atau PNG, ukuran maksimal 2MB. Disarankan pasfoto formal setengah badan dengan latar rapi.
+                        </p>
                     </div>
                 </div>
-            @endif
+            </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
                 <!-- Nama Lengkap -->
-                <div class="sm:col-span-2">
+                <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                         Nama Lengkap <span class="text-rose-500">*</span>
                     </label>
                     <input
                         type="text"
                         name="nama_lengkap"
-                        value="{{ old('nama_lengkap', $magang->nama_lengkap ?? $cs->nama_lengkap ?? '') }}"
+                        value="{{ old('nama_lengkap', $magang->nama_lengkap ?? '') }}"
                         required
                         class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition"
                     >
                 </div>
 
+                <!-- Jenis Kelamin -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Jenis Kelamin
+                    </label>
+                    <select
+                        name="jenis_kelamin"
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition bg-white"
+                    >
+                        <option value="">-- Pilih Jenis Kelamin --</option>
+                        <option value="L" {{ old('jenis_kelamin', $magang->jenis_kelamin ?? '') === 'L' ? 'selected' : '' }}>Laki-laki (L)</option>
+                        <option value="P" {{ old('jenis_kelamin', $magang->jenis_kelamin ?? '') === 'P' ? 'selected' : '' }}>Perempuan (P)</option>
+                    </select>
+                </div>
+
                 <!-- Nomor Induk (Readonly, dibuatkan Admin) -->
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                        {{ $user->role === 'magang' ? 'Nomor Induk (NIM / NISN)' : 'Nomor Induk Kependudukan (NIK)' }}
+                        Nomor Induk (NIM / NISN)
                         <span class="text-[10px] font-normal text-slate-400">(Admin Only)</span>
                     </label>
                     <input
                         type="text"
-                        value="{{ $magang->no_induk ?? $cs->nik ?? '-' }}"
+                        value="{{ $magang->no_induk ?? '-' }}"
                         disabled
                         class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono font-semibold text-slate-600 cursor-not-allowed"
                     >
@@ -141,76 +154,61 @@
                     >
                 </div>
 
-                @if($user->role === 'magang')
-                    <!-- Instansi Pendidikan (Asal Kampus / Sekolah) -->
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                            Asal Kampus / Sekolah <span class="text-rose-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            name="instansi_pendidikan"
-                            value="{{ old('instansi_pendidikan', $magang->instansi_pendidikan ?? '') }}"
-                            required
-                            placeholder="Contoh: Universitas Lambung Mangkurat"
-                            class="w-full px-3.5 py-2.5 rounded-xl border {{ empty($magang->instansi_pendidikan) ? 'border-amber-300 bg-amber-50/20' : 'border-slate-300' }} text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition"
-                        >
-                    </div>
+                <!-- Instansi Pendidikan (Asal Kampus / Sekolah) -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Asal Kampus / Sekolah <span class="text-rose-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="instansi_pendidikan"
+                        value="{{ old('instansi_pendidikan', $magang->instansi_pendidikan ?? '') }}"
+                        required
+                        placeholder="Contoh: Universitas Lambung Mangkurat"
+                        class="w-full px-3.5 py-2.5 rounded-xl border {{ empty($magang->instansi_pendidikan) ? 'border-amber-300 bg-amber-50/20' : 'border-slate-300' }} text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition"
+                    >
+                </div>
 
-                    <!-- Jurusan -->
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                            Program Studi / Jurusan <span class="text-rose-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            name="jurusan"
-                            value="{{ old('jurusan', $magang->jurusan ?? '') }}"
-                            required
-                            placeholder="Contoh: S1 Teknologi Informasi"
-                            class="w-full px-3.5 py-2.5 rounded-xl border {{ empty($magang->jurusan) ? 'border-amber-300 bg-amber-50/20' : 'border-slate-300' }} text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition"
-                        >
-                    </div>
+                <!-- Jurusan -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Program Studi / Jurusan <span class="text-rose-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="jurusan"
+                        value="{{ old('jurusan', $magang->jurusan ?? '') }}"
+                        required
+                        placeholder="Contoh: S1 Teknologi Informasi"
+                        class="w-full px-3.5 py-2.5 rounded-xl border {{ empty($magang->jurusan) ? 'border-amber-300 bg-amber-50/20' : 'border-slate-300' }} text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition"
+                    >
+                </div>
 
-                    <!-- Divisi Penempatan (Readonly) -->
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                            Divisi Penempatan <span class="text-[10px] font-normal text-slate-400">(Plotting Admin)</span>
-                        </label>
-                        <input
-                            type="text"
-                            value="{{ $magang->divisi->nama_divisi ?? 'Belum ditentukan admin' }}"
-                            disabled
-                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600 cursor-not-allowed"
-                        >
-                    </div>
+                <!-- Divisi Penempatan (Readonly) -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Divisi Penempatan <span class="text-[10px] font-normal text-slate-400">(Plotting Admin)</span>
+                    </label>
+                    <input
+                        type="text"
+                        value="{{ $magang->divisi->nama_divisi ?? 'Belum ditentukan admin' }}"
+                        disabled
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600 cursor-not-allowed"
+                    >
+                </div>
 
-                    <!-- Pembimbing Lapangan (Readonly) -->
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                            Pembimbing Lapangan <span class="text-[10px] font-normal text-slate-400">(Plotting Admin)</span>
-                        </label>
-                        <input
-                            type="text"
-                            value="{{ $magang->pembimbing->nama_lengkap ?? 'Belum ditentukan admin' }}"
-                            disabled
-                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600 cursor-not-allowed"
-                        >
-                    </div>
-                @else
-                    <!-- Jabatan CS (Readonly) -->
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                            Jabatan / Posisi <span class="text-[10px] font-normal text-slate-400">(Admin Only)</span>
-                        </label>
-                        <input
-                            type="text"
-                            value="{{ $cs->jabatan ?? 'Customer Service' }}"
-                            disabled
-                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600 cursor-not-allowed"
-                        >
-                    </div>
-                @endif
+                <!-- Pembimbing Lapangan (Readonly) -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Pembimbing Lapangan <span class="text-[10px] font-normal text-slate-400">(Plotting Admin)</span>
+                    </label>
+                    <input
+                        type="text"
+                        value="{{ $magang->pembimbing->nama_lengkap ?? 'Belum ditentukan admin' }}"
+                        disabled
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600 cursor-not-allowed"
+                    >
+                </div>
 
                 <!-- Nomor HP / WhatsApp Aktif -->
                 <div>
@@ -220,10 +218,10 @@
                     <input
                         type="text"
                         name="no_hp"
-                        value="{{ old('no_hp', $magang->no_hp ?? $cs->no_hp ?? '') }}"
+                        value="{{ old('no_hp', $magang->no_hp ?? '') }}"
                         required
                         placeholder="Contoh: 08123456789"
-                        class="w-full px-3.5 py-2.5 rounded-xl border {{ (empty($magang->no_hp) && empty($cs->no_hp)) ? 'border-amber-300 bg-amber-50/20' : 'border-slate-300' }} text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition"
+                        class="w-full px-3.5 py-2.5 rounded-xl border {{ empty($magang->no_hp) ? 'border-amber-300 bg-amber-50/20' : 'border-slate-300' }} text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition"
                     >
                 </div>
 

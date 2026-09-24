@@ -40,6 +40,7 @@ class MagangController extends Controller
         $request->validate([
             // Profil Magang
             'nama_lengkap' => 'required|string|max:100',
+            'jenis_kelamin' => 'nullable|in:L,P',
             'no_induk' => 'nullable|string|max:30',
             'jurusan' => 'nullable|string|max:100',
             'instansi_pendidikan' => 'nullable|string|max:150',
@@ -56,6 +57,7 @@ class MagangController extends Controller
             'password' => 'required|string|min:6',
         ], [
             'nama_lengkap.required' => 'Nama lengkap magang wajib diisi.',
+            'jenis_kelamin.in' => 'Pilihan jenis kelamin harus Laki-laki (L) atau Perempuan (P).',
             'pembimbing_id.required' => 'Pilih pembimbing untuk anak magang.',
             'pembimbing_id.exists' => 'Pembimbing yang dipilih tidak ditemukan.',
             'tanggal_mulai.required' => 'Tanggal mulai magang wajib diisi.',
@@ -90,6 +92,7 @@ class MagangController extends Controller
             'divisi_id' => $request->divisi_id,
             'no_induk' => $request->no_induk,
             'nama_lengkap' => $request->nama_lengkap,
+            'jenis_kelamin' => $request->jenis_kelamin,
             'jurusan' => $request->jurusan,
             'instansi_pendidikan' => $request->instansi_pendidikan,
             'no_hp' => $request->no_hp,
@@ -127,6 +130,7 @@ class MagangController extends Controller
         $request->validate([
             // Profil Magang
             'nama_lengkap' => 'required|string|max:100',
+            'jenis_kelamin' => 'nullable|in:L,P',
             'no_induk' => 'nullable|string|max:30',
             'jurusan' => 'nullable|string|max:100',
             'instansi_pendidikan' => 'nullable|string|max:150',
@@ -143,6 +147,7 @@ class MagangController extends Controller
             'password' => 'nullable|string|min:6', // Opsional saat edit
         ], [
             'nama_lengkap.required' => 'Nama lengkap magang wajib diisi.',
+            'jenis_kelamin.in' => 'Pilihan jenis kelamin harus Laki-laki (L) atau Perempuan (P).',
             'pembimbing_id.required' => 'Pilih pembimbing untuk anak magang.',
             'pembimbing_id.exists' => 'Pembimbing yang dipilih tidak ditemukan.',
             'tanggal_mulai.required' => 'Tanggal mulai magang wajib diisi.',
@@ -169,6 +174,7 @@ class MagangController extends Controller
             'divisi_id' => $request->divisi_id,
             'no_induk' => $request->no_induk,
             'nama_lengkap' => $request->nama_lengkap,
+            'jenis_kelamin' => $request->jenis_kelamin,
             'jurusan' => $request->jurusan,
             'instansi_pendidikan' => $request->instansi_pendidikan,
             'no_hp' => $request->no_hp,

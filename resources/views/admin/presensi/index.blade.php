@@ -9,7 +9,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Monitoring Presensi Harian</h1>
-            <p class="text-sm text-slate-500 mt-1">Pantau rekaman absensi, titik koordinat GPS, dan bukti foto selfie Magang & CS.</p>
+            <p class="text-sm text-slate-500 mt-1">Pantau rekaman absensi, titik koordinat GPS, dan bukti foto selfie Peserta Magang.</p>
         </div>
         <div class="flex items-center gap-2">
             <a href="{{ route('admin.presensi.cetak', request()->all()) }}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition cursor-pointer">
@@ -68,60 +68,63 @@
 
     <!-- Filter Toolbar -->
     <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-        <form action="{{ route('admin.presensi.index') }}" method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+        <form action="{{ route('admin.presensi.index') }}" method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-end">
+            <!-- Filter Tanggal Awal -->
             <div>
-                <label for="tanggal" class="block text-xs font-semibold text-slate-700 mb-1.5">Tanggal Presensi</label>
+                <label for="tanggal_mulai" class="block text-xs font-semibold text-slate-700 mb-1.5">Tanggal Awal</label>
                 <input
                     type="date"
-                    name="tanggal"
-                    id="tanggal"
-                    value="{{ request('tanggal', $filterTanggal) }}"
+                    name="tanggal_mulai"
+                    id="tanggal_mulai"
+                    value="{{ request('tanggal_mulai') }}"
                     class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
             </div>
 
+            <!-- Filter Tanggal Selesai -->
             <div>
-                <label for="role" class="block text-xs font-semibold text-slate-700 mb-1.5">Kategori Peran</label>
-                <select name="role" id="role" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                    <option value="">Semua Peran (Magang & CS)</option>
-                    <option value="magang" {{ request('role') === 'magang' ? 'selected' : '' }}>Magang</option>
-                    <option value="cs" {{ request('role') === 'cs' ? 'selected' : '' }}>Customer Service (CS)</option>
-                </select>
+                <label for="tanggal_akhir" class="block text-xs font-semibold text-slate-700 mb-1.5">Tanggal Selesai</label>
+                <input
+                    type="date"
+                    name="tanggal_akhir"
+                    id="tanggal_akhir"
+                    value="{{ request('tanggal_akhir') }}"
+                    class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
             </div>
 
+            <!-- Mode Kerja -->
             <div>
                 <label for="mode_kerja" class="block text-xs font-semibold text-slate-700 mb-1.5">Mode Kerja</label>
                 <select name="mode_kerja" id="mode_kerja" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20">
                     <option value="">Semua Mode</option>
-                    <option value="onsite" {{ request('mode_kerja') === 'onsite' ? 'selected' : '' }}>Onsite (Kantor)</option>
-                    <option value="wfh" {{ request('mode_kerja') === 'wfh' ? 'selected' : '' }}>WFH (Rumah)</option>
+                    <option value="onsite" {{ request('mode_kerja') === 'onsite' ? 'selected' : '' }}>Onsite</option>
+                    <option value="wfh" {{ request('mode_kerja') === 'wfh' ? 'selected' : '' }}>WFH</option>
                 </select>
             </div>
 
+            <!-- Aksi Tombol -->
             <div class="flex items-center gap-2">
-                <button type="submit" class="flex-1 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition cursor-pointer">
+                <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer">
                     Terapkan Filter
                 </button>
-                @if(request()->hasAny(['tanggal', 'role', 'mode_kerja']))
+                @if(request()->hasAny(['tanggal_mulai', 'tanggal_akhir', 'mode_kerja', 'tanggal']))
                     <a href="{{ route('admin.presensi.index') }}" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition" title="Reset Filter">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                     </a>
                 @endif
             </div>
         </form>
     </div>
 
-    <!-- Tabel Monitoring Presensi -->
+    <!-- Tabel Data Presensi -->
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm text-slate-600">
                 <thead class="bg-slate-50 border-b border-slate-200/80 text-xs font-bold uppercase tracking-wider text-slate-500">
                     <tr>
                         <th class="px-6 py-4">No</th>
-                        <th class="px-6 py-4">Nama Pengguna</th>
-                        <th class="px-6 py-4">Peran</th>
+                        <th class="px-6 py-4">Peserta Magang</th>
                         <th class="px-6 py-4">Mode</th>
                         <th class="px-6 py-4">Jam Masuk</th>
                         <th class="px-6 py-4">Jam Pulang</th>
@@ -138,18 +141,9 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="font-bold text-slate-900">{{ $item->nama_lengkap }}</div>
-                                <div class="text-[11px] text-slate-400 font-mono mt-0.5">@<span>{{ $item->pengguna->username ?? '-' }}</span></div>
-                            </td>
-                            <td class="px-6 py-4">
-                                @if($item->pengguna->role === 'magang')
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                        Magang
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
-                                        CS
-                                    </span>
-                                @endif
+                                <div class="text-[11px] text-slate-400 font-mono mt-0.5">
+                                    {{ $item->pengguna->magang->divisi->nama_divisi ?? '@' . ($item->pengguna->username ?? '-') }}
+                                </div>
                             </td>
                             <td class="px-6 py-4">
                                 @if($item->mode_kerja === 'onsite')
@@ -162,55 +156,40 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="px-6 py-4 font-mono font-semibold text-slate-800">
-                                {{ $item->jam_masuk ? substr($item->jam_masuk, 0, 5) . ' WIB' : '-' }}
+                            <td class="px-6 py-4 font-mono font-medium text-slate-900">
+                                {{ $item->jam_masuk ?? '-' }}
                             </td>
-                            <td class="px-6 py-4 font-mono font-semibold text-slate-800">
-                                {{ $item->jam_keluar ? substr($item->jam_keluar, 0, 5) . ' WIB' : '-' }}
+                            <td class="px-6 py-4 font-mono font-medium text-slate-900">
+                                {{ $item->jam_keluar ?? '-' }}
                             </td>
-                            <td class="px-6 py-4">
+                            <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center gap-2">
-                                    @if ($item->foto_masuk_url)
-                                        <a href="{{ $item->foto_masuk_url }}" target="_blank" title="Foto Masuk" class="group relative">
-                                            <img src="{{ $item->foto_masuk_url }}" class="w-9 h-9 rounded-lg object-cover border border-slate-200 hover:scale-110 transition shadow-xs">
+                                    @if($item->foto_masuk)
+                                        <a href="{{ asset('storage/' . $item->foto_masuk) }}" target="_blank" class="p-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition" title="Lihat Foto Masuk">
+                                            📸 Masuk
                                         </a>
-                                    @else
-                                        <span class="text-slate-300">-</span>
                                     @endif
-
-                                    @if ($item->foto_keluar_url)
-                                        <a href="{{ $item->foto_keluar_url }}" target="_blank" title="Foto Pulang" class="group relative">
-                                            <img src="{{ $item->foto_keluar_url }}" class="w-9 h-9 rounded-lg object-cover border border-slate-200 hover:scale-110 transition shadow-xs">
+                                    @if($item->foto_keluar)
+                                        <a href="{{ asset('storage/' . $item->foto_keluar) }}" target="_blank" class="p-1 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition" title="Lihat Foto Pulang">
+                                            📸 Pulang
                                         </a>
+                                    @endif
+                                    @if(! $item->foto_masuk && ! $item->foto_keluar)
+                                        <span class="text-slate-400">&mdash;</span>
                                     @endif
                                 </div>
                             </td>
-                            <td class="px-6 py-4">
-                                @if($item->lokasi_masuk)
-                                    <a href="https://www.google.com/maps?q={{ $item->lokasi_masuk }}" target="_blank" class="inline-flex items-center gap-1 text-blue-600 hover:underline font-mono text-[11px]" title="Buka di Google Maps">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
-                                        <span>{{ Str::limit($item->lokasi_masuk, 18) }}</span>
-                                    </a>
-                                @else
-                                    <span class="text-slate-400">-</span>
-                                @endif
+                            <td class="px-6 py-4 max-w-xs truncate" title="{{ $item->lokasi_masuk }}">
+                                <span class="font-mono text-slate-700">{{ $item->lokasi_masuk ?? '-' }}</span>
                             </td>
-                            <td class="px-6 py-4 text-slate-600 max-w-xs truncate">
+                            <td class="px-6 py-4 max-w-xs truncate" title="{{ $item->keterangan }}">
                                 {{ $item->keterangan ?? '-' }}
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="px-6 py-12 text-center text-slate-400">
-                                <div class="flex flex-col items-center justify-center">
-                                    <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
-                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </div>
-                                    <p class="text-sm font-semibold text-slate-700">Tidak ada rekaman presensi ditemukan</p>
-                                    <p class="text-xs text-slate-400 mt-1">Belum ada data presensi yang sesuai dengan kriteria filter pada tanggal {{ \Carbon\Carbon::parse($filterTanggal)->isoFormat('D MMMM Y') }}.</p>
-                                </div>
+                            <td colspan="8" class="px-6 py-12 text-center text-slate-400">
+                                Belum ada data presensi yang sesuai dengan parameter filter.
                             </td>
                         </tr>
                     @endforelse
@@ -218,8 +197,8 @@
             </table>
         </div>
 
-        @if ($presensi->hasPages())
-            <div class="p-4 border-t border-slate-100">
+        @if($presensi->hasPages())
+            <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
                 {{ $presensi->links() }}
             </div>
         @endif

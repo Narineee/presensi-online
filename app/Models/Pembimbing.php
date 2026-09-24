@@ -28,12 +28,6 @@ class Pembimbing extends Model
         return $this->hasMany(Magang::class, 'pembimbing_id');
     }
 
-    // Relasi ke Customer Service (CS) yang divalidasi
-    public function cs()
-    {
-        return $this->hasMany(Cs::class, 'pembimbing_id');
-    }
-
     // Relasi ke penilaian magang
     public function penilaian()
     {

@@ -117,7 +117,7 @@
             <table class="w-full text-left text-sm text-slate-600">
                 <thead class="bg-slate-50 border-b border-slate-200/80 text-xs font-bold uppercase tracking-wider text-slate-500">
                     <tr>
-                        <th class="px-6 py-4">Foto &amp; Peserta Binaan</th>
+                        <th class="px-6 py-4">Foto &amp; Peserta Magang</th>
                         <th class="px-6 py-4">Tanggal</th>
                         <th class="px-6 py-4">Uraian Aktivitas</th>
                         <th class="px-6 py-4">Progres</th>
@@ -128,43 +128,31 @@
                 <tbody class="divide-y divide-slate-100 text-xs">
                     @forelse ($aktivitas as $item)
                         @php
-                            $role = $item->pengguna->role ?? 'magang';
                             $magang = $item->pengguna->magang;
-                            $cs = $item->pengguna->cs;
-                            $fotoUrl = ($role === 'magang' && $magang && $magang->foto) ? asset('storage/' . $magang->foto) : '';
-                            $divisiNama = ($role === 'magang' && $magang && $magang->divisi) ? $magang->divisi->nama_divisi : ($cs ? ($cs->jabatan ?? 'CS') : '-');
-                            $nomorInduk = ($role === 'magang' && $magang) ? $magang->no_induk : ($cs ? $cs->nik : '-');
+                            $fotoUrl = ($magang && $magang->foto) ? asset('storage/' . $magang->foto) : '';
+                            $divisiNama = ($magang && $magang->divisi) ? $magang->divisi->nama_divisi : 'Peserta Magang';
+                            $nomorInduk = $magang ? $magang->no_induk : ($item->pengguna->username ?? '-');
                         @endphp
                         <tr class="hover:bg-slate-50/70 transition">
                             <!-- Kolom Peserta dengan Foto Avatar -->
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center gap-3">
-                                    <div class="relative shrink-0">
+                                    <div class="shrink-0">
                                         @if($fotoUrl)
                                             <img src="{{ $fotoUrl }}" alt="{{ $item->nama_lengkap }}" class="w-11 h-11 rounded-xl object-cover border-2 border-purple-200 shadow-xs">
                                         @else
-                                            <div class="w-11 h-11 rounded-xl {{ $role === 'magang' ? 'bg-amber-100 text-amber-700 border-2 border-amber-200' : 'bg-teal-100 text-teal-700 border-2 border-teal-200' }} flex items-center justify-center font-extrabold text-xs shadow-xs">
+                                            <div class="w-11 h-11 rounded-xl bg-purple-100 text-purple-700 border-2 border-purple-200 flex items-center justify-center font-extrabold text-xs shadow-xs">
                                                 {{ strtoupper(substr($item->nama_lengkap, 0, 2)) }}
                                             </div>
                                         @endif
-                                        <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold {{ $role === 'magang' ? 'bg-amber-500 text-white' : 'bg-teal-500 text-white' }}" title="{{ ucfirst($role) }}">
-                                            {{ $role === 'magang' ? 'M' : 'C' }}
-                                        </span>
                                     </div>
                                     <div>
                                         <div class="font-bold text-slate-900 text-sm">
                                             {{ $item->nama_lengkap }}
                                         </div>
                                         <div class="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5 font-medium">
-                                            @if($role === 'magang')
-                                                <span class="inline-flex items-center px-2 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">Magang</span>
-                                                <span class="font-mono text-slate-600">{{ $nomorInduk }}</span>
-                                                &bull; <span class="text-purple-700 font-semibold">{{ $divisiNama }}</span>
-                                            @else
-                                                <span class="inline-flex items-center px-2 py-0.2 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">CS</span>
-                                                <span class="font-mono text-slate-600">{{ $nomorInduk }}</span>
-                                                &bull; <span class="text-teal-700 font-semibold">{{ $divisiNama }}</span>
-                                            @endif
+                                            <span class="font-mono text-slate-600">NIM: {{ $nomorInduk }}</span>
+                                            &bull; <span class="text-purple-700 font-semibold">{{ $divisiNama }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -216,7 +204,7 @@
                             <td class="px-6 py-4 text-center whitespace-nowrap">
                                 <button
                                     type="button"
-                                    onclick="openModalValidasi({{ $item->id }}, '{{ addslashes($item->nama_lengkap) }}', '{{ $role }}', '{{ addslashes($divisiNama) }}', '{{ $fotoUrl }}', '{{ $item->tanggal->format('d/m/Y') }}', '{{ addslashes($item->isi) }}', {{ $item->progress }}, '{{ $item->status }}', '{{ addslashes($item->catatan_validasi ?? '') }}')"
+                                    onclick="openModalValidasi({{ $item->id }}, '{{ addslashes($item->nama_lengkap) }}', '{{ addslashes($divisiNama) }}', '{{ $fotoUrl }}', '{{ $item->tanggal->format('d/m/Y') }}', '{{ addslashes($item->isi) }}', {{ $item->progress }}, '{{ $item->status }}', '{{ addslashes($item->catatan_validasi ?? '') }}')"
                                     class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 text-xs font-semibold transition cursor-pointer"
                                 >
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
@@ -265,7 +253,7 @@
             <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between gap-2">
                     <h4 id="modal-participant-name" class="text-sm font-bold text-slate-900 truncate">-</h4>
-                    <span id="modal-participant-role" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700">Magang</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700">Magang</span>
                 </div>
                 <p id="modal-participant-divisi" class="text-xs text-slate-500 mt-0.5">-</p>
                 <div class="flex items-center gap-3 mt-2 text-[11px] text-slate-600">
@@ -349,7 +337,7 @@
 
 @section('scripts')
 <script>
-function openModalValidasi(id, nama, role, divisi, fotoUrl, tanggal, isi, progress, status, catatan) {
+function openModalValidasi(id, nama, divisi, fotoUrl, tanggal, isi, progress, status, catatan) {
     const modal = document.getElementById('modal-validasi');
     const form = document.getElementById('form-validasi');
     const statusApprove = document.getElementById('status-approve');
@@ -360,12 +348,6 @@ function openModalValidasi(id, nama, role, divisi, fotoUrl, tanggal, isi, progre
 
     // Populate participant detail
     document.getElementById('modal-participant-name').textContent = nama;
-    const roleBadge = document.getElementById('modal-participant-role');
-    roleBadge.textContent = role === 'magang' ? 'Magang' : 'CS';
-    roleBadge.className = role === 'magang'
-        ? 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200'
-        : 'px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200';
-
     document.getElementById('modal-participant-divisi').textContent = divisi;
     document.getElementById('modal-tanggal').textContent = tanggal;
     document.getElementById('modal-progress').textContent = progress + '%';
@@ -377,8 +359,7 @@ function openModalValidasi(id, nama, role, divisi, fotoUrl, tanggal, isi, progre
         avatarContainer.innerHTML = `<img src="${fotoUrl}" alt="${nama}" class="w-12 h-12 rounded-xl object-cover border-2 border-purple-200 shadow-xs">`;
     } else {
         const initials = nama.substring(0, 2).toUpperCase();
-        const bgClass = role === 'magang' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-teal-100 text-teal-700 border-teal-200';
-        avatarContainer.innerHTML = `<div class="w-12 h-12 rounded-xl ${bgClass} border-2 flex items-center justify-center font-extrabold text-sm shadow-xs">${initials}</div>`;
+        avatarContainer.innerHTML = `<div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-700 border-2 border-purple-200 flex items-center justify-center font-extrabold text-sm shadow-xs">${initials}</div>`;
     }
 
     if (status === 'approve') {

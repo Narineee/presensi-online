@@ -1,22 +1,19 @@
 // =====================================================================
 // DATABASE
-// APLIKASI ABSENSI & AKTIVITAS HARIAN MAGANG + CS
+// SISTEM INFORMASI MANAJEMEN MAGANG (SIM MAGANG)
 // =====================================================================
 //
 // Role:
-// 1. admin       -> mengelola akun, data magang, CS, pembimbing, dll.
-// 2. magang      -> presensi + aktivitas harian
-// 3. cs          -> presensi + aktivitas harian + shift
-// 4. pembimbing  -> memantau/validasi aktivitas + menilai magang
+// 1. admin       -> mengelola akun, data magang, pembimbing, master data, dll.
+// 2. magang      -> presensi + aktivitas harian + lembar penilaian
+// 3. pembimbing  -> memantau/validasi aktivitas + menilai magang
 //
 // Catatan desain:
 // - pengguna = akun untuk login
 // - Detail profil dipisahkan berdasarkan role
-// - Presensi & aktivitas bersifat generik untuk magang dan CS
 // - Penilaian KHUSUS untuk anak magang
 // - Penilaian dilakukan di akhir masa magang
 // - Tidak ada self-register, akun dibuat oleh admin
-// - Shift hanya digunakan untuk CS
 // - WFH disimpan sebagai mode kerja pada presensi
 // =====================================================================
 
@@ -33,7 +30,7 @@ Table pengguna {
 
   role varchar(30) [
     not null,
-    note: 'admin, magang, pembimbing, cs'
+    note: 'admin, magang, pembimbing'
   ]
 
   is_active boolean [not null, default: true]
@@ -66,7 +63,7 @@ Table pembimbing {
 }
 
 // =====================================================================
-// 3. DIVISI / SUB-BAGIAN (BARU)
+// 3. DIVISI / SUB-BAGIAN
 // =====================================================================
 
 Table divisi {
@@ -84,7 +81,7 @@ Table divisi {
 }
 
 // =====================================================================
-// 4. MAGANG (Update: Tambah divisi_id)
+// 4. MAGANG
 // =====================================================================
 
 Table magang {
@@ -96,6 +93,7 @@ Table magang {
 
   no_induk varchar(30)
   nama_lengkap varchar(100) [not null]
+  jenis_kelamin enum('L', 'P') [note: 'L = Laki-laki, P = Perempuan']
   jurusan varchar(100)
   instansi_pendidikan varchar(150)
   no_hp varchar(20)
@@ -118,101 +116,7 @@ Table magang {
 
 
 // =====================================================================
-// 5. CS
-// =====================================================================
-
-Table cs {
-  id integer [pk, increment]
-
-  pengguna_id integer [not null, unique]
-  pembimbing_id integer [
-    not null,
-    note: 'Pembimbing/validator CS'
-  ]
-
-  nik varchar(30)
-  nama_lengkap varchar(100) [not null]
-  jabatan varchar(50)
-  no_hp varchar(20)
-
-  tanggal_bergabung date
-
-  status enum(
-    'aktif',
-    'non_aktif'
-  ) [not null, default: 'aktif']
-
-  created_at timestamp [not null, default: `now()`]
-  updated_at timestamp
-
-  Note: 'Profil Customer Service.'
-}
-
-
-// =====================================================================
-// 6. SHIFT
-// =====================================================================
-
-Table shift {
-  id integer [pk, increment]
-
-  nama varchar(50) [not null]
-
-  jam_masuk time [not null]
-  jam_keluar time [not null]
-
-  toleransi_masuk integer [
-    not null,
-    default: 0,
-    note: 'Toleransi keterlambatan dalam menit'
-  ]
-
-  is_active boolean [not null, default: true]
-
-  created_at timestamp [not null, default: `now()`]
-  updated_at timestamp
-
-  Note: 'Master shift kerja untuk CS.'
-}
-
-
-// =====================================================================
-// 7. JADWAL SHIFT CS
-// =====================================================================
-
-Table jadwal_shift_cs {
-  id integer [pk, increment]
-
-  cs_id integer [not null]
-  shift_id integer [not null]
-
-  tanggal date [not null]
-
-  status enum(
-    'terjadwal',
-    'libur',
-    'izin',
-    'cuti'
-  ) [not null, default: 'terjadwal']
-
-  keterangan varchar(255)
-
-  created_at timestamp [not null, default: `now()`]
-  updated_at timestamp
-
-  indexes {
-    (cs_id, tanggal) [
-      unique,
-      note: 'Satu CS hanya memiliki satu jadwal shift per hari'
-    ]
-  }
-
-  Note: 'Jadwal shift CS berdasarkan tanggal.'
-}
-
-
-// =====================================================================
-// 8. PRESENSI
+// 5. PRESENSI
 // =====================================================================
 
 Table presensi {
@@ -227,6 +131,7 @@ Table presensi {
 
   status enum(
     'hadir',
+    'terlambat',
     'izin',
     'sakit',
     'alpha',
@@ -259,12 +164,12 @@ Table presensi {
     ]
   }
 
-  Note: 'Presensi harian untuk magang dan CS. Mode kerja dapat berupa onsite atau WFH.'
+  Note: 'Presensi harian untuk magang. Mode kerja dapat berupa onsite atau WFH.'
 }
 
 
 // =====================================================================
-// 9. PENGAJUAN IZIN & SAKIT (BARU)
+// 6. PENGAJUAN IZIN & SAKIT
 // =====================================================================
 
 Table pengajuan_izin {
@@ -287,12 +192,12 @@ Table pengajuan_izin {
   created_at timestamp [not null, default: `now()`]
   updated_at timestamp
 
-  Note: 'Tabel khusus untuk merekam pengajuan izin/sakit beserta lampiran buktinya.'
+  Note: 'Tabel khusus untuk merekam pengajuan izin/sakit peserta magang beserta lampiran buktinya.'
 }
 
 
 // =====================================================================
-// 10. AKTIVITAS
+// 7. AKTIVITAS
 // =====================================================================
 
 Table aktivitas {
@@ -327,12 +232,12 @@ Table aktivitas {
   created_at timestamp [not null, default: `now()`]
   updated_at timestamp
 
-  Note: 'Aktivitas harian magang dan CS yang dapat divalidasi pembimbing.'
+  Note: 'Aktivitas harian magang yang dapat divalidasi pembimbing.'
 }
 
 
 // =====================================================================
-// 11. KRITERIA PENILAIAN
+// 8. KRITERIA PENILAIAN
 // =====================================================================
 
 Table kriteria_penilaian {
@@ -354,7 +259,7 @@ Table kriteria_penilaian {
 
 
 // =====================================================================
-// 12. PENILAIAN
+// 9. PENILAIAN
 // =====================================================================
 
 Table penilaian {
@@ -383,7 +288,7 @@ Table penilaian {
 
 
 // =====================================================================
-// 13. DETAIL PENILAIAN
+// 10. DETAIL PENILAIAN
 // =====================================================================
 
 Table detail_penilaian {
@@ -417,7 +322,6 @@ Table detail_penilaian {
 
 Ref: pembimbing.pengguna_id - pengguna.id
 Ref: magang.pengguna_id - pengguna.id
-Ref: cs.pengguna_id - pengguna.id
 
 // =====================================================================
 // RELASI MAGANG KE DIVISI (TTD PIMPINAN)
@@ -430,14 +334,6 @@ Ref: magang.divisi_id > divisi.id
 // =====================================================================
 
 Ref: magang.pembimbing_id > pembimbing.id
-Ref: cs.pembimbing_id > pembimbing.id
-
-// =====================================================================
-// RELASI SHIFT CS
-// =====================================================================
-
-Ref: jadwal_shift_cs.cs_id > cs.id
-Ref: jadwal_shift_cs.shift_id > shift.id
 
 // =====================================================================
 // RELASI PRESENSI & PENGAJUAN IZIN
@@ -462,5 +358,3 @@ Ref: penilaian.magang_id > magang.id
 Ref: penilaian.pembimbing_id > pembimbing.id
 Ref: detail_penilaian.penilaian_id > penilaian.id
 Ref: detail_penilaian.kriteria_id > kriteria_penilaian.id
-
-Ref: "divisi"."id" <? "pengguna"."password"

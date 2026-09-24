@@ -47,7 +47,7 @@ class DivisiController extends Controller
             'jabatan_pimpinan' => $request->jabatan_pimpinan,
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
-            'radius_meter' => $request->radius_meter ?? 100,
+            'radius_meter' => $request->radius_meter ?? 40,
         ]);
 
         return redirect()->route('admin.divisi.index')->with('success', 'Data divisi berhasil ditambahkan!');
@@ -93,7 +93,7 @@ class DivisiController extends Controller
             'jabatan_pimpinan' => $request->jabatan_pimpinan,
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
-            'radius_meter' => $request->radius_meter ?? 100,
+            'radius_meter' => $request->radius_meter ?? 40,
         ]);
 
         return redirect()->route('admin.divisi.index')->with('success', 'Data divisi berhasil diperbarui!');

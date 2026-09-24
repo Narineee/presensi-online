@@ -9,7 +9,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Monitoring Pengajuan Izin & Sakit</h1>
-            <p class="text-sm text-slate-500 mt-1">Pantau seluruh permohonan ketidakhadiran, surat dokter, dan status verifikasi Magang & CS.</p>
+            <p class="text-sm text-slate-500 mt-1">Pantau seluruh permohonan ketidakhadiran, surat dokter, dan status verifikasi Peserta Magang.</p>
         </div>
     </div>
 
@@ -62,10 +62,35 @@
 
     <!-- Filter Toolbar -->
     <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-        <form action="{{ route('admin.izin.index') }}" method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+        <form action="{{ route('admin.izin.index') }}" method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 items-end">
+            <!-- Filter Tanggal Awal -->
+            <div>
+                <label for="tanggal_mulai" class="block text-xs font-semibold text-slate-700 mb-1.5">Tanggal Awal</label>
+                <input
+                    type="date"
+                    name="tanggal_mulai"
+                    id="tanggal_mulai"
+                    value="{{ request('tanggal_mulai') }}"
+                    class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+            </div>
+
+            <!-- Filter Tanggal Selesai -->
+            <div>
+                <label for="tanggal_akhir" class="block text-xs font-semibold text-slate-700 mb-1.5">Tanggal Selesai</label>
+                <input
+                    type="date"
+                    name="tanggal_akhir"
+                    id="tanggal_akhir"
+                    value="{{ request('tanggal_akhir') }}"
+                    class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+            </div>
+
+            <!-- Jenis Izin -->
             <div>
                 <label for="jenis_izin" class="block text-xs font-semibold text-slate-700 mb-1.5">Jenis Izin</label>
-                <select name="jenis_izin" id="jenis_izin" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <select name="jenis_izin" id="jenis_izin" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20">
                     <option value="">Semua Jenis</option>
                     <option value="sakit" {{ request('jenis_izin') === 'sakit' ? 'selected' : '' }}>Sakit</option>
                     <option value="izin" {{ request('jenis_izin') === 'izin' ? 'selected' : '' }}>Izin Keperluan</option>
@@ -73,9 +98,10 @@
                 </select>
             </div>
 
+            <!-- Status Approval -->
             <div>
                 <label for="status_approval" class="block text-xs font-semibold text-slate-700 mb-1.5">Status Approval</label>
-                <select name="status_approval" id="status_approval" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <select name="status_approval" id="status_approval" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20">
                     <option value="">Semua Status</option>
                     <option value="pending" {{ request('status_approval') === 'pending' ? 'selected' : '' }}>Pending (Menunggu)</option>
                     <option value="disetujui" {{ request('status_approval') === 'disetujui' ? 'selected' : '' }}>Disetujui</option>
@@ -83,20 +109,12 @@
                 </select>
             </div>
 
-            <div>
-                <label for="role" class="block text-xs font-semibold text-slate-700 mb-1.5">Kategori Peran</label>
-                <select name="role" id="role" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                    <option value="">Semua Peran</option>
-                    <option value="magang" {{ request('role') === 'magang' ? 'selected' : '' }}>Magang</option>
-                    <option value="cs" {{ request('role') === 'cs' ? 'selected' : '' }}>Customer Service (CS)</option>
-                </select>
-            </div>
-
+            <!-- Tombol Aksi -->
             <div class="flex items-center gap-2">
                 <button type="submit" class="flex-1 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition cursor-pointer">
-                    Terapkan Filter
+                    Filter
                 </button>
-                @if(request()->hasAny(['jenis_izin', 'status_approval', 'role']))
+                @if(request()->hasAny(['tanggal_mulai', 'tanggal_akhir', 'tanggal', 'jenis_izin', 'status_approval']))
                     <a href="{{ route('admin.izin.index') }}" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition" title="Reset">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                     </a>
@@ -112,7 +130,7 @@
                 <thead class="bg-slate-50 border-b border-slate-200/80 text-xs font-bold uppercase tracking-wider text-slate-500">
                     <tr>
                         <th class="px-6 py-4">No</th>
-                        <th class="px-6 py-4">Peserta</th>
+                        <th class="px-6 py-4">Peserta Magang</th>
                         <th class="px-6 py-4">Jenis</th>
                         <th class="px-6 py-4">Rentang Waktu</th>
                         <th class="px-6 py-4">Alasan</th>
@@ -129,12 +147,8 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="font-bold text-slate-900">{{ $item->nama_lengkap }}</div>
-                                <div class="mt-0.5">
-                                    @if($item->pengguna->role === 'magang')
-                                        <span class="inline-flex items-center px-2 py-0.2 rounded text-[10px] font-semibold bg-amber-50 text-amber-700">Magang</span>
-                                    @else
-                                        <span class="inline-flex items-center px-2 py-0.2 rounded text-[10px] font-semibold bg-teal-50 text-teal-700">CS</span>
-                                    @endif
+                                <div class="text-[11px] text-slate-400 font-mono mt-0.5">
+                                    {{ $item->pengguna->magang->divisi->nama_divisi ?? '@' . ($item->pengguna->username ?? '-') }}
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">

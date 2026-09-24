@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
 class AktivitasValidasiController extends Controller
 {
     /**
-     * Mendapatkan daftar ID akun pengguna yang dibimbing oleh pembimbing yang sedang login.
+     * Mendapatkan daftar ID akun pengguna magang yang dibimbing oleh pembimbing yang sedang login.
      */
     private function getSupervisedUserIds()
     {
@@ -20,21 +20,18 @@ class AktivitasValidasiController extends Controller
             return collect();
         }
 
-        $magangUserIds = $pembimbing->magang()->pluck('pengguna_id');
-        $csUserIds = $pembimbing->cs()->pluck('pengguna_id');
-
-        return $magangUserIds->merge($csUserIds);
+        return $pembimbing->magang()->pluck('pengguna_id');
     }
 
     /**
-     * Menampilkan daftar aktivitas anak magang dan CS yang perlu divalidasi pembimbing.
+     * Menampilkan daftar aktivitas anak magang yang perlu divalidasi pembimbing.
      */
     public function index(Request $request)
     {
         $supervisedIds = $this->getSupervisedUserIds();
 
         $query = Aktivitas::whereIn('pengguna_id', $supervisedIds)
-            ->with(['pengguna.magang.divisi', 'pengguna.cs']);
+            ->with(['pengguna.magang.divisi']);
 
         // Filter status
         if ($request->filled('status')) {

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Aktivitas;
 use App\Models\Divisi;
-use App\Models\JadwalShiftCs;
 use App\Models\Pembimbing;
 use App\Models\Pengaturan;
 use App\Models\Pengguna;
@@ -13,6 +12,9 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
+use Log;
 
 class PresensiController extends Controller
 {
@@ -28,19 +30,6 @@ class PresensiController extends Controller
         $todayPresensi = Presensi::where('pengguna_id', $user->id)
             ->whereDate('tanggal', $today)
             ->first();
-
-        // Khusus CS: ambil informasi jadwal shift hari ini
-        $shiftToday = null;
-        if ($user->role === 'cs' && $user->cs) {
-            $jadwal = JadwalShiftCs::where('cs_id', $user->cs->id)
-                ->whereDate('tanggal', $today)
-                ->with('shift')
-                ->first();
-
-            if ($jadwal && $jadwal->shift) {
-                $shiftToday = $jadwal->shift;
-            }
-        }
 
         // Ambil riwayat presensi pengguna dengan pagination
         $historyQuery = Presensi::where('pengguna_id', $user->id);
@@ -75,7 +64,7 @@ class PresensiController extends Controller
                 ->count(),
         ];
 
-        // Cek apakah pengguna sudah mengisi aktivitas harian hari ini (wajib untuk Magang & CS)
+        // Cek apakah pengguna sudah mengisi aktivitas harian hari ini (wajib untuk Magang)
         $hasAktivitasToday = Aktivitas::where('pengguna_id', $user->id)
             ->whereDate('tanggal', $today)
             ->exists();
@@ -84,10 +73,27 @@ class PresensiController extends Controller
             ->whereDate('tanggal', $today)
             ->count();
 
+        // Cek batasan jam presensi (WITA):
+        // Masuk: mulai 07:30 WITA, lewat 08:00 WITA tercatat terlambat.
+        // Pulang: 16:00 - 18:00 WITA. Lewat 18:00 WITA tidak dapat presensi.
+        $now = Carbon::now();
+        $bukaMasuk = $now->copy()->setTime(7, 30, 0);
+        $batasTepatWaktu = $now->copy()->setTime(8, 0, 0);
+        $bukaPulang = $now->copy()->setTime(16, 0, 0);
+        $tutupPresensi = $now->copy()->setTime(18, 0, 0);
+
+        $timeStatus = [
+            'is_before_masuk' => $now->lessThan($bukaMasuk),
+            'is_late_masuk' => $now->greaterThan($batasTepatWaktu),
+            'is_after_tutup' => $now->greaterThan($tutupPresensi),
+            'is_before_pulang' => $now->lessThan($bukaPulang),
+            'is_waktu_pulang' => $now->greaterThanOrEqualTo($bukaPulang) && $now->lessThanOrEqualTo($tutupPresensi),
+        ];
+
         // Ambil data lokasi kantor dan radius presensi
         $officeLocation = $this->getOfficeLocation($user);
 
-        return view('presensi.index', compact('user', 'todayPresensi', 'shiftToday', 'riwayat', 'stats', 'hasAktivitasToday', 'countAktivitasToday', 'officeLocation'));
+        return view('presensi.index', compact('user', 'todayPresensi', 'riwayat', 'stats', 'hasAktivitasToday', 'countAktivitasToday', 'officeLocation', 'timeStatus'));
     }
 
     /**
@@ -105,6 +111,21 @@ class PresensiController extends Controller
 
         if ($existing && $existing->jam_masuk) {
             return redirect()->back()->with('error', 'Anda sudah melakukan presensi masuk hari ini.');
+        }
+
+        // Batasan jam presensi masuk:
+        // - Mulai dari jam 07.30 WITA
+        // - Lewat jam 18.00 WITA tidak dapat presensi
+        $jamSekarang = Carbon::now();
+        $bukaMasuk = $jamSekarang->copy()->setTime(7, 30, 0);
+        $tutupHari = $jamSekarang->copy()->setTime(18, 0, 0);
+
+        if ($jamSekarang->lessThan($bukaMasuk)) {
+            return redirect()->back()->withInput()->with('error', 'Presensi masuk belum dibuka. Presensi masuk dimulai pukul 07.30 WITA.');
+        }
+
+        if ($jamSekarang->greaterThan($tutupHari)) {
+            return redirect()->back()->withInput()->with('error', 'Waktu presensi untuk hari ini telah berakhir (pukul 18.00 WITA). Anda tidak dapat melakukan presensi.');
         }
 
         // Validasi input data presensi
@@ -136,16 +157,15 @@ class PresensiController extends Controller
         }
 
         // Simpan foto selfie masuk (dukungan base64 dari kamera atau file upload)
+        // Simpan foto selfie masuk dengan resize dan kompresi
         $fotoPath = null;
-        if (str_starts_with($request->foto_masuk, 'data:image')) {
-            $imageParts = explode(';base64,', $request->foto_masuk);
-            $imageTypeAux = explode('image/', $imageParts[0]);
-            $imageExtension = $imageTypeAux[1] ?? 'jpg';
-            $imageBinary = base64_decode($imageParts[1]);
 
-            $fileName = 'masuk_'.$user->id.'_'.date('Ymd_His').'.'.$imageExtension;
-            Storage::disk('public')->put('presensi/masuk/'.$fileName, $imageBinary);
-            $fotoPath = 'presensi/masuk/'.$fileName;
+        if (str_starts_with($request->foto_masuk, 'data:image')) {
+            $fotoPath = $this->compressAndStoreImage(
+                $request->foto_masuk,
+                'presensi/masuk',
+                'masuk_'.$user->id.'_'.date('Ymd_His')
+            );
         }
 
         // Waktu kerja: 08:00 WITA - 16:00 WITA
@@ -156,11 +176,17 @@ class PresensiController extends Controller
 
         $keteranganTambahan = $request->keterangan;
         $menitTerlambat = 0;
+        $statusPresensi = 'hadir';
 
         if ($jamSekarang->greaterThan($batasMasuk)) {
-            $menitTerlambat = max(1, (int) ceil(abs($jamSekarang->diffInSeconds($batasMasuk)) / 60));
+            $menitTerlambat = max(1, (int) ceil($batasMasuk->diffInSeconds($jamSekarang) / 60));
+
+            $statusPresensi = 'terlambat';
+
             $infoTerlambat = "[Terlambat {$menitTerlambat} menit]";
-            $keteranganTambahan = $keteranganTambahan ? $keteranganTambahan.' '.$infoTerlambat : $infoTerlambat;
+            $keteranganTambahan = $keteranganTambahan
+                ? $keteranganTambahan . ' ' . $infoTerlambat
+                : $infoTerlambat;
         }
 
         // Simpan atau buat record presensi hari ini
@@ -171,7 +197,7 @@ class PresensiController extends Controller
             ],
             [
                 'jam_masuk' => $jamMasukStr,
-                'status' => 'hadir',
+                'status' => $statusPresensi,
                 'mode_kerja' => $request->mode_kerja,
                 'foto_masuk' => $fotoPath,
                 'lokasi_masuk' => $request->lokasi_masuk,
@@ -208,7 +234,22 @@ class PresensiController extends Controller
             return redirect()->back()->with('error', 'Anda sudah melakukan presensi pulang hari ini.');
         }
 
-        // Validasi: Presensi pulang hanya dapat diinput apabila sudah mengisi aktivitas harian hari ini (berlaku untuk Magang & CS)
+        // Batasan jam presensi pulang:
+        // - Mulai dari jam 16.00 WITA sampai jam 18.00 WITA
+        // - Sebelum 16.00 atau lebih dari 18.00 tidak dapat melakukan presensi
+        $jamSekarang = Carbon::now();
+        $bukaPulang = $jamSekarang->copy()->setTime(16, 0, 0);
+        $tutupPulang = $jamSekarang->copy()->setTime(18, 0, 0);
+
+        if ($jamSekarang->lessThan($bukaPulang)) {
+            return redirect()->back()->with('error', 'Presensi pulang belum dibuka. Presensi pulang dapat dilakukan mulai pukul 16.00 WITA sampai 18.00 WITA.');
+        }
+
+        if ($jamSekarang->greaterThan($tutupPulang)) {
+            return redirect()->back()->with('error', 'Batas waktu presensi pulang telah berakhir (pukul 18.00 WITA). Anda tidak dapat melakukan presensi.');
+        }
+
+        // Validasi: Presensi pulang hanya dapat diinput apabila sudah mengisi aktivitas harian hari ini
         $hasAktivitas = Aktivitas::where('pengguna_id', $user->id)
             ->whereDate('tanggal', $today)
             ->exists();
@@ -243,16 +284,15 @@ class PresensiController extends Controller
         }
 
         // Simpan foto selfie pulang
+        // Simpan foto selfie pulang dengan resize dan kompresi
         $fotoPath = null;
-        if (str_starts_with($request->foto_keluar, 'data:image')) {
-            $imageParts = explode(';base64,', $request->foto_keluar);
-            $imageTypeAux = explode('image/', $imageParts[0]);
-            $imageExtension = $imageTypeAux[1] ?? 'jpg';
-            $imageBinary = base64_decode($imageParts[1]);
 
-            $fileName = 'keluar_'.$user->id.'_'.date('Ymd_His').'.'.$imageExtension;
-            Storage::disk('public')->put('presensi/keluar/'.$fileName, $imageBinary);
-            $fotoPath = 'presensi/keluar/'.$fileName;
+        if (str_starts_with($request->foto_keluar, 'data:image')) {
+            $fotoPath = $this->compressAndStoreImage(
+                $request->foto_keluar,
+                'presensi/keluar',
+                'keluar_'.$user->id.'_'.date('Ymd_His')
+            );
         }
 
         // Gabungkan keterangan jika ada
@@ -276,15 +316,15 @@ class PresensiController extends Controller
     }
 
     /**
-     * Mencetak laporan rekapitulasi presensi pribadi (untuk Magang & CS).
+     * Mencetak laporan rekapitulasi presensi pribadi (untuk Magang).
      */
     public function cetak(Request $request)
     {
         /** @var Pengguna $user */
         $user = Auth::user();
 
-        // Eager load relasi magang/CS
-        $user->load(['magang.divisi', 'magang.pembimbing', 'cs.pembimbing']);
+        // Eager load relasi magang
+        $user->load(['magang.divisi', 'magang.pembimbing']);
 
         $query = Presensi::where('pengguna_id', $user->id);
 
@@ -317,10 +357,76 @@ class PresensiController extends Controller
         ];
 
         $divisi = $user->magang?->divisi ?? Divisi::first();
-        $pembimbing = $user->magang?->pembimbing ?? ($user->cs?->pembimbing ?? Pembimbing::first());
+        $pembimbing = $user->magang?->pembimbing ?? Pembimbing::first();
         $pengaturan = Pengaturan::getPengaturan();
 
         return view('presensi.cetak', compact('user', 'presensi', 'stats', 'periodeText', 'bulan', 'divisi', 'pembimbing', 'pengaturan'));
+    }
+
+    /**
+     * Resize dan kompres gambar Base64 sebelum disimpan.
+     *
+     * Maksimal ukuran gambar: 1000px
+     * Format penyimpanan: JPG
+     * Kualitas: 75%
+     */
+    private function compressAndStoreImage(
+        string $base64Image,
+        string $directory,
+        string $fileName
+    ): ?string {
+        try {
+            // Pisahkan header Base64 dengan isi gambar
+            $imageParts = explode(';base64,', $base64Image, 2);
+
+            if (count($imageParts) !== 2) {
+                return null;
+            }
+
+            // Decode Base64 menjadi binary
+            $imageBinary = base64_decode($imageParts[1], true);
+
+            if ($imageBinary === false) {
+                return null;
+            }
+
+            // Buat image manager menggunakan GD
+            $manager = new ImageManager(new Driver);
+
+            // Baca gambar
+            $image = $manager->read($imageBinary);
+
+            // Resize gambar jika salah satu dimensinya lebih dari 1000px
+            $image->scaleDown(
+                width: 1000,
+                height: 1000
+            );
+
+            // Encode menjadi JPG dengan kualitas 75
+            $encodedImage = $image->toJpeg(quality: 75);
+
+            // Nama file selalu JPG
+            $fileName .= '.jpg';
+
+            // Path penyimpanan
+            $path = $directory.'/'.$fileName;
+
+            // Simpan gambar
+            Storage::disk('public')->put(
+                $path,
+                (string) $encodedImage
+            );
+
+            return $path;
+        } catch (\Throwable $e) {
+            Log::error('Gagal memproses foto presensi', [
+                'error' => $e->getMessage(),
+                'directory' => $directory,
+                'file_name' => $fileName,
+            ]);
+
+            return null;
+        }
     }
 
     /**
@@ -331,9 +437,9 @@ class PresensiController extends Controller
     private function getOfficeLocation(?Pengguna $user = null): array
     {
         $default = [
-            'lat' => -3.4893886444181983,
-            'lng' => 114.8252583950533,
-            'radius' => 100,
+            'lat' => -3.489563757755857,
+            'lng' => 114.82525839853534,
+            'radius' => 40,
             'nama' => 'Kantor Utama',
         ];
 
@@ -343,7 +449,7 @@ class PresensiController extends Controller
                 return [
                     'lat' => (float) $divisi->latitude,
                     'lng' => (float) $divisi->longitude,
-                    'radius' => (int) ($divisi->radius_meter ?? 100),
+                    'radius' => (int) ($divisi->radius_meter ?? 40),
                     'nama' => $divisi->nama_divisi,
                 ];
             }
@@ -354,7 +460,7 @@ class PresensiController extends Controller
             return [
                 'lat' => (float) $divisi->latitude,
                 'lng' => (float) $divisi->longitude,
-                'radius' => (int) ($divisi->radius_meter ?? 100),
+                'radius' => (int) ($divisi->radius_meter ?? 40),
                 'nama' => $divisi->nama_divisi,
             ];
         }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Divisi;
 use App\Models\Pembimbing;
+use App\Models\Pengaturan;
 use App\Models\Presensi;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -12,23 +13,21 @@ use Illuminate\Http\Request;
 class MonitoringPresensiController extends Controller
 {
     /**
-     * Menampilkan seluruh rekap presensi (Magang & CS) untuk dipantau oleh Admin.
+     * Menampilkan seluruh rekap presensi Magang untuk dipantau oleh Admin.
      */
     public function index(Request $request)
     {
-        $query = Presensi::with(['pengguna.magang', 'pengguna.cs']);
+        $query = Presensi::with(['pengguna.magang']);
 
-        // Filter tanggal (default: hari ini jika tidak dipilih)
-        $filterTanggal = $request->input('tanggal', Carbon::today()->toDateString());
-        if ($request->filled('tanggal')) {
-            $query->where('tanggal', $filterTanggal);
-        }
-
-        // Filter role (magang / cs)
-        if ($request->filled('role')) {
-            $query->whereHas('pengguna', function ($q) use ($request) {
-                $q->where('role', $request->role);
-            });
+        // Filter rentang tanggal (tanggal_mulai & tanggal_akhir)
+        if ($request->filled('tanggal_mulai') && $request->filled('tanggal_akhir')) {
+            $query->whereBetween('tanggal', [$request->tanggal_mulai, $request->tanggal_akhir]);
+        } elseif ($request->filled('tanggal_mulai')) {
+            $query->where('tanggal', '>=', $request->tanggal_mulai);
+        } elseif ($request->filled('tanggal_akhir')) {
+            $query->where('tanggal', '<=', $request->tanggal_akhir);
+        } elseif ($request->filled('tanggal')) {
+            $query->where('tanggal', $request->tanggal);
         }
 
         // Filter mode kerja (onsite / wfh)
@@ -36,7 +35,7 @@ class MonitoringPresensiController extends Controller
             $query->where('mode_kerja', $request->mode_kerja);
         }
 
-        $presensi = $query->orderBy('jam_masuk', 'desc')->paginate(15)->withQueryString();
+        $presensi = $query->orderBy('tanggal', 'desc')->orderBy('jam_masuk', 'desc')->paginate(15)->withQueryString();
 
         // Hitung ringkasan hari ini
         $today = Carbon::today()->toDateString();
@@ -47,15 +46,17 @@ class MonitoringPresensiController extends Controller
             'total_sudah_pulang' => Presensi::where('tanggal', $today)->whereNotNull('jam_keluar')->count(),
         ];
 
+        $filterTanggal = $request->input('tanggal', Carbon::today()->toDateString());
+
         return view('admin.presensi.index', compact('presensi', 'statsToday', 'filterTanggal'));
     }
 
     /**
-     * Mencetak laporan rekapitulasi presensi seluruh peserta (Magang & CS) untuk Admin.
+     * Mencetak laporan rekapitulasi presensi peserta Magang untuk Admin.
      */
     public function cetak(Request $request)
     {
-        $query = Presensi::with(['pengguna.magang.divisi', 'pengguna.cs']);
+        $query = Presensi::with(['pengguna.magang.divisi']);
 
         $tanggalMulai = $request->input('tanggal_mulai');
         $tanggalAkhir = $request->input('tanggal_akhir');
@@ -65,6 +66,12 @@ class MonitoringPresensiController extends Controller
         if ($tanggalMulai && $tanggalAkhir) {
             $query->whereBetween('tanggal', [$tanggalMulai, $tanggalAkhir]);
             $periodeText = Carbon::parse($tanggalMulai)->isoFormat('D MMMM Y').' s/d '.Carbon::parse($tanggalAkhir)->isoFormat('D MMMM Y');
+        } elseif ($tanggalMulai) {
+            $query->where('tanggal', '>=', $tanggalMulai);
+            $periodeText = 'Mulai '.Carbon::parse($tanggalMulai)->isoFormat('D MMMM Y');
+        } elseif ($tanggalAkhir) {
+            $query->where('tanggal', '<=', $tanggalAkhir);
+            $periodeText = 'Sampai '.Carbon::parse($tanggalAkhir)->isoFormat('D MMMM Y');
         } elseif ($singleTanggal) {
             $query->whereDate('tanggal', $singleTanggal);
             $periodeText = Carbon::parse($singleTanggal)->isoFormat('D MMMM Y');
@@ -77,13 +84,6 @@ class MonitoringPresensiController extends Controller
             $query->whereYear('tanggal', Carbon::today()->year)
                 ->whereMonth('tanggal', Carbon::today()->month);
             $periodeText = Carbon::today()->isoFormat('MMMM Y');
-        }
-
-        // Filter role (magang / cs)
-        if ($request->filled('role')) {
-            $query->whereHas('pengguna', function ($q) use ($request) {
-                $q->where('role', $request->role);
-            });
         }
 
         // Filter mode kerja (onsite / wfh)
@@ -100,13 +100,13 @@ class MonitoringPresensiController extends Controller
             'hadir' => $presensi->where('status', 'hadir')->count(),
             'onsite' => $presensi->where('mode_kerja', 'onsite')->count(),
             'wfh' => $presensi->where('mode_kerja', 'wfh')->count(),
-            'magang' => $presensi->filter(fn ($p) => $p->pengguna && $p->pengguna->role === 'magang')->count(),
-            'cs' => $presensi->filter(fn ($p) => $p->pengguna && $p->pengguna->role === 'cs')->count(),
+            'magang' => $presensi->count(),
         ];
 
         $divisi = Divisi::first();
         $pembimbing = Pembimbing::first();
+        $pengaturan = Pengaturan::getPengaturan();
 
-        return view('admin.presensi.cetak', compact('presensi', 'stats', 'periodeText', 'divisi', 'pembimbing'));
+        return view('admin.presensi.cetak', compact('presensi', 'stats', 'periodeText', 'divisi', 'pembimbing', 'pengaturan'));
     }
 }

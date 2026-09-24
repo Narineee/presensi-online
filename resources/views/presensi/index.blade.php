@@ -92,26 +92,22 @@
                     <span>Presensi & Monitoring Harian</span>
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                    Halo, {{ $user->magang->nama_lengkap ?? $user->cs->nama_lengkap ?? $user->username }}!
+                    Halo, {{ $user->magang->nama_lengkap ?? $user->username }}!
                 </h1>
                 <p class="text-blue-100 text-sm mt-1 max-w-xl leading-relaxed">
                     Catat kehadiran Anda hari ini dengan mengaktifkan GPS dan mengambil foto selfie sebagai bukti absensi yang sah.
                 </p>
 
-                <!-- Informasi Waktu Kerja (08.00 - 16.00 WITA) -->
+                <!-- Informasi Waktu Kerja & Batasan Presensi WITA -->
                 <div class="mt-4 flex flex-wrap items-center gap-2">
                     <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-xs text-blue-50">
                         <svg class="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span>Jam Kerja: <strong>08.00 - 16.00 WITA</strong> &bull; Batas Masuk: <strong>08.00 WITA</strong> (Lewat jam 08.00 tercatat terlambat)</span>
+                        <span>
+                            Masuk: <strong>07.30 - 08.00 WITA</strong> (Lewat 08.00 tercatat terlambat) &bull; Pulang: <strong>16.00 - 18.00 WITA</strong> (Maks. 18.00 WITA)
+                        </span>
                     </div>
-
-                    @if($user->role === 'cs' && $shiftToday)
-                        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-teal-500/20 backdrop-blur-md border border-teal-300/30 text-xs text-teal-100">
-                            <span>Shift: <strong>{{ $shiftToday->nama }}</strong> ({{ substr($shiftToday->jam_masuk, 0, 5) }} - {{ substr($shiftToday->jam_keluar, 0, 5) }} WITA)</span>
-                        </div>
-                    @endif
                 </div>
             </div>
 
@@ -183,6 +179,42 @@
                     </div>
                 </div>
 
+                <!-- Banner Informasi Waktu Masuk -->
+                @if($timeStatus['is_before_masuk'] ?? false)
+                    <div class="p-4 sm:p-5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 shadow-xs flex items-center gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-amber-200/80 text-amber-800 flex items-center justify-center font-bold shrink-0 text-lg">
+                            ⏰
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-amber-950 uppercase tracking-wider">Presensi Masuk Belum Dibuka</h4>
+                            <p class="text-xs text-amber-800 mt-0.5">
+                                Presensi masuk baru dapat dilakukan mulai pukul <strong>07.30 WITA</strong>. Harap menunggu hingga jam presensi dibuka.
+                            </p>
+                        </div>
+                    </div>
+                @elseif($timeStatus['is_after_tutup'] ?? false)
+                    <div class="p-4 sm:p-5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-900 shadow-xs flex items-center gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-rose-200/80 text-rose-800 flex items-center justify-center font-bold shrink-0 text-lg">
+                            ⛔
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-rose-950 uppercase tracking-wider">Waktu Presensi Hari Ini Telah Berakhir</h4>
+                            <p class="text-xs text-rose-800 mt-0.5">
+                                Batas waktu presensi hari ini telah ditutup pada pukul <strong>18.00 WITA</strong>. Anda tidak dapat melakukan presensi lagi hari ini.
+                            </p>
+                        </div>
+                    </div>
+                @elseif($timeStatus['is_late_masuk'] ?? false)
+                    <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 shadow-xs flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-amber-200 text-amber-800 flex items-center justify-center font-bold shrink-0">
+                            ⚠️
+                        </div>
+                        <p class="text-xs text-amber-800">
+                            Saat ini telah melewati batas jam masuk (<strong>08.00 WITA</strong>). Presensi yang Anda lakukan akan otomatis tercatat <strong>Terlambat</strong>.
+                        </p>
+                    </div>
+                @endif
+
                 <form action="{{ route('presensi.masuk') }}" method="POST" id="form-presensi-masuk" class="space-y-6">
                     @csrf
                     <input type="hidden" name="foto_masuk" id="input_foto_masuk" value="">
@@ -224,43 +256,81 @@
 
                     <!-- Webcam Selfie & GPS Grid -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- Kamera Selfie -->
+                        <!-- Kamera Selfie & Realtime Liveness Detection -->
                         <div class="space-y-3">
-                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                                Foto Selfie Masuk <span class="text-rose-500">*</span>
-                            </label>
+                            <div class="flex items-center justify-between">
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                    Verifikasi Wajah (Liveness) <span class="text-rose-500">*</span>
+                                </label>
+                                <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                                    Realtime AI
+                                </span>
+                            </div>
                             
-                            <div class="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video flex items-center justify-center border border-slate-200 shadow-inner">
-                                <!-- Video Stream -->
-                                <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover"></video>
+                            <div class="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video flex items-center justify-center border-2 border-slate-200 shadow-inner">
+                                <!-- Video Stream (Mirrored) -->
+                                <video id="webcam-video" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
                                 
                                 <!-- Canvas Hidden (Untuk Capture) -->
                                 <canvas id="webcam-canvas" class="hidden"></canvas>
                                 
+                                <!-- Face Oval Guide SVG Overlay -->
+                                <div id="face-guide-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center transition-all duration-300">
+                                    <svg class="w-48 h-60 sm:w-56 sm:h-68" viewBox="0 0 200 260" fill="none">
+                                        <ellipse id="guide-oval" cx="100" cy="130" rx="72" ry="100" stroke="#38bdf8" stroke-width="3" stroke-dasharray="8 6" class="transition-colors duration-300" />
+                                    </svg>
+                                </div>
+
+                                <!-- Challenge Instruction Banner (Top Overlay) -->
+                                <div id="challenge-banner" class="absolute top-2.5 inset-x-2.5 pointer-events-none transition-all duration-300">
+                                    <div class="bg-slate-950/85 backdrop-blur-md text-white px-3.5 py-2 rounded-xl border border-white/10 shadow-lg flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-2.5 min-w-0">
+                                            <span id="challenge-icon" class="text-xl shrink-0 transition-transform duration-300">👤</span>
+                                            <div class="min-w-0">
+                                                <div id="challenge-instruction" class="text-xs sm:text-sm font-bold text-white truncate">
+                                                    Menyiapkan Liveness Detection...
+                                                </div>
+                                                <div id="challenge-subtext" class="text-[10px] sm:text-[11px] text-slate-300 truncate">
+                                                    Posisikan wajah Anda di dalam bingkai oval
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="challenge-step-badge" class="shrink-0 px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-[10px] font-bold">
+                                            Langkah 1/2
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Flash Effect Overlay on Auto-Capture -->
+                                <div id="camera-flash" class="absolute inset-0 bg-white opacity-0 pointer-events-none transition-opacity duration-200"></div>
+
                                 <!-- Hasil Capture Preview -->
                                 <img id="captured-preview" class="w-full h-full object-cover hidden" alt="Selfie Preview">
 
                                 <!-- Placeholder Ketika Kamera Belum Aktif -->
-                                <div id="camera-placeholder" class="text-center p-4 text-slate-400">
-                                    <svg class="w-10 h-10 mx-auto mb-2 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                                    </svg>
-                                    <span class="text-xs">Menyiapkan kamera webcam...</span>
+                                <div id="camera-placeholder" class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-4 text-slate-300 text-center z-10">
+                                    <div class="w-9 h-9 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mb-2.5"></div>
+                                    <span class="text-xs font-semibold text-slate-200">Menyiapkan Kamera & AI Liveness...</span>
+                                    <span class="text-[10px] text-slate-400 mt-1">Pastikan izin kamera diizinkan di browser</span>
                                 </div>
                             </div>
 
-                            <!-- Tombol Kontrol Kamera -->
-                            <div class="flex items-center gap-2">
-                                <button type="button" id="btn-capture" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition cursor-pointer">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                                    </svg>
-                                    <span>Ambil Foto Selfie</span>
-                                </button>
-                                <button type="button" id="btn-retake" class="hidden px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition cursor-pointer">
-                                    Foto Ulang
+                            <!-- Status Box Liveness & Tombol Aksi -->
+                            <div class="space-y-2">
+                                <div id="liveness-status-box" class="p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs flex items-center justify-between gap-2 transition-all">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <span id="liveness-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+                                        <span id="liveness-status-text" class="text-slate-600 font-medium truncate">Menunggu verifikasi liveness wajah...</span>
+                                    </div>
+                                    <span id="liveness-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0 uppercase tracking-wider">
+                                        Belum Terverifikasi
+                                    </span>
+                                </div>
+
+                                <button type="button" id="btn-retake" class="hidden w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition cursor-pointer">
+                                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+                                    <span>Ulangi Verifikasi Wajah</span>
                                 </button>
                             </div>
                         </div>
@@ -273,7 +343,7 @@
                                         Titik Lokasi GPS <span class="text-rose-500">*</span>
                                     </label>
                                     <span class="text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
-                                        Radius Kantor: {{ $officeLocation['radius'] ?? 100 }}m
+                                        Radius Kantor: {{ $officeLocation['radius'] ?? 40 }}m
                                     </span>
                                 </div>
 
@@ -298,7 +368,7 @@
                                     <div class="relative">
                                         <div id="leaflet-map" class="w-full h-52 sm:h-56 rounded-xl border border-slate-300 overflow-hidden shadow-inner bg-slate-100"></div>
                                         <div class="absolute bottom-2 left-2 z-20 bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-md text-[10px] text-slate-700 font-medium border border-slate-200 shadow-xs flex items-center gap-2">
-                                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span> Kantor (100m)</span>
+                                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span> Kantor ({{ $officeLocation['radius'] ?? 40 }}m)</span>
                                             <span class="text-slate-300">|</span>
                                             <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-600 inline-block"></span> Posisi Anda</span>
                                         </div>
@@ -308,7 +378,7 @@
                                     <div id="radius-indicator-box" class="p-3 rounded-xl border border-slate-200 bg-white text-xs space-y-1.5 shadow-xs transition-colors">
                                         <div class="flex items-center justify-between">
                                             <span class="text-slate-500">Target Lokasi:</span>
-                                            <span class="font-bold text-slate-800">{{ $officeLocation['nama'] ?? 'Kantor Utama' }} (Radius {{ $officeLocation['radius'] ?? 100 }}m)</span>
+                                            <span class="font-bold text-slate-800">{{ $officeLocation['nama'] ?? 'Kantor Utama' }} (Radius {{ $officeLocation['radius'] ?? 40 }}m)</span>
                                         </div>
                                         <div class="flex items-center justify-between">
                                             <span class="text-slate-500">Jarak Anda ke Kantor:</span>
@@ -320,15 +390,12 @@
                                         </div>
                                     </div>
 
-                                    <div class="pt-2 border-t border-slate-200/80 text-xs text-slate-600 space-y-1">
-                                        <div class="flex justify-between">
+                                    <div class="pt-2 border-t border-slate-200/80 text-xs text-slate-600 space-y-1.5">
+                                        <div class="flex justify-between items-center">
                                             <span class="text-slate-400">Koordinat Anda:</span>
                                             <span id="gps-coords" class="font-mono font-bold text-slate-800">-</span>
                                         </div>
-                                        <div class="flex justify-between">
-                                            <span class="text-slate-400">Akurasi GPS:</span>
-                                            <span id="gps-accuracy" class="font-mono text-slate-600">-</span>
-                                        </div>
+
                                         <div id="gps-map-container" class="pt-1 flex items-center justify-between text-xs">
                                             <a id="gps-map-link" href="#" target="_blank" class="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold">
                                                 Buka Posisi di Google Maps &rarr;
@@ -364,12 +431,28 @@
 
                     <!-- Tombol Submit Presensi Masuk -->
                     <div class="pt-4 border-t border-slate-100 flex items-center justify-end">
-                        <button type="submit" id="btn-submit-masuk" class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition cursor-pointer flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>Kirim Presensi Masuk Sekarang</span>
-                        </button>
+                        @if($timeStatus['is_before_masuk'] ?? false)
+                            <button type="button" disabled class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-slate-200 text-slate-400 font-bold text-sm cursor-not-allowed flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>Dibuka Pukul 07.30 WITA</span>
+                            </button>
+                        @elseif($timeStatus['is_after_tutup'] ?? false)
+                            <button type="button" disabled class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-slate-200 text-slate-400 font-bold text-sm cursor-not-allowed flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                </svg>
+                                <span>Presensi Hari Ini Ditutup</span>
+                            </button>
+                        @else
+                            <button type="submit" id="btn-submit-masuk" class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition cursor-pointer flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>Kirim Presensi Masuk Sekarang</span>
+                            </button>
+                        @endif
                     </div>
                 </form>
             </div>
@@ -468,6 +551,33 @@
                             </a>
                         </div>
 
+                        <!-- Banner Informasi Waktu Pulang -->
+                        @if($timeStatus['is_before_pulang'] ?? false)
+                            <div class="p-4 sm:p-5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 shadow-xs flex items-center gap-3.5">
+                                <div class="w-10 h-10 rounded-xl bg-amber-200/80 text-amber-800 flex items-center justify-center font-bold shrink-0 text-lg">
+                                    ⏰
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-amber-950 uppercase tracking-wider">Presensi Pulang Belum Dibuka</h4>
+                                    <p class="text-xs text-amber-800 mt-0.5">
+                                        Presensi pulang dibuka mulai pukul <strong>16.00 WITA</strong> sampai <strong>18.00 WITA</strong>. Saat ini belum memasuki jam kepulangan.
+                                    </p>
+                                </div>
+                            </div>
+                        @elseif($timeStatus['is_after_tutup'] ?? false)
+                            <div class="p-4 sm:p-5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-900 shadow-xs flex items-center gap-3.5">
+                                <div class="w-10 h-10 rounded-xl bg-rose-200/80 text-rose-800 flex items-center justify-center font-bold shrink-0 text-lg">
+                                    ⛔
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-rose-950 uppercase tracking-wider">Batas Waktu Presensi Pulang Telah Berakhir</h4>
+                                    <p class="text-xs text-rose-800 mt-0.5">
+                                        Batas waktu presensi pulang hari ini telah ditutup pada pukul <strong>18.00 WITA</strong>. Anda tidak dapat melakukan presensi kepulangan lagi.
+                                    </p>
+                                </div>
+                            </div>
+                        @endif
+
                         <form action="{{ route('presensi.keluar') }}" method="POST" id="form-presensi-keluar" class="space-y-6">
                             @csrf
                             <input type="hidden" name="foto_keluar" id="input_foto_keluar" value="">
@@ -475,29 +585,81 @@
                             <input type="hidden" id="today-mode-kerja" value="{{ $todayPresensi->mode_kerja }}">
 
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <!-- Kamera Pulang -->
+                                <!-- Kamera Pulang & Realtime Liveness Detection -->
                                 <div class="space-y-3">
-                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                                        Foto Selfie Pulang <span class="text-rose-500">*</span>
-                                    </label>
+                                    <div class="flex items-center justify-between">
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                            Verifikasi Wajah Pulang (Liveness) <span class="text-rose-500">*</span>
+                                        </label>
+                                        <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                            Realtime AI
+                                        </span>
+                                    </div>
                                     
-                                    <div class="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video flex items-center justify-center border border-slate-200 shadow-inner">
-                                        <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover"></video>
+                                    <div class="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video flex items-center justify-center border-2 border-slate-200 shadow-inner">
+                                        <!-- Video Stream (Mirrored) -->
+                                        <video id="webcam-video" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
+                                        
+                                        <!-- Canvas Hidden (Untuk Capture) -->
                                         <canvas id="webcam-canvas" class="hidden"></canvas>
+                                        
+                                        <!-- Face Oval Guide SVG Overlay -->
+                                        <div id="face-guide-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center transition-all duration-300">
+                                            <svg class="w-48 h-60 sm:w-56 sm:h-68" viewBox="0 0 200 260" fill="none">
+                                                <ellipse id="guide-oval" cx="100" cy="130" rx="72" ry="100" stroke="#38bdf8" stroke-width="3" stroke-dasharray="8 6" class="transition-colors duration-300" />
+                                            </svg>
+                                        </div>
+
+                                        <!-- Challenge Instruction Banner (Top Overlay) -->
+                                        <div id="challenge-banner" class="absolute top-2.5 inset-x-2.5 pointer-events-none transition-all duration-300">
+                                            <div class="bg-slate-950/85 backdrop-blur-md text-white px-3.5 py-2 rounded-xl border border-white/10 shadow-lg flex items-center justify-between gap-2">
+                                                <div class="flex items-center gap-2.5 min-w-0">
+                                                    <span id="challenge-icon" class="text-xl shrink-0 transition-transform duration-300">👤</span>
+                                                    <div class="min-w-0">
+                                                        <div id="challenge-instruction" class="text-xs sm:text-sm font-bold text-white truncate">
+                                                            Menyiapkan Liveness Detection...
+                                                        </div>
+                                                        <div id="challenge-subtext" class="text-[10px] sm:text-[11px] text-slate-300 truncate">
+                                                            Posisikan wajah Anda di dalam bingkai oval
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div id="challenge-step-badge" class="shrink-0 px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-[10px] font-bold">
+                                                    Langkah 1/2
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Flash Effect Overlay on Auto-Capture -->
+                                        <div id="camera-flash" class="absolute inset-0 bg-white opacity-0 pointer-events-none transition-opacity duration-200"></div>
+
+                                        <!-- Hasil Capture Preview -->
                                         <img id="captured-preview" class="w-full h-full object-cover hidden" alt="Selfie Preview">
-                                        <div id="camera-placeholder" class="text-center p-4 text-slate-400">
-                                            <svg class="w-10 h-10 mx-auto mb-2 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/></svg>
-                                            <span class="text-xs">Menyiapkan kamera webcam...</span>
+
+                                        <!-- Placeholder Ketika Kamera Belum Aktif -->
+                                        <div id="camera-placeholder" class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-4 text-slate-300 text-center z-10">
+                                            <div class="w-9 h-9 border-3 border-amber-500 border-t-transparent rounded-full animate-spin mb-2.5"></div>
+                                            <span class="text-xs font-semibold text-slate-200">Menyiapkan Kamera & AI Liveness...</span>
+                                            <span class="text-[10px] text-slate-400 mt-1">Pastikan izin kamera diizinkan di browser</span>
                                         </div>
                                     </div>
 
-                                    <div class="flex items-center gap-2">
-                                        <button type="button" id="btn-capture" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-md shadow-amber-500/20 transition cursor-pointer">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/></svg>
-                                            <span>Ambil Foto Selfie Pulang</span>
-                                        </button>
-                                        <button type="button" id="btn-retake" class="hidden px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition cursor-pointer">
-                                            Foto Ulang
+                                    <!-- Status Box Liveness & Tombol Aksi -->
+                                    <div class="space-y-2">
+                                        <div id="liveness-status-box" class="p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs flex items-center justify-between gap-2 transition-all">
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <span id="liveness-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+                                                <span id="liveness-status-text" class="text-slate-600 font-medium truncate">Menunggu verifikasi liveness wajah...</span>
+                                            </div>
+                                            <span id="liveness-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0 uppercase tracking-wider">
+                                                Belum Terverifikasi
+                                            </span>
+                                        </div>
+
+                                        <button type="button" id="btn-retake" class="hidden w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition cursor-pointer">
+                                            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+                                            <span>Ulangi Verifikasi Wajah</span>
                                         </button>
                                     </div>
                                 </div>
@@ -532,7 +694,7 @@
                                             <div class="relative">
                                                 <div id="leaflet-map" class="w-full h-52 sm:h-56 rounded-xl border border-slate-300 overflow-hidden shadow-inner bg-slate-100"></div>
                                                 <div class="absolute bottom-2 left-2 z-20 bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-md text-[10px] text-slate-700 font-medium border border-slate-200 shadow-xs flex items-center gap-2">
-                                                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span> Kantor (100m)</span>
+                                                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span> Kantor ({{ $officeLocation['radius'] ?? 40 }}m)</span>
                                                     <span class="text-slate-300">|</span>
                                                     <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-600 inline-block"></span> Posisi Anda</span>
                                                 </div>
@@ -542,7 +704,7 @@
                                             <div id="radius-indicator-box" class="p-3 rounded-xl border border-slate-200 bg-white text-xs space-y-1.5 shadow-xs transition-colors">
                                                 <div class="flex items-center justify-between">
                                                     <span class="text-slate-500">Target Lokasi:</span>
-                                                    <span class="font-bold text-slate-800">{{ $officeLocation['nama'] ?? 'Kantor Utama' }} (Radius {{ $officeLocation['radius'] ?? 100 }}m)</span>
+                                                    <span class="font-bold text-slate-800">{{ $officeLocation['nama'] ?? 'Kantor Utama' }} (Radius {{ $officeLocation['radius'] ?? 40 }}m)</span>
                                                 </div>
                                                 <div class="flex items-center justify-between">
                                                     <span class="text-slate-500">Jarak Anda ke Kantor:</span>
@@ -554,15 +716,12 @@
                                                 </div>
                                             </div>
 
-                                            <div class="pt-2 border-t border-slate-200/80 text-xs text-slate-600 space-y-1">
-                                                <div class="flex justify-between">
+                                             <div class="pt-2 border-t border-slate-200/80 text-xs text-slate-600 space-y-1.5">
+                                                 <div class="flex justify-between items-center">
                                                     <span class="text-slate-400">Koordinat Anda:</span>
                                                     <span id="gps-coords" class="font-mono font-bold text-slate-800">-</span>
                                                 </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-slate-400">Akurasi GPS:</span>
-                                                    <span id="gps-accuracy" class="font-mono text-slate-600">-</span>
-                                                </div>
+
                                                 <div id="gps-map-container" class="pt-1 flex items-center justify-between text-xs">
                                                     <a id="gps-map-link" href="#" target="_blank" class="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold">
                                                         Buka Posisi di Google Maps &rarr;
@@ -596,10 +755,26 @@
                             </div>
 
                             <div class="pt-4 border-t border-slate-100 flex items-center justify-end">
-                                <button type="submit" id="btn-submit-keluar" class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow-lg shadow-amber-500/25 transition cursor-pointer flex items-center justify-center gap-2">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/></svg>
-                                    <span>Kirim Presensi Pulang Sekarang</span>
-                                </button>
+                                @if($timeStatus['is_before_pulang'] ?? false)
+                                    <button type="button" disabled class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-slate-200 text-slate-400 font-bold text-sm cursor-not-allowed flex items-center justify-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <span>Dibuka Pukul 16.00 WITA</span>
+                                    </button>
+                                @elseif($timeStatus['is_after_tutup'] ?? false)
+                                    <button type="button" disabled class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-slate-200 text-slate-400 font-bold text-sm cursor-not-allowed flex items-center justify-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                        </svg>
+                                        <span>Batas Presensi Pulang Berakhir</span>
+                                    </button>
+                                @else
+                                    <button type="submit" id="btn-submit-keluar" class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow-lg shadow-amber-500/25 transition cursor-pointer flex items-center justify-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/></svg>
+                                        <span>Kirim Presensi Pulang Sekarang</span>
+                                    </button>
+                                @endif
                             </div>
                         </form>
                     @endif
@@ -768,6 +943,9 @@
 @endsection
 
 @section('scripts')
+<!-- MediaPipe FaceMesh & Camera Utils -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
@@ -789,94 +967,521 @@ document.addEventListener('DOMContentLoaded', function() {
     updateClock();
 
     // ==========================================
-    // 2. WEBCAM HTML5 STREAM & CAPTURE
+    // 2. WEBCAM & REALTIME LIVENESS DETECTION (AI FACE MESH)
     // ==========================================
     const video = document.getElementById('webcam-video');
     const canvas = document.getElementById('webcam-canvas');
     const preview = document.getElementById('captured-preview');
     const placeholder = document.getElementById('camera-placeholder');
-    const btnCapture = document.getElementById('btn-capture');
     const btnRetake = document.getElementById('btn-retake');
 
     // Input target hidden foto
     const inputFotoMasuk = document.getElementById('input_foto_masuk');
     const inputFotoKeluar = document.getElementById('input_foto_keluar');
 
-    let streamObj = null;
+    // Pengaturan resize & kompres foto (Base64 JPEG)
+    const FOTO_MAX_DIMENSI = 1000;
+    const FOTO_QUALITY = 0.85;
+    const FOTO_MAX_BYTES = 1.5 * 1024 * 1024;
 
+    // Helper Web Audio API untuk feedback suara intuitif (beeps)
+    function playTone(freq = 600, type = 'sine', duration = 0.12) {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            gain.gain.setValueAtTime(0.12, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + duration);
+        } catch (e) {
+            // AudioContext silent fallback jika browser memerlukan user gesture
+        }
+    }
+
+    // Ambil frame video, mirror horizontally agar sesuai tampilan selfie, kompres JPEG Base64
+    function ambilFotoTerkompres(videoEl, canvasEl) {
+        const srcW = videoEl.videoWidth || 640;
+        const srcH = videoEl.videoHeight || 480;
+
+        const scale = Math.min(1, FOTO_MAX_DIMENSI / Math.max(srcW, srcH));
+        canvasEl.width = Math.round(srcW * scale);
+        canvasEl.height = Math.round(srcH * scale);
+
+        const ctx = canvasEl.getContext('2d');
+        ctx.save();
+        ctx.translate(canvasEl.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+        ctx.restore();
+
+        return canvasEl.toDataURL('image/jpeg', FOTO_QUALITY);
+    }
+
+    // Validasi format & ukuran foto sebelum submit
+    function isValidSelfie(dataUrl) {
+        if (!dataUrl || !/^data:image\/jpeg;base64,/.test(dataUrl)) return false;
+        const base64 = dataUrl.split(',')[1] || '';
+        const sizeBytes = Math.floor(base64.length * 3 / 4);
+        return sizeBytes >= 5 * 1024 && sizeBytes <= FOTO_MAX_BYTES;
+    }
+
+    // Daftar preset tantangan liveness acak (Random Challenge Pool)
+    const LIVENESS_CHALLENGES = [
+        {
+            id: 'left_then_front',
+            title: 'Tengok Kiri lalu Depan',
+            steps: [
+                { type: 'turn_left', text: 'Tengokkan kepala ke KIRI', subtext: 'Perlahan tolehkan kepala ke arah kiri Anda', icon: '⬅️' },
+                { type: 'face_center', text: 'Kembali hadap lurus ke DEPAN', subtext: 'Tahan posisi menghadap kamera dengan tenang', icon: '😊' }
+            ]
+        },
+        {
+            id: 'right_then_front',
+            title: 'Tengok Kanan lalu Depan',
+            steps: [
+                { type: 'turn_right', text: 'Tengokkan kepala ke KANAN', subtext: 'Perlahan tolehkan kepala ke arah kanan Anda', icon: '➡️' },
+                { type: 'face_center', text: 'Kembali hadap lurus ke DEPAN', subtext: 'Tahan posisi menghadap kamera dengan tenang', icon: '😊' }
+            ]
+        },
+        {
+            id: 'left_right_front',
+            title: 'Tengok Kiri, Kanan, lalu Depan',
+            steps: [
+                { type: 'turn_left', text: 'Tengokkan kepala ke KIRI', subtext: 'Perlahan tolehkan kepala ke arah kiri Anda', icon: '⬅️' },
+                { type: 'turn_right', text: 'Tengokkan kepala ke KANAN', subtext: 'Bagus! Sekarang tolehkan kepala ke arah kanan Anda', icon: '➡️' },
+                { type: 'face_center', text: 'Kembali hadap lurus ke DEPAN', subtext: 'Sempurna! Tahan posisi menghadap kamera', icon: '😊' }
+            ]
+        },
+        {
+            id: 'right_left_front',
+            title: 'Tengok Kanan, Kiri, lalu Depan',
+            steps: [
+                { type: 'turn_right', text: 'Tengokkan kepala ke KANAN', subtext: 'Perlahan tolehkan kepala ke arah kanan Anda', icon: '➡️' },
+                { type: 'turn_left', text: 'Tengokkan kepala ke KIRI', subtext: 'Bagus! Sekarang tolehkan kepala ke arah kiri Anda', icon: '⬅️' },
+                { type: 'face_center', text: 'Kembali hadap lurus ke DEPAN', subtext: 'Sempurna! Tahan posisi menghadap kamera', icon: '😊' }
+            ]
+        },
+        {
+            id: 'blink_then_front',
+            title: 'Kedipkan Mata lalu Hadap Depan',
+            steps: [
+                { type: 'blink', text: 'Kedipkan kedua mata Anda', subtext: 'Pejamkan mata sejenak lalu buka kembali', icon: '😉' },
+                { type: 'face_center', text: 'Kembali hadap lurus ke DEPAN', subtext: 'Tahan posisi menghadap kamera dengan tenang', icon: '😊' }
+            ]
+        },
+        {
+            id: 'blink_left_front',
+            title: 'Kedipkan Mata, Tengok Kiri, lalu Depan',
+            steps: [
+                { type: 'blink', text: 'Kedipkan kedua mata Anda', subtext: 'Pejamkan mata sejenak lalu buka kembali', icon: '😉' },
+                { type: 'turn_left', text: 'Tengokkan kepala ke KIRI', subtext: 'Tolehkan kepala ke arah kiri Anda', icon: '⬅️' },
+                { type: 'face_center', text: 'Kembali hadap lurus ke DEPAN', subtext: 'Sempurna! Tahan posisi menghadap kamera', icon: '😊' }
+            ]
+        },
+        {
+            id: 'blink_right_front',
+            title: 'Kedipkan Mata, Tengok Kanan, lalu Depan',
+            steps: [
+                { type: 'blink', text: 'Kedipkan kedua mata Anda', subtext: 'Pejamkan mata sejenak lalu buka kembali', icon: '😉' },
+                { type: 'turn_right', text: 'Tengokkan kepala ke KANAN', subtext: 'Tolehkan kepala ke arah kanan Anda', icon: '➡️' },
+                { type: 'face_center', text: 'Kembali hadap lurus ke DEPAN', subtext: 'Sempurna! Tahan posisi menghadap kamera', icon: '😊' }
+            ]
+        }
+    ];
+
+    // State Mesin Verifikasi Liveness
+    let isLivenessVerified = false;
+    let isLivenessActive = false;
+    let currentChallenge = null;
+    let currentStepIndex = 0;
+    let stepConsecutiveFrames = 0;
+    let blinkState = 'waiting_close';
+    let centerHoldStartTime = null;
+    let faceMeshInstance = null;
+    let cameraInstance = null;
+    let isSendingFrame = false;
+
+    // Perbarui Tampilan UI Tantangan
+    function updateChallengeUI(customTitle = null, customSubtext = null, customIcon = null) {
+        if (!currentChallenge) return;
+        const iconEl = document.getElementById('challenge-icon');
+        const titleEl = document.getElementById('challenge-instruction');
+        const subtextEl = document.getElementById('challenge-subtext');
+        const stepBadgeEl = document.getElementById('challenge-step-badge');
+
+        if (customTitle) {
+            if (titleEl) titleEl.textContent = customTitle;
+            if (subtextEl) subtextEl.textContent = customSubtext || '';
+            if (iconEl && customIcon) iconEl.textContent = customIcon;
+            return;
+        }
+
+        const step = currentChallenge.steps[currentStepIndex];
+        if (step) {
+            if (titleEl) titleEl.textContent = step.text;
+            if (subtextEl) subtextEl.textContent = step.subtext;
+            if (iconEl) iconEl.textContent = step.icon;
+            if (stepBadgeEl) {
+                stepBadgeEl.textContent = `Langkah ${currentStepIndex + 1}/${currentChallenge.steps.length}`;
+            }
+        }
+    }
+
+    // Mulai Sesi Verifikasi Liveness Baru (dengan tantangan acak)
+    function startNewLivenessSession() {
+        isLivenessVerified = false;
+        isLivenessActive = true;
+
+        // Pilih tantangan acak dari preset
+        const randIdx = Math.floor(Math.random() * LIVENESS_CHALLENGES.length);
+        currentChallenge = LIVENESS_CHALLENGES[randIdx];
+        currentStepIndex = 0;
+        stepConsecutiveFrames = 0;
+        blinkState = 'waiting_close';
+        centerHoldStartTime = null;
+
+        // Kosongkan nilai foto sebelumnya
+        if (inputFotoMasuk) inputFotoMasuk.value = '';
+        if (inputFotoKeluar) inputFotoKeluar.value = '';
+
+        // Tampilkan stream video & sembunyikan preview
+        if (video) video.classList.remove('hidden');
+        if (preview) preview.classList.add('hidden');
+        if (btnRetake) btnRetake.classList.add('hidden');
+
+        const guideOval = document.getElementById('guide-oval');
+        if (guideOval) guideOval.setAttribute('stroke', '#38bdf8'); // Biru netral
+
+        const guideOverlay = document.getElementById('face-guide-overlay');
+        if (guideOverlay) guideOverlay.classList.remove('hidden');
+
+        const banner = document.getElementById('challenge-banner');
+        if (banner) banner.classList.remove('hidden');
+
+        // Update status box UI
+        const statusBox = document.getElementById('liveness-status-box');
+        if (statusBox) {
+            statusBox.className = 'p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs flex items-center justify-between gap-2 transition-all';
+        }
+        const statusDot = document.getElementById('liveness-status-dot');
+        if (statusDot) {
+            statusDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0';
+        }
+        const statusText = document.getElementById('liveness-status-text');
+        if (statusText) {
+            statusText.textContent = 'Menunggu verifikasi liveness wajah...';
+        }
+        const statusBadge = document.getElementById('liveness-badge');
+        if (statusBadge) {
+            statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0 uppercase tracking-wider';
+            statusBadge.textContent = 'Belum Terverifikasi';
+        }
+
+        updateChallengeUI();
+    }
+
+    // Auto-Capture Setelah Verifikasi Liveness Berhasil
+    function completeLivenessAndCapture() {
+        isLivenessVerified = true;
+        isLivenessActive = false;
+
+        // Visual flash kamera
+        const flashEl = document.getElementById('camera-flash');
+        if (flashEl) {
+            flashEl.classList.remove('opacity-0');
+            flashEl.classList.add('opacity-90');
+            setTimeout(() => {
+                flashEl.classList.remove('opacity-90');
+                flashEl.classList.add('opacity-0');
+            }, 250);
+        }
+
+        // Suara shutter
+        playTone(1050, 'triangle', 0.25);
+
+        // Ambil snapshot terkompresi
+        const dataUrl = ambilFotoTerkompres(video, canvas);
+
+        // Tampilkan preview foto & sembunyikan video
+        if (preview) {
+            preview.src = dataUrl;
+            preview.classList.remove('hidden');
+        }
+        if (video) video.classList.add('hidden');
+
+        // Sembunyikan guide oval & banner challenge
+        const guideOverlay = document.getElementById('face-guide-overlay');
+        if (guideOverlay) guideOverlay.classList.add('hidden');
+        const banner = document.getElementById('challenge-banner');
+        if (banner) banner.classList.add('hidden');
+
+        // Simpan Base64 ke input target form
+        if (inputFotoMasuk) inputFotoMasuk.value = dataUrl;
+        if (inputFotoKeluar) inputFotoKeluar.value = dataUrl;
+
+        // Update status box UI menjadi terverifikasi
+        const statusBox = document.getElementById('liveness-status-box');
+        if (statusBox) {
+            statusBox.className = 'p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-xs flex items-center justify-between gap-2 shadow-xs transition-all';
+        }
+        const statusDot = document.getElementById('liveness-status-dot');
+        if (statusDot) {
+            statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0';
+        }
+        const statusText = document.getElementById('liveness-status-text');
+        if (statusText) {
+            statusText.innerHTML = '<span class="font-bold text-emerald-800">✅ Verifikasi Wajah Berhasil!</span> Foto presensi tersimpan otomatis.';
+        }
+        const statusBadge = document.getElementById('liveness-badge');
+        if (statusBadge) {
+            statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0 uppercase tracking-wider';
+            statusBadge.textContent = 'Terverifikasi';
+        }
+
+        // Tampilkan tombol ulangi jika ingin re-verifikasi
+        if (btnRetake) btnRetake.classList.remove('hidden');
+    }
+
+    // Listener Hasil Frame FaceMesh MediaPipe Realtime
+    function onFaceMeshResults(results) {
+        if (!isLivenessActive || isLivenessVerified) return;
+
+        const guideOval = document.getElementById('guide-oval');
+
+        // 1. Cek apakah ada wajah manusia di depan kamera
+        if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+            stepConsecutiveFrames = 0;
+            centerHoldStartTime = null;
+            blinkState = 'waiting_close';
+            if (guideOval) guideOval.setAttribute('stroke', '#f43f5e'); // Merah (tidak ada wajah)
+            updateChallengeUI('Arahkan wajah ke kamera', 'Posisikan wajah Anda tepat di dalam bingkai oval', '👤');
+            return;
+        }
+
+        const landmarks = results.multiFaceLandmarks[0];
+
+        // Landmark anatomi wajah
+        const nose = landmarks[1];          // Ujung hidung
+        const cheekRight = landmarks[234];  // Sisi kanan wajah anatomi
+        const cheekLeft = landmarks[454];   // Sisi kiri wajah anatomi
+        const forehead = landmarks[10];     // Dahi
+        const chin = landmarks[152];        // Dagu
+
+        // 2. Cek jarak dan posisi wajah dalam frame
+        const faceHeight = Math.hypot(chin.x - forehead.x, chin.y - forehead.y);
+
+        if (faceHeight < 0.22) {
+            stepConsecutiveFrames = 0;
+            if (guideOval) guideOval.setAttribute('stroke', '#f59e0b');
+            updateChallengeUI('Dekatkan wajah Anda', 'Posisikan wajah lebih dekat ke dalam bingkai oval', '🔍');
+            return;
+        }
+
+        if (faceHeight > 0.85) {
+            stepConsecutiveFrames = 0;
+            if (guideOval) guideOval.setAttribute('stroke', '#f59e0b');
+            updateChallengeUI('Mundurkan sedikit wajah', 'Wajah terlalu dekat dengan kamera', '🔍');
+            return;
+        }
+
+        if (nose.x < 0.22 || nose.x > 0.78 || nose.y < 0.20 || nose.y > 0.80) {
+            stepConsecutiveFrames = 0;
+            if (guideOval) guideOval.setAttribute('stroke', '#f59e0b');
+            updateChallengeUI('Posisikan wajah di tengah', 'Arahkan wajah tepat di tengah bingkai oval', '🎯');
+            return;
+        }
+
+        // Posisi wajah tepat di dalam bingkai oval
+        if (guideOval) guideOval.setAttribute('stroke', '#22c55e'); // Hijau cerah
+
+        // 3. Hitung Rasio Yaw Rotasi Kepala (Horizontal Turn)
+        // dRight: Jarak hidung ke pipi kanan anatomi (kiri pada kamera)
+        // dLeft: Jarak hidung ke pipi kiri anatomi (kanan pada kamera)
+        const dRight = Math.abs(nose.x - cheekRight.x);
+        const dLeft = Math.abs(cheekLeft.x - nose.x);
+        const yawRatio = (dRight + dLeft) > 0 ? (dRight / (dRight + dLeft)) : 0.5;
+
+        // 4. Hitung EAR (Eye Aspect Ratio) untuk Kedipan Mata
+        // Mata Kanan Anatomi: 159-145 (vertikal), 33-133 (horizontal)
+        const vr = Math.hypot(landmarks[159].x - landmarks[145].x, landmarks[159].y - landmarks[145].y);
+        const hr = Math.hypot(landmarks[33].x - landmarks[133].x, landmarks[33].y - landmarks[133].y);
+        const earR = hr > 0 ? (vr / hr) : 0;
+
+        // Mata Kiri Anatomi: 386-374 (vertikal), 263-362 (horizontal)
+        const vl = Math.hypot(landmarks[386].x - landmarks[374].x, landmarks[386].y - landmarks[374].y);
+        const hl = Math.hypot(landmarks[263].x - landmarks[362].x, landmarks[263].y - landmarks[362].y);
+        const earL = hl > 0 ? (vl / hl) : 0;
+
+        const avgEar = (earR + earL) / 2;
+
+        // 5. Verifikasi Gerakan Sesuai Langkah Tantangan Aktif
+        const currentStep = currentChallenge.steps[currentStepIndex];
+        updateChallengeUI();
+
+        let isStepSatisfied = false;
+
+        if (currentStep.type === 'turn_left') {
+            // Pengguna menoleh ke arah kirinya sendiri (yawRatio > 0.65)
+            if (yawRatio > 0.65) {
+                stepConsecutiveFrames++;
+                if (stepConsecutiveFrames >= 3) {
+                    isStepSatisfied = true;
+                }
+            } else {
+                stepConsecutiveFrames = Math.max(0, stepConsecutiveFrames - 1);
+            }
+        } else if (currentStep.type === 'turn_right') {
+            // Pengguna menoleh ke arah kanannya sendiri (yawRatio < 0.35)
+            if (yawRatio < 0.35) {
+                stepConsecutiveFrames++;
+                if (stepConsecutiveFrames >= 3) {
+                    isStepSatisfied = true;
+                }
+            } else {
+                stepConsecutiveFrames = Math.max(0, stepConsecutiveFrames - 1);
+            }
+        } else if (currentStep.type === 'blink') {
+            // Siklus kedip: mata terpejam (ear < 0.15) lalu terbuka kembali (ear > 0.20)
+            if (blinkState === 'waiting_close') {
+                if (avgEar < 0.15) blinkState = 'closed';
+            } else if (blinkState === 'closed') {
+                if (avgEar > 0.20) {
+                    blinkState = 'waiting_close';
+                    isStepSatisfied = true;
+                }
+            }
+        } else if (currentStep.type === 'face_center') {
+            // Wajah menghadap lurus ke depan (yawRatio antara 0.42 dan 0.58)
+            if (yawRatio >= 0.42 && yawRatio <= 0.58) {
+                if (!centerHoldStartTime) {
+                    centerHoldStartTime = performance.now();
+                } else if (performance.now() - centerHoldStartTime >= 550) {
+                    // Tahan 550ms untuk kestabilan pose bebas blur
+                    isStepSatisfied = true;
+                }
+            } else {
+                centerHoldStartTime = null;
+            }
+        }
+
+        // Jika langkah aktif terpenuhi
+        if (isStepSatisfied) {
+            playTone(720, 'sine', 0.1);
+            stepConsecutiveFrames = 0;
+            centerHoldStartTime = null;
+            blinkState = 'waiting_close';
+            currentStepIndex++;
+
+            if (currentStepIndex >= currentChallenge.steps.length) {
+                // Semua langkah berhasil -> Auto-capture foto selfie
+                completeLivenessAndCapture();
+            } else {
+                updateChallengeUI();
+            }
+        }
+    }
+
+    // Inisialisasi MediaPipe FaceMesh & Camera Stream
+    function initFaceMeshAndCamera() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            if (placeholder) {
+                placeholder.innerHTML = `
+                    <div class="text-rose-400 text-xs p-4">
+                        <p class="font-bold">Peramban Anda tidak mendukung akses kamera.</p>
+                        <p class="text-[11px] text-slate-300 mt-1">Gunakan peramban modern seperti Google Chrome atau Microsoft Edge.</p>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        try {
+            faceMeshInstance = new FaceMesh({
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+            });
+
+            faceMeshInstance.setOptions({
+                maxNumFaces: 1,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+
+            faceMeshInstance.onResults(onFaceMeshResults);
+
+            cameraInstance = new Camera(video, {
+                onFrame: async () => {
+                    if (isLivenessActive && !isLivenessVerified && video.videoWidth > 0 && !isSendingFrame) {
+                        isSendingFrame = true;
+                        try {
+                            await faceMeshInstance.send({ image: video });
+                        } catch (err) {
+                            console.warn("FaceMesh frame processing error:", err);
+                        } finally {
+                            isSendingFrame = false;
+                        }
+                    }
+                },
+                width: 640,
+                height: 480
+            });
+
+            cameraInstance.start()
+                .then(() => {
+                    if (placeholder) placeholder.classList.add('hidden');
+                    startNewLivenessSession();
+                })
+                .catch((err) => {
+                    console.error("Gagal membuka kamera:", err);
+                    if (placeholder) {
+                        placeholder.innerHTML = `
+                            <div class="text-rose-400 text-xs p-4">
+                                <p class="font-bold">Izin kamera tidak diberikan atau perangkat tidak mendukung.</p>
+                                <p class="text-[11px] text-slate-300 mt-1">Pastikan izin kamera diaktifkan di peramban Anda.</p>
+                            </div>
+                        `;
+                    }
+                });
+        } catch (e) {
+            console.error("Inisialisasi FaceMesh gagal:", e);
+        }
+    }
+
+    // Tombol Ulangi Verifikasi
+    if (btnRetake) {
+        btnRetake.addEventListener('click', function() {
+            startNewLivenessSession();
+        });
+    }
+
+    // Periksa kesiapan pustaka MediaPipe FaceMesh & Camera
     if (video) {
-        // Minta akses kamera pengguna
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    width: { ideal: 640 }, 
-                    height: { ideal: 480 },
-                    facingMode: 'user' 
-                } 
-            })
-            .then(function(stream) {
-                streamObj = stream;
-                video.srcObject = stream;
-                video.play();
-                if (placeholder) placeholder.classList.add('hidden');
-            })
-            .catch(function(err) {
-                console.error("Gagal membuka kamera:", err);
+        let loadAttempts = 0;
+        function checkLibrariesAndStart() {
+            if (typeof FaceMesh !== 'undefined' && typeof Camera !== 'undefined') {
+                initFaceMeshAndCamera();
+            } else if (loadAttempts < 50) {
+                loadAttempts++;
+                setTimeout(checkLibrariesAndStart, 150);
+            } else {
                 if (placeholder) {
                     placeholder.innerHTML = `
-                        <div class="text-rose-400 text-xs">
-                            <p class="font-bold">Izin kamera tidak diberikan atau perangkat tidak mendukung.</p>
-                            <p class="text-[11px] text-slate-400 mt-1">Pastikan izin kamera aktif di browser Anda.</p>
+                        <div class="text-rose-400 text-xs p-4">
+                            <p class="font-bold">Gagal memuat pustaka AI Liveness dari CDN.</p>
+                            <p class="text-[11px] text-slate-300 mt-1">Periksa koneksi internet Anda lalu segarkan halaman ini.</p>
                         </div>
                     `;
                 }
-            });
+            }
         }
-
-        // Jepret Foto Selfie
-        if (btnCapture) {
-            btnCapture.addEventListener('click', function() {
-                if (!streamObj) {
-                    alert('Kamera belum siap atau izin kamera belum diberikan.');
-                    return;
-                }
-
-                canvas.width = video.videoWidth || 640;
-                canvas.height = video.videoHeight || 480;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                // Convert to base64 JPEG
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-
-                // Set preview
-                preview.src = dataUrl;
-                preview.classList.remove('hidden');
-                video.classList.add('hidden');
-
-                // Simpan ke input hidden
-                if (inputFotoMasuk) inputFotoMasuk.value = dataUrl;
-                if (inputFotoKeluar) inputFotoKeluar.value = dataUrl;
-
-                // Ganti tombol
-                btnCapture.classList.add('hidden');
-                if (btnRetake) btnRetake.classList.remove('hidden');
-            });
-        }
-
-        // Foto Ulang
-        if (btnRetake) {
-            btnRetake.addEventListener('click', function() {
-                preview.classList.add('hidden');
-                video.classList.remove('hidden');
-
-                if (inputFotoMasuk) inputFotoMasuk.value = '';
-                if (inputFotoKeluar) inputFotoKeluar.value = '';
-
-                btnCapture.classList.remove('hidden');
-                btnRetake.classList.add('hidden');
-            });
-        }
+        checkLibrariesAndStart();
     }
 
     // ==========================================
@@ -885,7 +1490,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const officeConfig = {
         lat: {{ $officeLocation['lat'] ?? -3.4893886444181983 }},
         lng: {{ $officeLocation['lng'] ?? 114.8252583950533 }},
-        radius: {{ $officeLocation['radius'] ?? 100 }},
+        radius: {{ $officeLocation['radius'] ?? 40 }},
         nama: "{{ addslashes($officeLocation['nama'] ?? 'Kantor Utama') }}"
     };
 
@@ -893,7 +1498,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputLokasiKeluar = document.getElementById('input_lokasi_keluar');
     const gpsStatus = document.getElementById('gps-status');
     const gpsCoords = document.getElementById('gps-coords');
-    const gpsAccuracy = document.getElementById('gps-accuracy');
     const gpsMapLink = document.getElementById('gps-map-link');
     const btnRefreshGps = document.getElementById('btn-refresh-gps');
 
@@ -901,7 +1505,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let officeMarker = null;
     let officeCircle = null;
     let userMarker = null;
-    let userAccuracyCircle = null;
     let currentDistanceMeters = null;
 
     // Formula Haversine dalam JavaScript (hasil dalam meter)
@@ -1023,7 +1626,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `);
 
-        // Lingkaran Radius Kantor 100m
+        // Lingkaran Radius Kantor 40m
         officeCircle = L.circle([officeConfig.lat, officeConfig.lng], {
             color: '#2563eb',
             fillColor: '#3b82f6',
@@ -1039,6 +1642,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Deteksi Posisi Pengguna Melalui HTML5 Geolocation API
     function getGPSLocation() {
+        if (inputLokasiMasuk) inputLokasiMasuk.value = '';
+        if (inputLokasiKeluar) inputLokasiKeluar.value = '';
+        currentDistanceMeters = null;
+
         if (!navigator.geolocation) {
             if (gpsStatus) {
                 gpsStatus.innerHTML = '<span class="text-rose-600">Browser tidak mendukung geolokasi GPS</span>';
@@ -1057,7 +1664,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const rawLng = position.coords.longitude;
                 const lat = rawLat.toFixed(6);
                 const lng = rawLng.toFixed(6);
-                const accuracy = Math.round(position.coords.accuracy);
                 const coordString = `${lat}, ${lng}`;
 
                 if (inputLokasiMasuk) inputLokasiMasuk.value = coordString;
@@ -1069,7 +1675,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 if (gpsCoords) gpsCoords.textContent = coordString;
-                if (gpsAccuracy) gpsAccuracy.textContent = `&plusmn; ${accuracy} meter`;
 
                 if (gpsMapLink) {
                     gpsMapLink.href = `https://www.google.com/maps?q=${lat},${lng}`;
@@ -1104,25 +1709,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     userMarker.bindPopup(`
                         <div style="text-align: center; font-size: 12px; font-family: sans-serif; line-height: 1.4;">
                             <strong style="color: #1e293b;">Posisi Anda Saat Ini</strong><br>
-                            <span style="color: #64748b;">Jarak ke kantor: <b>${currentDistanceMeters.toLocaleString('id-ID')} m</b></span><br>
-                            <span style="font-size: 10px; color: #94a3b8;">Akurasi GPS: &plusmn; ${accuracy} m</span>
+                            <span style="color: #64748b;">Jarak ke kantor: <b>${currentDistanceMeters.toLocaleString('id-ID')} m</b></span>
                         </div>
                     `);
-
-                    if (accuracy > 15) {
-                        if (userAccuracyCircle) {
-                            userAccuracyCircle.setLatLng([rawLat, rawLng]);
-                            userAccuracyCircle.setRadius(accuracy);
-                        } else {
-                            userAccuracyCircle = L.circle([rawLat, rawLng], {
-                                color: '#60a5fa',
-                                fillColor: '#93c5fd',
-                                fillOpacity: 0.1,
-                                radius: accuracy,
-                                weight: 1
-                            }).addTo(map);
-                        }
-                    }
 
                     // Tampilkan kedua titik (kantor & user) dalam view peta
                     const bounds = L.latLngBounds([
@@ -1132,37 +1721,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     map.fitBounds(bounds.pad(0.25));
                 }
             },
-            function(error) {
+                        function(error) {
                 console.warn('GPS error:', error);
                 let pesan = 'Gagal mendeteksi lokasi GPS.';
                 if (error.code === error.PERMISSION_DENIED) {
                     pesan = 'Izin lokasi GPS ditolak oleh browser. Mohon izinkan akses lokasi.';
                 } else if (error.code === error.POSITION_UNAVAILABLE) {
-                    pesan = 'Sinyal lokasi GPS tidak tersedia.';
+                    pesan = 'Sinyal lokasi GPS tidak tersedia. Pastikan GPS perangkat aktif.';
                 } else if (error.code === error.TIMEOUT) {
-                    pesan = 'Waktu permintaan sinyal GPS habis.';
+                    pesan = 'Waktu permintaan sinyal GPS habis. Coba segarkan lokasi.';
                 }
+
+                // Kosongkan semua, jangan isi koordinat palsu
+                if (inputLokasiMasuk) inputLokasiMasuk.value = '';
+                if (inputLokasiKeluar) inputLokasiKeluar.value = '';
+                currentDistanceMeters = null;
 
                 if (gpsStatus) {
-                    gpsStatus.innerHTML = `<span class="text-rose-600 font-semibold">${pesan}</span>`;
+                    gpsStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> ${pesan}`;
+                    gpsStatus.className = 'text-xs font-bold text-rose-600 flex items-center gap-1.5 mt-0.5';
                 }
-
-                // Fallback default coordinates jika localhost / simulasi tanpa GPS (gunakan titik kantor baru)
-                const defaultLat = officeConfig.lat.toFixed(6);
-                const defaultLng = officeConfig.lng.toFixed(6);
-                const defaultCoord = `${defaultLat}, ${defaultLng}`;
-
-                if (inputLokasiMasuk) inputLokasiMasuk.value = defaultCoord;
-                if (inputLokasiKeluar) inputLokasiKeluar.value = defaultCoord;
-                if (gpsCoords) gpsCoords.textContent = `${defaultCoord} (Perkiraan / Fallback)`;
-                if (gpsAccuracy) gpsAccuracy.textContent = 'Mode Lokal / Default';
-
-                currentDistanceMeters = 0;
-                updateRadiusStatusUI(currentDistanceMeters);
-
-                if (map) {
-                    map.setView([officeConfig.lat, officeConfig.lng], 17);
-                }
+                if (gpsCoords) gpsCoords.textContent = '-';
+                
+                const distanceEl = document.getElementById('gps-distance');
+                if (distanceEl) distanceEl.textContent = 'Tidak diketahui';
             },
             {
                 enableHighAccuracy: true,
@@ -1187,9 +1769,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const formMasuk = document.getElementById('form-presensi-masuk');
     if (formMasuk) {
         formMasuk.addEventListener('submit', function(e) {
-            if (!inputFotoMasuk.value) {
+            if (!isLivenessVerified || !isValidSelfie(inputFotoMasuk.value)) {
                 e.preventDefault();
-                alert('Silakan ambil foto selfie masuk terlebih dahulu sebelum mengirim presensi.');
+                alert('Verifikasi wajah (Liveness Detection) belum selesai!\n\nSilakan ikuti instruksi tantangan gerakan di depan kamera hingga foto otomatis terambil.');
                 return;
             }
             if (!inputLokasiMasuk.value) {
@@ -1210,9 +1792,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const formKeluar = document.getElementById('form-presensi-keluar');
     if (formKeluar) {
         formKeluar.addEventListener('submit', function(e) {
-            if (!inputFotoKeluar.value) {
+            if (!isLivenessVerified || !isValidSelfie(inputFotoKeluar.value)) {
                 e.preventDefault();
-                alert('Silakan ambil foto selfie pulang terlebih dahulu sebelum mengirim presensi.');
+                alert('Verifikasi wajah (Liveness Detection) kepulangan belum selesai!\n\nSilakan ikuti instruksi tantangan gerakan di depan kamera hingga foto otomatis terambil.');
                 return;
             }
             if (!inputLokasiKeluar.value) {

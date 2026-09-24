@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Divisi;
 use App\Models\Magang;
 use App\Models\Pembimbing;
+use App\Models\Pengaturan;
 use App\Models\Penilaian;
 use Illuminate\Http\Request;
 
@@ -73,6 +74,55 @@ class MonitoringPenilaianController extends Controller
     }
 
     /**
+     * Cetak rekapitulasi penilaian seluruh anak magang (tampilan cetak khusus kertas).
+     */
+    public function cetak(Request $request)
+    {
+        $query = Magang::with(['divisi', 'pembimbing', 'penilaian.detail.kriteria']);
+
+        // Filter divisi
+        if ($request->filled('divisi_id')) {
+            $query->where('divisi_id', $request->divisi_id);
+        }
+
+        // Filter pembimbing
+        if ($request->filled('pembimbing_id')) {
+            $query->where('pembimbing_id', $request->pembimbing_id);
+        }
+
+        // Filter status penilaian (sudah / belum)
+        if ($request->filled('status_nilai')) {
+            if ($request->status_nilai === 'sudah') {
+                $query->has('penilaian');
+            } elseif ($request->status_nilai === 'belum') {
+                $query->doesntHave('penilaian');
+            }
+        }
+
+        // Filter pencarian teks
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('nama_lengkap', 'like', "%{$search}%")
+                    ->orWhere('no_induk', 'like', "%{$search}%")
+                    ->orWhere('instansi_pendidikan', 'like', "%{$search}%");
+            });
+        }
+
+        $magangList = $query->orderBy('nama_lengkap', 'asc')->get();
+        $pengaturan = Pengaturan::getPengaturan();
+
+        $stats = [
+            'total' => $magangList->count(),
+            'sudah' => $magangList->filter(fn ($m) => $m->penilaian !== null)->count(),
+            'belum' => $magangList->filter(fn ($m) => $m->penilaian === null)->count(),
+            'rata_rata' => $magangList->filter(fn ($m) => $m->penilaian !== null)->avg(fn ($m) => $m->penilaian->total_nilai) ?? 0,
+        ];
+
+        return view('admin.penilaian.cetak', compact('magangList', 'pengaturan', 'stats'));
+    }
+
+    /**
      * Menampilkan lembar nilai anak magang untuk admin (termasuk cetak).
      */
     public function show($id)
@@ -84,7 +134,9 @@ class MonitoringPenilaianController extends Controller
             'detail.kriteria',
         ])->findOrFail($id);
 
-        return view('admin.penilaian.show', compact('penilaian'));
+        $pengaturan = Pengaturan::getPengaturan();
+
+        return view('admin.penilaian.show', compact('penilaian', 'pengaturan'));
     }
 
     /**

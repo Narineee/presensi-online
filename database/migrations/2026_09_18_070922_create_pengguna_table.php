@@ -16,7 +16,6 @@ return new class extends Migration
                 'admin',
                 'pembimbing',
                 'magang',
-                'cs',
             ]);
             $table->boolean('is_active')->default(true);
             $table->timestamps();

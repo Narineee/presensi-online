@@ -138,7 +138,8 @@
                             type="number"
                             name="radius_meter"
                             id="radius_meter"
-                            value="{{ old('radius_meter', $divisi->radius_meter) }}"
+                            value="{{ old('radius_meter', $divisi->radius_meter ?? 40) }}"
+                            placeholder="40"
                             class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-sm text-slate-800 font-medium"
                         >
                     </div>
