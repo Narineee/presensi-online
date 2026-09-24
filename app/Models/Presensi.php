@@ -20,6 +20,8 @@ class Presensi extends Model
         'lokasi_masuk',
         'lokasi_keluar',
         'keterangan',
+        'face_distance_masuk',
+        'face_distance_keluar',
     ];
 
     protected $casts = [
@@ -38,10 +40,6 @@ class Presensi extends Model
     {
         if ($this->pengguna && $this->pengguna->magang) {
             return $this->pengguna->magang->nama_lengkap;
-        }
-
-        if ($this->pengguna && $this->pengguna->cs) {
-            return $this->pengguna->cs->nama_lengkap;
         }
 
         return $this->pengguna->username ?? '-';

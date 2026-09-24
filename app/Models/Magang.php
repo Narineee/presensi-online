@@ -22,6 +22,9 @@ class Magang extends Model
         'tanggal_mulai',
         'tanggal_selesai',
         'status',
+        'face_descriptors',
+        'face_foto',
+        'face_registered_at',
     ];
 
     /**
@@ -39,7 +42,11 @@ class Magang extends Model
     protected $casts = [
         'tanggal_mulai' => 'date',
         'tanggal_selesai' => 'date',
+        'face_descriptors' => 'array',
+        'face_registered_at' => 'datetime',
     ];
+
+    protected $hidden = ['face_descriptors']; 
 
     // Relasi ke akun login pengguna
     public function pengguna()

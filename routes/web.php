@@ -21,6 +21,10 @@ use App\Http\Controllers\PengajuanIzinController;
 use App\Http\Controllers\PresensiController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\WajahController;
+
+Route::get('/rekam-wajah', [WajahController::class, 'create'])->name('wajah.create');
+Route::post('/rekam-wajah', [WajahController::class, 'store'])->name('wajah.store');
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -61,6 +65,9 @@ Route::middleware(['auth', 'role:admin'])
 
         // CRUD Pembimbing
         Route::resource('pembimbing', PembimbingController::class);
+
+        Route::get('magang/{magang}/foto-wajah', [MagangController::class, 'fotoWajah'])->name('magang.wajah.foto');
+        Route::post('magang/{magang}/reset-wajah', [MagangController::class, 'resetWajah'])->name('magang.wajah.reset');
 
         // CRUD Magang & Plotting
         Route::resource('magang', MagangController::class);

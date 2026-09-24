@@ -11,19 +11,25 @@ use App\Models\Presensi;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Drivers\Gd\Driver;
-use Intervention\Image\ImageManager;
-use Log;
+use App\Services\FaceVerificationService;
+use App\Support\StoresBase64Image;
+use Illuminate\Support\Facades\Log;
 
 class PresensiController extends Controller
 {
+     use StoresBase64Image;
+
+    public function __construct(private FaceVerificationService $face) {}
     /**
      * Menampilkan halaman utama presensi (form absen hari ini & riwayat presensi).
      */
     public function index(Request $request)
     {
         $user = Auth::user();
+                if ($user->role === 'magang' && ! $user->magang?->face_registered_at) {
+            return redirect()->route('wajah.create')
+                ->with('error', 'Daftarkan wajah Anda terlebih dahulu sebelum presensi.');
+        }
         $today = Carbon::today()->toDateString();
 
         // Ambil data presensi hari ini jika sudah pernah absen
@@ -101,10 +107,9 @@ class PresensiController extends Controller
      */
     public function storeMasuk(Request $request)
     {
-        $user = Auth::user();
+         $user = Auth::user();
         $today = Carbon::today()->toDateString();
 
-        // Cek apakah sudah absen masuk hari ini
         $existing = Presensi::where('pengguna_id', $user->id)
             ->whereDate('tanggal', $today)
             ->first();
@@ -113,105 +118,102 @@ class PresensiController extends Controller
             return redirect()->back()->with('error', 'Anda sudah melakukan presensi masuk hari ini.');
         }
 
-        // Batasan jam presensi masuk:
-        // - Mulai dari jam 07.30 WITA
-        // - Lewat jam 18.00 WITA tidak dapat presensi
+        // Batas jam: buka 07.30, tutup 18.00 WITA
         $jamSekarang = Carbon::now();
         $bukaMasuk = $jamSekarang->copy()->setTime(7, 30, 0);
         $tutupHari = $jamSekarang->copy()->setTime(18, 0, 0);
 
         if ($jamSekarang->lessThan($bukaMasuk)) {
-            return redirect()->back()->withInput()->with('error', 'Presensi masuk belum dibuka. Presensi masuk dimulai pukul 07.30 WITA.');
+            return redirect()->back()->with('error', 'Presensi masuk belum dibuka. Presensi masuk dimulai pukul 07.30 WITA.');
         }
 
         if ($jamSekarang->greaterThan($tutupHari)) {
-            return redirect()->back()->withInput()->with('error', 'Waktu presensi untuk hari ini telah berakhir (pukul 18.00 WITA). Anda tidak dapat melakukan presensi.');
+            return redirect()->back()->with('error', 'Waktu presensi untuk hari ini telah berakhir (pukul 18.00 WITA).');
         }
 
-        // Validasi input data presensi
         $request->validate([
             'mode_kerja' => 'required|in:onsite,wfh',
             'lokasi_masuk' => 'required|string',
             'foto_masuk' => 'required|string',
+            'face_descriptor' => 'required|string',
             'keterangan' => 'nullable|string|max:255',
         ], [
             'mode_kerja.required' => 'Pilih mode kerja (Onsite atau WFH).',
             'lokasi_masuk.required' => 'Titik lokasi GPS wajib terdeteksi. Silakan izinkan akses lokasi di browser Anda.',
-            'foto_masuk.required' => 'Foto selfie wajib diambil melalui kamera atau diunggah.',
+            'foto_masuk.required' => 'Foto selfie wajib diambil.',
+            'face_descriptor.required' => 'Verifikasi wajah belum selesai. Silakan ulangi.',
             'keterangan.max' => 'Keterangan maksimal 255 karakter.',
         ]);
 
-        // Khusus Onsite: Validasi apakah pengguna berada di dalam radius kantor
+        $inputAman = $request->except(['foto_masuk', 'face_descriptor']);
+
+        // Onsite: cek radius kantor
         $officeLocation = $this->getOfficeLocation($user);
         if ($request->mode_kerja === 'onsite') {
             $coords = explode(',', $request->lokasi_masuk);
             if (count($coords) === 2) {
-                $userLat = (float) trim($coords[0]);
-                $userLng = (float) trim($coords[1]);
-                $jarak = $this->calculateDistance($officeLocation['lat'], $officeLocation['lng'], $userLat, $userLng);
+                $jarak = $this->calculateDistance(
+                    $officeLocation['lat'], $officeLocation['lng'],
+                    (float) trim($coords[0]), (float) trim($coords[1])
+                );
 
                 if ($jarak > $officeLocation['radius']) {
-                    return redirect()->back()->withInput()->with('error', "Titik lokasi Anda berada di luar radius kantor ({$jarak} meter, batas maksimal: {$officeLocation['radius']} meter). Silakan lakukan presensi di area kantor atau pilih mode WFH jika bekerja remote.");
+                    return redirect()->back()->withInput($inputAman)->with('error', "Titik lokasi Anda berada di luar radius kantor ({$jarak} meter, batas maksimal: {$officeLocation['radius']} meter). Silakan presensi di area kantor atau pilih mode WFH jika bekerja remote.");
                 }
             }
         }
 
-        // Simpan foto selfie masuk (dukungan base64 dari kamera atau file upload)
-        // Simpan foto selfie masuk dengan resize dan kompresi
-        $fotoPath = null;
+        // Verifikasi wajah
+        $face = $this->checkFace($user, $request->face_descriptor);
+        if ($face['error']) {
+            Log::warning('Verifikasi wajah masuk gagal', ['user' => $user->id, 'distance' => $face['distance']]);
 
-        if (str_starts_with($request->foto_masuk, 'data:image')) {
-            $fotoPath = $this->compressAndStoreImage(
-                $request->foto_masuk,
-                'presensi/masuk',
-                'masuk_'.$user->id.'_'.date('Ymd_His')
-            );
+            return redirect()->back()->withInput($inputAman)->with('error', $face['error']);
         }
 
-        // Waktu kerja: 08:00 WITA - 16:00 WITA
-        // Apabila presensi masuk lebih dari jam 08:00 WITA, akan tercatat terlambat untuk seluruh kegiatan presensi (baik magang maupun cs)
+        // Simpan foto; batalkan presensi jika foto gagal tersimpan
+        $fotoPath = str_starts_with($request->foto_masuk, 'data:image')
+            ? $this->compressAndStoreImage($request->foto_masuk, 'presensi/masuk', 'masuk_'.$user->id.'_'.date('Ymd_His'))
+            : null;
+
+        if (! $fotoPath) {
+            return redirect()->back()->withInput($inputAman)->with('error', 'Foto presensi gagal disimpan. Silakan ulangi verifikasi wajah.');
+        }
+
+        // Hitung keterlambatan (batas 08.00 WITA)
         $jamSekarang = Carbon::now();
         $jamMasukStr = $jamSekarang->format('H:i:s');
         $batasMasuk = $jamSekarang->copy()->setTime(8, 0, 0);
 
         $keteranganTambahan = $request->keterangan;
         $menitTerlambat = 0;
-        $statusPresensi = 'hadir';
+        $statusPresensi = 'hadir'; // enum status tidak punya 'terlambat'; keterlambatan dicatat di keterangan
 
         if ($jamSekarang->greaterThan($batasMasuk)) {
             $menitTerlambat = max(1, (int) ceil($batasMasuk->diffInSeconds($jamSekarang) / 60));
-
-            $statusPresensi = 'terlambat';
-
             $infoTerlambat = "[Terlambat {$menitTerlambat} menit]";
-            $keteranganTambahan = $keteranganTambahan
-                ? $keteranganTambahan . ' ' . $infoTerlambat
-                : $infoTerlambat;
+            $keteranganTambahan = $keteranganTambahan ? $keteranganTambahan.' '.$infoTerlambat : $infoTerlambat;
         }
 
-        // Simpan atau buat record presensi hari ini
         Presensi::updateOrCreate(
-            [
-                'pengguna_id' => $user->id,
-                'tanggal' => $today,
-            ],
+            ['pengguna_id' => $user->id, 'tanggal' => $today],
             [
                 'jam_masuk' => $jamMasukStr,
                 'status' => $statusPresensi,
                 'mode_kerja' => $request->mode_kerja,
                 'foto_masuk' => $fotoPath,
                 'lokasi_masuk' => $request->lokasi_masuk,
+                'face_distance_masuk' => $face['distance'],
                 'keterangan' => $keteranganTambahan,
             ]
         );
 
-        $pesanSukses = 'Presensi masuk berhasil dicatat pada pukul '.$jamMasukStr.' WITA!';
-        if ($jamSekarang->greaterThan($batasMasuk)) {
-            $pesanSukses .= ' (Tercatat Terlambat '.$menitTerlambat.' menit dari batas jam 08.00 WITA)';
+        $pesanSukses = 'Presensi masuk berhasil dicatat pukul '.$jamMasukStr.' WITA.';
+        if ($menitTerlambat > 0) {
+            $pesanSukses .= " Tercatat terlambat {$menitTerlambat} menit dari batas 08.00 WITA.";
         }
 
-        return redirect()->route('presensi.index')
-            ->with('success', $pesanSukses);
+        return redirect()->route('presensi.index')->with('success', $pesanSukses);
     }
 
     /**
@@ -234,68 +236,74 @@ class PresensiController extends Controller
             return redirect()->back()->with('error', 'Anda sudah melakukan presensi pulang hari ini.');
         }
 
-        // Batasan jam presensi pulang:
-        // - Mulai dari jam 16.00 WITA sampai jam 18.00 WITA
-        // - Sebelum 16.00 atau lebih dari 18.00 tidak dapat melakukan presensi
+        // Batas jam pulang: 16.00 sampai 18.00 WITA
         $jamSekarang = Carbon::now();
         $bukaPulang = $jamSekarang->copy()->setTime(16, 0, 0);
         $tutupPulang = $jamSekarang->copy()->setTime(18, 0, 0);
 
         if ($jamSekarang->lessThan($bukaPulang)) {
-            return redirect()->back()->with('error', 'Presensi pulang belum dibuka. Presensi pulang dapat dilakukan mulai pukul 16.00 WITA sampai 18.00 WITA.');
+            return redirect()->back()->with('error', 'Presensi pulang belum dibuka. Presensi pulang dapat dilakukan pukul 16.00 sampai 18.00 WITA.');
         }
 
         if ($jamSekarang->greaterThan($tutupPulang)) {
-            return redirect()->back()->with('error', 'Batas waktu presensi pulang telah berakhir (pukul 18.00 WITA). Anda tidak dapat melakukan presensi.');
+            return redirect()->back()->with('error', 'Batas waktu presensi pulang telah berakhir (pukul 18.00 WITA).');
         }
 
-        // Validasi: Presensi pulang hanya dapat diinput apabila sudah mengisi aktivitas harian hari ini
+        // Wajib mengisi aktivitas harian dulu
         $hasAktivitas = Aktivitas::where('pengguna_id', $user->id)
             ->whereDate('tanggal', $today)
             ->exists();
 
         if (! $hasAktivitas) {
-            return redirect()->back()->with('error', 'Anda belum mengisi aktivitas harian hari ini. Silakan isi aktivitas harian terlebih dahulu sebelum melakukan presensi pulang.');
+            return redirect()->back()->with('error', 'Anda belum mengisi aktivitas harian hari ini. Silakan isi aktivitas harian terlebih dahulu.');
         }
 
-        // Validasi input data presensi pulang
         $request->validate([
             'lokasi_keluar' => 'required|string',
             'foto_keluar' => 'required|string',
+            'face_descriptor' => 'required|string',
             'keterangan_keluar' => 'nullable|string|max:255',
         ], [
             'lokasi_keluar.required' => 'Titik lokasi GPS kepulangan wajib terdeteksi.',
             'foto_keluar.required' => 'Foto selfie pulang wajib diambil.',
+            'face_descriptor.required' => 'Verifikasi wajah belum selesai. Silakan ulangi.',
         ]);
 
-        // Khusus Onsite: Validasi apakah pengguna berada di dalam radius kantor saat presensi pulang
+        $inputAman = $request->except(['foto_keluar', 'face_descriptor']);
+
+        // Onsite: cek radius kantor
         $officeLocation = $this->getOfficeLocation($user);
         if ($presensi->mode_kerja === 'onsite') {
             $coords = explode(',', $request->lokasi_keluar);
             if (count($coords) === 2) {
-                $userLat = (float) trim($coords[0]);
-                $userLng = (float) trim($coords[1]);
-                $jarak = $this->calculateDistance($officeLocation['lat'], $officeLocation['lng'], $userLat, $userLng);
+                $jarak = $this->calculateDistance(
+                    $officeLocation['lat'], $officeLocation['lng'],
+                    (float) trim($coords[0]), (float) trim($coords[1])
+                );
 
                 if ($jarak > $officeLocation['radius']) {
-                    return redirect()->back()->withInput()->with('error', "Titik lokasi kepulangan Anda berada di luar radius kantor ({$jarak} meter, batas maksimal: {$officeLocation['radius']} meter). Silakan lakukan presensi pulang di area kantor.");
+                    return redirect()->back()->withInput($inputAman)->with('error', "Titik lokasi kepulangan Anda berada di luar radius kantor ({$jarak} meter, batas maksimal: {$officeLocation['radius']} meter).");
                 }
             }
         }
 
-        // Simpan foto selfie pulang
-        // Simpan foto selfie pulang dengan resize dan kompresi
-        $fotoPath = null;
+        // Verifikasi wajah
+        $face = $this->checkFace($user, $request->face_descriptor);
+        if ($face['error']) {
+            Log::warning('Verifikasi wajah pulang gagal', ['user' => $user->id, 'distance' => $face['distance']]);
 
-        if (str_starts_with($request->foto_keluar, 'data:image')) {
-            $fotoPath = $this->compressAndStoreImage(
-                $request->foto_keluar,
-                'presensi/keluar',
-                'keluar_'.$user->id.'_'.date('Ymd_His')
-            );
+            return redirect()->back()->withInput($inputAman)->with('error', $face['error']);
         }
 
-        // Gabungkan keterangan jika ada
+        // Simpan foto
+        $fotoPath = str_starts_with($request->foto_keluar, 'data:image')
+            ? $this->compressAndStoreImage($request->foto_keluar, 'presensi/keluar', 'keluar_'.$user->id.'_'.date('Ymd_His'))
+            : null;
+
+        if (! $fotoPath) {
+            return redirect()->back()->withInput($inputAman)->with('error', 'Foto presensi gagal disimpan. Silakan ulangi verifikasi wajah.');
+        }
+
         $finalKeterangan = $presensi->keterangan;
         if ($request->filled('keterangan_keluar')) {
             $finalKeterangan = $finalKeterangan
@@ -303,16 +311,18 @@ class PresensiController extends Controller
                 : 'Pulang: '.$request->keterangan_keluar;
         }
 
-        // Update record presensi dengan jam keluar
+        $jamKeluar = Carbon::now()->format('H:i:s');
+
         $presensi->update([
-            'jam_keluar' => Carbon::now()->format('H:i:s'),
+            'jam_keluar' => $jamKeluar,
             'foto_keluar' => $fotoPath,
             'lokasi_keluar' => $request->lokasi_keluar,
+            'face_distance_keluar' => $face['distance'],
             'keterangan' => $finalKeterangan,
         ]);
 
         return redirect()->route('presensi.index')
-            ->with('success', 'Presensi pulang berhasil dicatat pada pukul '.Carbon::now()->format('H:i:s').' WITA. Selamat beristirahat!');
+            ->with('success', 'Presensi pulang berhasil dicatat pukul '.$jamKeluar.' WITA.');
     }
 
     /**
@@ -361,72 +371,6 @@ class PresensiController extends Controller
         $pengaturan = Pengaturan::getPengaturan();
 
         return view('presensi.cetak', compact('user', 'presensi', 'stats', 'periodeText', 'bulan', 'divisi', 'pembimbing', 'pengaturan'));
-    }
-
-    /**
-     * Resize dan kompres gambar Base64 sebelum disimpan.
-     *
-     * Maksimal ukuran gambar: 1000px
-     * Format penyimpanan: JPG
-     * Kualitas: 75%
-     */
-    private function compressAndStoreImage(
-        string $base64Image,
-        string $directory,
-        string $fileName
-    ): ?string {
-        try {
-            // Pisahkan header Base64 dengan isi gambar
-            $imageParts = explode(';base64,', $base64Image, 2);
-
-            if (count($imageParts) !== 2) {
-                return null;
-            }
-
-            // Decode Base64 menjadi binary
-            $imageBinary = base64_decode($imageParts[1], true);
-
-            if ($imageBinary === false) {
-                return null;
-            }
-
-            // Buat image manager menggunakan GD
-            $manager = new ImageManager(new Driver);
-
-            // Baca gambar
-            $image = $manager->read($imageBinary);
-
-            // Resize gambar jika salah satu dimensinya lebih dari 1000px
-            $image->scaleDown(
-                width: 1000,
-                height: 1000
-            );
-
-            // Encode menjadi JPG dengan kualitas 75
-            $encodedImage = $image->toJpeg(quality: 75);
-
-            // Nama file selalu JPG
-            $fileName .= '.jpg';
-
-            // Path penyimpanan
-            $path = $directory.'/'.$fileName;
-
-            // Simpan gambar
-            Storage::disk('public')->put(
-                $path,
-                (string) $encodedImage
-            );
-
-            return $path;
-        } catch (\Throwable $e) {
-            Log::error('Gagal memproses foto presensi', [
-                'error' => $e->getMessage(),
-                'directory' => $directory,
-                'file_name' => $fileName,
-            ]);
-
-            return null;
-        }
     }
 
     /**
@@ -486,4 +430,24 @@ class PresensiController extends Controller
 
         return (int) round($earthRadius * $c);
     }
+    /** @return array{error: ?string, distance: ?float} */
+        private function checkFace(Pengguna $user, ?string $probeJson): array
+        {
+            $enrolled = $user->magang?->face_descriptors;
+            if (empty($enrolled)) {
+                return ['error' => 'Wajah Anda belum terdaftar. Silakan daftarkan wajah terlebih dahulu.', 'distance' => null];
+            }
+
+            $probe = $this->face->parse($probeJson);
+            if (! $probe) {
+                return ['error' => 'Data verifikasi wajah tidak valid. Silakan ulangi verifikasi wajah.', 'distance' => null];
+            }
+
+            $r = $this->face->match($enrolled, $probe[0]);
+            if (! $r['match']) {
+                return ['error' => 'Wajah tidak cocok dengan data pendaftaran. Silakan coba lagi.', 'distance' => $r['distance']];
+            }
+
+            return ['error' => null, 'distance' => $r['distance']];
+        }
 }

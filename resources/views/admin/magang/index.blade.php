@@ -107,6 +107,21 @@
                                         </span>
                                     @endif
                                 </div>
+                                <div class="mt-2 text-[11px]">
+                                    @if ($item->face_registered_at)
+                                        <span class="text-emerald-700">Wajah terdaftar</span>
+                                        <span class="text-slate-300">&middot;</span>
+                                        <a href="{{ route('admin.magang.wajah.foto', $item->id) }}" target="_blank" class="text-blue-600 hover:underline">Lihat foto</a>
+                                        <span class="text-slate-300">&middot;</span>
+                                        <form action="{{ route('admin.magang.wajah.reset', $item->id) }}" method="POST" class="inline"
+                                            onsubmit="return confirm('Reset data wajah {{ $item->nama_lengkap }}? Peserta harus mendaftarkan wajah lagi.');">
+                                            @csrf
+                                            <button type="submit" class="text-rose-600 hover:underline cursor-pointer">Reset</button>
+                                        </form>
+                                    @else
+                                        <span class="text-amber-700">Belum mendaftarkan wajah</span>
+                                    @endif
+                                </div>
                             </td>
                             <td class="px-6 py-4 text-center text-xs">
                                 <div class="font-medium text-slate-600">

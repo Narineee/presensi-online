@@ -210,6 +210,10 @@ class MagangController extends Controller
             Storage::disk('public')->delete($magang->foto);
         }
 
+        if ($magang->face_foto) {
+            Storage::disk('local')->delete($magang->face_foto);
+        }
+        
         // Hapus profil magang
         $magang->delete();
 
@@ -219,5 +223,32 @@ class MagangController extends Controller
         }
 
         return redirect()->route('admin.magang.index')->with('success', 'Data magang dan akun login berhasil dihapus!');
+    }
+    // Menampilkan foto wajah terdaftar (privat, hanya lewat route admin)
+    public function fotoWajah($id)
+    {
+        $magang = Magang::findOrFail($id);
+
+        abort_unless($magang->face_foto && Storage::disk('local')->exists($magang->face_foto), 404);
+
+        return Storage::disk('local')->response($magang->face_foto);
+    }
+
+    // Menghapus data wajah agar peserta merekam ulang
+    public function resetWajah($id)
+    {
+        $magang = Magang::findOrFail($id);
+
+        if ($magang->face_foto) {
+            Storage::disk('local')->delete($magang->face_foto);
+        }
+
+        $magang->update([
+            'face_descriptors' => null,
+            'face_foto' => null,
+            'face_registered_at' => null,
+        ]);
+
+        return back()->with('success', "Data wajah {$magang->nama_lengkap} telah direset. Peserta akan diminta mendaftarkan wajah lagi.");
     }
 }

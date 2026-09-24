@@ -219,6 +219,7 @@
                     @csrf
                     <input type="hidden" name="foto_masuk" id="input_foto_masuk" value="">
                     <input type="hidden" name="lokasi_masuk" id="input_lokasi_masuk" value="">
+                    <input type="hidden" name="face_descriptor" id="input_face_descriptor" value="">
 
                     <!-- Pilihan Mode Kerja -->
                     <div>
@@ -260,7 +261,7 @@
                         <div class="space-y-3">
                             <div class="flex items-center justify-between">
                                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                                    Verifikasi Wajah (Liveness) <span class="text-rose-500">*</span>
+                                    Foto Wajah (Liveness) <span class="text-rose-500">*</span>
                                 </label>
                                 <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
                                     <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
@@ -582,6 +583,7 @@
                             @csrf
                             <input type="hidden" name="foto_keluar" id="input_foto_keluar" value="">
                             <input type="hidden" name="lokasi_keluar" id="input_lokasi_keluar" value="">
+                            <input type="hidden" name="face_descriptor" id="input_face_descriptor" value="">
                             <input type="hidden" id="today-mode-kerja" value="{{ $todayPresensi->mode_kerja }}">
 
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -589,12 +591,8 @@
                                 <div class="space-y-3">
                                     <div class="flex items-center justify-between">
                                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                                            Verifikasi Wajah Pulang (Liveness) <span class="text-rose-500">*</span>
+                                            Foto Wajah Pulang (Liveness) <span class="text-rose-500">*</span>
                                         </label>
-                                        <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                            Realtime AI
-                                        </span>
                                     </div>
                                     
                                     <div class="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video flex items-center justify-center border-2 border-slate-200 shadow-inner">
@@ -618,7 +616,7 @@
                                                     <span id="challenge-icon" class="text-xl shrink-0 transition-transform duration-300">👤</span>
                                                     <div class="min-w-0">
                                                         <div id="challenge-instruction" class="text-xs sm:text-sm font-bold text-white truncate">
-                                                            Menyiapkan Liveness Detection...
+                                                            Ikuti Instruksi di layar
                                                         </div>
                                                         <div id="challenge-subtext" class="text-[10px] sm:text-[11px] text-slate-300 truncate">
                                                             Posisikan wajah Anda di dalam bingkai oval
@@ -640,7 +638,7 @@
                                         <!-- Placeholder Ketika Kamera Belum Aktif -->
                                         <div id="camera-placeholder" class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-4 text-slate-300 text-center z-10">
                                             <div class="w-9 h-9 border-3 border-amber-500 border-t-transparent rounded-full animate-spin mb-2.5"></div>
-                                            <span class="text-xs font-semibold text-slate-200">Menyiapkan Kamera & AI Liveness...</span>
+                                            <span class="text-xs font-semibold text-slate-200">Membuka kamera...</span>
                                             <span class="text-[10px] text-slate-400 mt-1">Pastikan izin kamera diizinkan di browser</span>
                                         </div>
                                     </div>
@@ -650,7 +648,7 @@
                                         <div id="liveness-status-box" class="p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs flex items-center justify-between gap-2 transition-all">
                                             <div class="flex items-center gap-2 min-w-0">
                                                 <span id="liveness-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
-                                                <span id="liveness-status-text" class="text-slate-600 font-medium truncate">Menunggu verifikasi liveness wajah...</span>
+                                                <span id="liveness-status-text" class="text-slate-600 font-medium truncate">Ikuti instruksi di layar, foto akan diambil otomatis</span>
                                             </div>
                                             <span id="liveness-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0 uppercase tracking-wider">
                                                 Belum Terverifikasi
@@ -659,7 +657,7 @@
 
                                         <button type="button" id="btn-retake" class="hidden w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition cursor-pointer">
                                             <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
-                                            <span>Ulangi Verifikasi Wajah</span>
+                                            <span>Ambil Ulang</span>
                                         </button>
                                     </div>
                                 </div>
@@ -943,6 +941,8 @@
 @endsection
 
 @section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js"></script>
+<script src="{{ asset('js/face-id.js') }}"></script>
 <!-- MediaPipe FaceMesh & Camera Utils -->
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
@@ -978,6 +978,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Input target hidden foto
     const inputFotoMasuk = document.getElementById('input_foto_masuk');
     const inputFotoKeluar = document.getElementById('input_foto_keluar');
+    const inputFaceDescriptor = document.getElementById('input_face_descriptor');
+    if (typeof FaceID !== 'undefined') FaceID.load(); // muat model lebih awal
 
     // Pengaturan resize & kompres foto (Base64 JPEG)
     const FOTO_MAX_DIMENSI = 1000;
@@ -1150,6 +1152,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Kosongkan nilai foto sebelumnya
         if (inputFotoMasuk) inputFotoMasuk.value = '';
         if (inputFotoKeluar) inputFotoKeluar.value = '';
+        if (inputFaceDescriptor) inputFaceDescriptor.value = '';
 
         // Tampilkan stream video & sembunyikan preview
         if (video) video.classList.remove('hidden');
@@ -1176,7 +1179,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const statusText = document.getElementById('liveness-status-text');
         if (statusText) {
-            statusText.textContent = 'Menunggu verifikasi liveness wajah...';
+            statusText.textContent = 'Ikuti instruksi di layar, foto akan diambil otomatis';
         }
         const statusBadge = document.getElementById('liveness-badge');
         if (statusBadge) {
@@ -1188,11 +1191,33 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Auto-Capture Setelah Verifikasi Liveness Berhasil
-    function completeLivenessAndCapture() {
-        isLivenessVerified = true;
-        isLivenessActive = false;
+    async function completeLivenessAndCapture() {
+        isLivenessActive = false; // hentikan pemrosesan frame liveness
 
-        // Visual flash kamera
+        const statusText = document.getElementById('liveness-status-text');
+        if (statusText) statusText.textContent = 'Memproses foto dan data wajah...';
+
+        // Ambil foto dari frame video saat ini
+        const dataUrl = ambilFotoTerkompres(video, canvas);
+
+        // Hitung descriptor dari foto yang sama
+        let descriptor;
+        try {
+            if (typeof FaceID === 'undefined') {
+                throw new Error('Modul pengenal wajah gagal dimuat. Segarkan halaman.');
+            }
+            descriptor = await FaceID.descriptorFrom(canvas);
+        } catch (err) {
+            startNewLivenessSession();
+            const st = document.getElementById('liveness-status-text');
+            if (st) st.textContent = err.message + ' Ikuti instruksi sekali lagi.';
+            return;
+        }
+
+        if (inputFaceDescriptor) inputFaceDescriptor.value = JSON.stringify(descriptor);
+        isLivenessVerified = true;
+
+        // Efek kilat dan suara
         const flashEl = document.getElementById('camera-flash');
         if (flashEl) {
             flashEl.classList.remove('opacity-0');
@@ -1202,50 +1227,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 flashEl.classList.add('opacity-0');
             }, 250);
         }
-
-        // Suara shutter
         playTone(1050, 'triangle', 0.25);
 
-        // Ambil snapshot terkompresi
-        const dataUrl = ambilFotoTerkompres(video, canvas);
-
-        // Tampilkan preview foto & sembunyikan video
+        // Tampilkan hasil foto, sembunyikan video dan panduan
         if (preview) {
             preview.src = dataUrl;
             preview.classList.remove('hidden');
         }
         if (video) video.classList.add('hidden');
 
-        // Sembunyikan guide oval & banner challenge
         const guideOverlay = document.getElementById('face-guide-overlay');
         if (guideOverlay) guideOverlay.classList.add('hidden');
         const banner = document.getElementById('challenge-banner');
         if (banner) banner.classList.add('hidden');
 
-        // Simpan Base64 ke input target form
+        // Simpan foto ke input form
         if (inputFotoMasuk) inputFotoMasuk.value = dataUrl;
         if (inputFotoKeluar) inputFotoKeluar.value = dataUrl;
 
-        // Update status box UI menjadi terverifikasi
+        // Status terverifikasi
         const statusBox = document.getElementById('liveness-status-box');
         if (statusBox) {
-            statusBox.className = 'p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-xs flex items-center justify-between gap-2 shadow-xs transition-all';
+            statusBox.className = 'p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-xs flex items-center justify-between gap-2 transition-all';
         }
         const statusDot = document.getElementById('liveness-status-dot');
-        if (statusDot) {
-            statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0';
-        }
-        const statusText = document.getElementById('liveness-status-text');
-        if (statusText) {
-            statusText.innerHTML = '<span class="font-bold text-emerald-800">✅ Verifikasi Wajah Berhasil!</span> Foto presensi tersimpan otomatis.';
-        }
+        if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0';
+        if (statusText) statusText.textContent = 'Verifikasi berhasil. Foto presensi sudah diambil.';
         const statusBadge = document.getElementById('liveness-badge');
         if (statusBadge) {
             statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0 uppercase tracking-wider';
             statusBadge.textContent = 'Terverifikasi';
         }
 
-        // Tampilkan tombol ulangi jika ingin re-verifikasi
         if (btnRetake) btnRetake.classList.remove('hidden');
     }
 
@@ -1772,6 +1785,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!isLivenessVerified || !isValidSelfie(inputFotoMasuk.value)) {
                 e.preventDefault();
                 alert('Verifikasi wajah (Liveness Detection) belum selesai!\n\nSilakan ikuti instruksi tantangan gerakan di depan kamera hingga foto otomatis terambil.');
+                return;
+            }
+            if (!inputFaceDescriptor || !inputFaceDescriptor.value) {
+                e.preventDefault();
+                alert('Data verifikasi wajah belum tersedia. Silakan ulangi verifikasi wajah.');
                 return;
             }
             if (!inputLokasiMasuk.value) {
