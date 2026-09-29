@@ -103,7 +103,7 @@
                     <span>Akun Login Pembimbing</span>
                 </h3>
                 <p class="text-xs text-slate-500 mt-2">
-                    Kredensial login ini akan digunakan pembimbing untuk masuk ke sistem validasi aktivitas dan penilaian magang.
+                    AKun login ini akan digunakan pembimbing untuk masuk ke sistem validasi aktivitas dan penilaian magang.
                 </p>
 
                 <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">

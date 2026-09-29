@@ -54,10 +54,16 @@ class KriteriaPenilaianController extends Controller
             'bobot.max' => 'Bobot maksimal adalah 100.',
         ]);
 
+        $isPresensi = $request->boolean('is_presensi');
+        if ($isPresensi) {
+            KriteriaPenilaian::where('is_presensi', true)->update(['is_presensi' => false]);
+        }
+
         // Simpan data kriteria baru
         KriteriaPenilaian::create([
             'nama' => $request->nama,
             'bobot' => $request->bobot,
+            'is_presensi' => $isPresensi,
         ]);
 
         return redirect()->route('admin.kriteria.index')
@@ -102,10 +108,16 @@ class KriteriaPenilaianController extends Controller
 
         $kriteria = KriteriaPenilaian::findOrFail($id);
 
+        $isPresensi = $request->boolean('is_presensi');
+        if ($isPresensi) {
+            KriteriaPenilaian::where('id', '!=', $id)->where('is_presensi', true)->update(['is_presensi' => false]);
+        }
+
         // Update data kriteria
         $kriteria->update([
             'nama' => $request->nama,
             'bobot' => $request->bobot,
+            'is_presensi' => $isPresensi,
         ]);
 
         return redirect()->route('admin.kriteria.index')

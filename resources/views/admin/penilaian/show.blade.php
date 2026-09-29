@@ -68,6 +68,48 @@
             </div>
         </div>
 
+        @if(isset($presensiScore))
+            <!-- Ringkasan Objektif Presensi Digital -->
+            <div class="bg-gradient-to-br from-emerald-50 via-teal-50/40 to-slate-50 p-3 rounded-xl border border-emerald-200/90 space-y-2">
+                <div class="flex items-center justify-between gap-2 border-b border-emerald-200/60 pb-1.5">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-5 h-5 rounded-md bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px] shadow-xs">⏱️</span>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-900">Rincian Evaluasi Presensi Digital (Objektif)</h4>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-md {{ $presensiScore['badge_class'] }} border">
+                            Capaian: {{ $presensiScore['skor_presensi'] }}% ({{ $presensiScore['predikat'] }})
+                        </span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <div class="bg-white/80 p-1.5 rounded-lg border border-emerald-100 shadow-2xs">
+                        <span class="text-slate-400 block text-[9px] uppercase font-semibold">Target Jam Kerja</span>
+                        <span class="font-mono font-bold text-slate-800 text-[11px]">{{ number_format($presensiScore['target_menit']) }} Menit</span>
+                        <span class="text-[9px] text-slate-400 block">({{ $presensiScore['target_hari'] }} hari kerja)</span>
+                    </div>
+                    <div class="bg-white/80 p-1.5 rounded-lg border border-emerald-100 shadow-2xs">
+                        <span class="text-slate-400 block text-[9px] uppercase font-semibold">Total Realisasi</span>
+                        <span class="font-mono font-bold text-emerald-700 text-[11px]">{{ number_format($presensiScore['total_menit_realisasi']) }} Menit</span>
+                        <span class="text-[9px] text-emerald-600 block">Persentase: {{ $presensiScore['skor_presensi'] }}%</span>
+                    </div>
+                    <div class="bg-white/80 p-1.5 rounded-lg border border-emerald-100 shadow-2xs">
+                        <span class="text-slate-400 block text-[9px] uppercase font-semibold">Kehadiran & Izin</span>
+                        <span class="font-mono font-bold text-slate-700 text-[11px]">{{ $presensiScore['total_hari_hadir'] }} Hadir &bull; {{ $presensiScore['total_hari_izin'] }} Izin</span>
+                        <span class="text-[9px] text-blue-600 block">Izin disetujui (480m)</span>
+                    </div>
+                    <div class="bg-white/80 p-1.5 rounded-lg border border-emerald-100 shadow-2xs">
+                        <span class="text-slate-400 block text-[9px] uppercase font-semibold">Lupa Checkout / Telat</span>
+                        <span class="font-mono font-bold text-amber-700 text-[11px]">{{ $presensiScore['total_hari_lupa_checkout'] }} Lupa &bull; {{ $presensiScore['total_hari_terlambat'] }}x Telat</span>
+                        <span class="text-[9px] text-rose-500 block">-{{ $presensiScore['menit_terlambat_potong'] }}m (cut 50%)</span>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <!-- Tabel Rincian Nilai Kriteria -->
         <div class="w-full">
             <table class="w-full table-fixed text-xs border border-slate-300 border-collapse">
@@ -85,10 +127,20 @@
                         @php
                             $bobot = $detail->kriteria->bobot ?? 0;
                             $terbobot = round(($detail->nilai * $bobot) / 100, 2);
+                            $isPresensi = $detail->kriteria->is_presensi ?? false;
                         @endphp
                         <tr class="{{ $loop->even ? 'bg-slate-50/40' : 'bg-white' }}">
                             <td class="border border-slate-300 py-1.5 px-2 text-center text-slate-500 break-words">{{ $loop->iteration }}</td>
-                            <td class="border border-slate-300 py-1.5 px-3 font-medium text-slate-900 break-words">{{ $detail->kriteria->nama ?? 'Kriteria #' . $detail->kriteria_id }}</td>
+                            <td class="border border-slate-300 py-1.5 px-3 font-medium text-slate-900 break-words">
+                                <div class="flex items-center gap-1.5">
+                                    <span>{{ $detail->kriteria->nama ?? 'Kriteria #' . $detail->kriteria_id }}</span>
+                                    @if($isPresensi)
+                                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                            Objektif (Presensi)
+                                        </span>
+                                    @endif
+                                </div>
+                            </td>
                             <td class="border border-slate-300 py-1.5 px-2 text-center text-slate-700 break-words">{{ $bobot }}%</td>
                             <td class="border border-slate-300 py-1.5 px-2 text-center font-bold text-slate-800 break-words">{{ $detail->nilai }}</td>
                             <td class="border border-slate-300 py-1.5 px-2 text-center font-semibold text-slate-700 break-words">{{ number_format($terbobot, 2) }}</td>
@@ -123,10 +175,11 @@
         <!-- Tabel Konversi Predikat Ringkas -->
         <div class="text-[10px] text-slate-600 bg-slate-50/60 px-3 py-1.5 rounded-lg border border-slate-200/80 flex flex-wrap items-center justify-between gap-1">
             <span class="font-bold text-slate-700">Standar Predikat:</span>
-            <span>&bull; <strong class="text-slate-800">85 - 100:</strong> A (Sangat Baik)</span>
-            <span>&bull; <strong class="text-slate-800">75 - 84:</strong> B (Baik)</span>
-            <span>&bull; <strong class="text-slate-800">60 - 74:</strong> C (Cukup)</span>
-            <span>&bull; <strong class="text-slate-800">&lt; 60:</strong> D (Kurang)</span>
+            <span>&bull; <strong class="text-slate-800">90 - 100:</strong> A (Sangat Baik)</span>
+            <span>&bull; <strong class="text-slate-800">80 - 89:</strong> B (Baik)</span>
+            <span>&bull; <strong class="text-slate-800">70 - 79:</strong> C (Cukup Baik)</span>
+            <span>&bull; <strong class="text-slate-800">60 - 69:</strong> D (Kurang Baik)</span>
+            <span>&bull; <strong class="text-slate-800">&lt; 60:</strong> E (Tidak Baik)</span>
         </div>
 
         <!-- Tanda Tangan Dinamis (Pembimbing Lapangan & Pimpinan Divisi / Dinas) -->

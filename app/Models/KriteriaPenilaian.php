@@ -11,10 +11,12 @@ class KriteriaPenilaian extends Model
     protected $fillable = [
         'nama',
         'bobot',
+        'is_presensi',
     ];
 
     protected $casts = [
         'bobot' => 'integer',
+        'is_presensi' => 'boolean',
     ];
 
     public function detailPenilaian()

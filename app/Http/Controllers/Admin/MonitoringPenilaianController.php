@@ -8,10 +8,13 @@ use App\Models\Magang;
 use App\Models\Pembimbing;
 use App\Models\Pengaturan;
 use App\Models\Penilaian;
+use App\Services\PresensiScoreService;
 use Illuminate\Http\Request;
 
 class MonitoringPenilaianController extends Controller
 {
+    public function __construct(private PresensiScoreService $presensiScoreService) {}
+
     /**
      * Menampilkan rekapitulasi penilaian seluruh anak magang.
      */
@@ -135,8 +138,9 @@ class MonitoringPenilaianController extends Controller
         ])->findOrFail($id);
 
         $pengaturan = Pengaturan::getPengaturan();
+        $presensiScore = $this->presensiScoreService->calculateScore($penilaian->magang);
 
-        return view('admin.penilaian.show', compact('penilaian', 'pengaturan'));
+        return view('admin.penilaian.show', compact('penilaian', 'pengaturan', 'presensiScore'));
     }
 
     /**

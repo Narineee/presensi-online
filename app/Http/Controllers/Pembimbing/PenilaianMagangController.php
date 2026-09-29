@@ -7,11 +7,14 @@ use App\Models\DetailPenilaian;
 use App\Models\KriteriaPenilaian;
 use App\Models\Magang;
 use App\Models\Penilaian;
+use App\Services\PresensiScoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class PenilaianMagangController extends Controller
 {
+    public function __construct(private PresensiScoreService $presensiScoreService) {}
+
     /**
      * Menampilkan daftar anak magang binaan dan status penilaian akhirnya.
      */
@@ -95,7 +98,10 @@ class PenilaianMagangController extends Controller
                 ->with('error', 'Belum ada kriteria penilaian yang dibuat admin. Hubungi admin sistem.');
         }
 
-        return view('pembimbing.penilaian.create', compact('magang', 'kriteriaList'));
+        // Hitung skor presensi objektif
+        $presensiScore = $this->presensiScoreService->calculateScore($magang);
+
+        return view('pembimbing.penilaian.create', compact('magang', 'kriteriaList', 'presensiScore'));
     }
 
     /**
@@ -133,6 +139,10 @@ class PenilaianMagangController extends Controller
                 ->with('error', 'Penilaian untuk anak magang ini sudah ada.');
         }
 
+        // Hitung skor objektif presensi digital (Opsi A)
+        $presensiScore = $this->presensiScoreService->calculateScore($magang);
+        $presensiKriteriaId = $presensiScore['kriteria_presensi']?->id;
+
         $kriteriaList = KriteriaPenilaian::all();
 
         // Hitung total nilai berbobot
@@ -141,7 +151,13 @@ class PenilaianMagangController extends Controller
 
         foreach ($kriteriaList as $kriteria) {
             $bobot = $kriteria->bobot;
-            $nilaiInput = (int) ($request->nilai[$kriteria->id] ?? 0);
+
+            // Jika ini kriteria presensi, gunakan skor objektif sistem
+            if ($kriteria->is_presensi || $kriteria->id === $presensiKriteriaId) {
+                $nilaiInput = $presensiScore['nilai_angka'];
+            } else {
+                $nilaiInput = (int) ($request->nilai[$kriteria->id] ?? 0);
+            }
 
             $sumBobotNilai += ($nilaiInput * $bobot);
             $totalBobot += $bobot;
@@ -158,7 +174,11 @@ class PenilaianMagangController extends Controller
 
         // Simpan setiap rincian kriteria ke detail_penilaian
         foreach ($kriteriaList as $kriteria) {
-            $nilaiInput = (int) ($request->nilai[$kriteria->id] ?? 0);
+            if ($kriteria->is_presensi || $kriteria->id === $presensiKriteriaId) {
+                $nilaiInput = $presensiScore['nilai_angka'];
+            } else {
+                $nilaiInput = (int) ($request->nilai[$kriteria->id] ?? 0);
+            }
 
             DetailPenilaian::create([
                 'penilaian_id' => $penilaian->id,
@@ -198,7 +218,9 @@ class PenilaianMagangController extends Controller
             ])
             ->firstOrFail();
 
-        return view('pembimbing.penilaian.show', compact('penilaian'));
+        $presensiScore = $this->presensiScoreService->calculateScore($penilaian->magang);
+
+        return view('pembimbing.penilaian.show', compact('penilaian', 'presensiScore'));
     }
 
     /**
@@ -221,10 +243,13 @@ class PenilaianMagangController extends Controller
 
         $kriteriaList = KriteriaPenilaian::orderBy('id', 'asc')->get();
 
+        // Hitung skor objektif presensi
+        $presensiScore = $this->presensiScoreService->calculateScore($penilaian->magang);
+
         // Format nilai per kriteria ID agar mudah diakses di form blade
         $nilaiMap = $penilaian->detail->pluck('nilai', 'kriteria_id')->toArray();
 
-        return view('pembimbing.penilaian.edit', compact('penilaian', 'kriteriaList', 'nilaiMap'));
+        return view('pembimbing.penilaian.edit', compact('penilaian', 'kriteriaList', 'nilaiMap', 'presensiScore'));
     }
 
     /**
@@ -253,6 +278,10 @@ class PenilaianMagangController extends Controller
             'nilai.*.max' => 'Nilai maksimal 100.',
         ]);
 
+        // Hitung skor objektif presensi
+        $presensiScore = $this->presensiScoreService->calculateScore($penilaian->magang);
+        $presensiKriteriaId = $presensiScore['kriteria_presensi']?->id;
+
         $kriteriaList = KriteriaPenilaian::all();
 
         $totalBobot = 0;
@@ -260,7 +289,13 @@ class PenilaianMagangController extends Controller
 
         foreach ($kriteriaList as $kriteria) {
             $bobot = $kriteria->bobot;
-            $nilaiInput = (int) ($request->nilai[$kriteria->id] ?? 0);
+
+            // Kriteria presensi terkunci otomatis
+            if ($kriteria->is_presensi || $kriteria->id === $presensiKriteriaId) {
+                $nilaiInput = $presensiScore['nilai_angka'];
+            } else {
+                $nilaiInput = (int) ($request->nilai[$kriteria->id] ?? 0);
+            }
 
             $sumBobotNilai += ($nilaiInput * $bobot);
             $totalBobot += $bobot;

@@ -8,25 +8,27 @@ use App\Models\Pembimbing;
 use App\Models\Pengaturan;
 use App\Models\Pengguna;
 use App\Models\Presensi;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Services\FaceVerificationService;
 use App\Support\StoresBase64Image;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class PresensiController extends Controller
 {
-     use StoresBase64Image;
+    use StoresBase64Image;
 
     public function __construct(private FaceVerificationService $face) {}
+
     /**
      * Menampilkan halaman utama presensi (form absen hari ini & riwayat presensi).
      */
     public function index(Request $request)
     {
         $user = Auth::user();
-                if ($user->role === 'magang' && ! $user->magang?->face_registered_at) {
+        if ($user->role === 'magang' && ! $user->magang?->face_registered_at) {
             return redirect()->route('wajah.create')
                 ->with('error', 'Daftarkan wajah Anda terlebih dahulu sebelum presensi.');
         }
@@ -107,7 +109,7 @@ class PresensiController extends Controller
      */
     public function storeMasuk(Request $request)
     {
-         $user = Auth::user();
+        $user = Auth::user();
         $today = Carbon::today()->toDateString();
 
         $existing = Presensi::where('pengguna_id', $user->id)
@@ -430,24 +432,54 @@ class PresensiController extends Controller
 
         return (int) round($earthRadius * $c);
     }
+
     /** @return array{error: ?string, distance: ?float} */
-        private function checkFace(Pengguna $user, ?string $probeJson): array
-        {
-            $enrolled = $user->magang?->face_descriptors;
-            if (empty($enrolled)) {
-                return ['error' => 'Wajah Anda belum terdaftar. Silakan daftarkan wajah terlebih dahulu.', 'distance' => null];
-            }
-
-            $probe = $this->face->parse($probeJson);
-            if (! $probe) {
-                return ['error' => 'Data verifikasi wajah tidak valid. Silakan ulangi verifikasi wajah.', 'distance' => null];
-            }
-
-            $r = $this->face->match($enrolled, $probe[0]);
-            if (! $r['match']) {
-                return ['error' => 'Wajah tidak cocok dengan data pendaftaran. Silakan coba lagi.', 'distance' => $r['distance']];
-            }
-
-            return ['error' => null, 'distance' => $r['distance']];
+    private function checkFace(Pengguna $user, ?string $probeJson): array
+    {
+        $enrolled = $user->magang?->face_descriptors;
+        if (empty($enrolled)) {
+            return ['error' => 'Wajah Anda belum terdaftar. Silakan daftarkan wajah terlebih dahulu.', 'distance' => null];
         }
+
+        $probe = $this->face->parse($probeJson);
+        if (! $probe) {
+            return ['error' => 'Data verifikasi wajah tidak valid. Silakan ulangi verifikasi wajah.', 'distance' => null];
+        }
+
+        $r = $this->face->match($enrolled, $probe[0]);
+        if (! $r['match']) {
+            return ['error' => 'Wajah tidak cocok dengan data pendaftaran. Silakan coba lagi.', 'distance' => $r['distance']];
+        }
+
+        return ['error' => null, 'distance' => $r['distance']];
+    }
+
+    /**
+     * Verifikasi instan (pre-check) kecocokan wajah via AJAX sebelum presensi disubmit.
+     */
+    public function verifikasiWajah(Request $request): JsonResponse
+    {
+        $request->validate([
+            'face_descriptor' => 'required|string',
+        ]);
+
+        $user = Auth::user();
+        $face = $this->checkFace($user, $request->face_descriptor);
+
+        if ($face['error']) {
+            return response()->json([
+                'success' => false,
+                'match' => false,
+                'distance' => $face['distance'],
+                'message' => $face['error'],
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'match' => true,
+            'distance' => $face['distance'],
+            'message' => 'Wajah terverifikasi dan cocok dengan data pendaftaran.',
+        ]);
+    }
 }

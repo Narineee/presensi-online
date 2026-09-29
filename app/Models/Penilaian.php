@@ -30,19 +30,21 @@ class Penilaian extends Model
     }
 
     /**
-     * Mendapatkan huruf mutu / predikat nilai (A, B, C, D)
+     * Mendapatkan huruf mutu / predikat nilai (A, B, C, D, E)
      */
     public function getPredikatAttribute(): string
     {
         $nilai = $this->total_nilai ?? 0;
-        if ($nilai >= 85) {
+        if ($nilai >= 90) {
             return 'A';
-        } elseif ($nilai >= 75) {
+        } elseif ($nilai >= 80) {
             return 'B';
-        } elseif ($nilai >= 60) {
+        } elseif ($nilai >= 70) {
             return 'C';
-        } else {
+        } elseif ($nilai >= 60) {
             return 'D';
+        } else {
+            return 'E';
         }
     }
 
@@ -54,10 +56,11 @@ class Penilaian extends Model
         $predikat = $this->predikat;
 
         return match ($predikat) {
-            'A' => 'Sangat Baik (Memuaskan)',
+            'A' => 'Sangat Baik',
             'B' => 'Baik',
-            'C' => 'Cukup',
-            default => 'Kurang',
+            'C' => 'Cukup Baik',
+            'D' => 'Kurang Baik',
+            default => 'Tidak Baik',
         };
     }
 
@@ -70,6 +73,7 @@ class Penilaian extends Model
             'A' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
             'B' => 'bg-blue-50 text-blue-700 border-blue-200',
             'C' => 'bg-amber-50 text-amber-700 border-amber-200',
+            'D' => 'bg-orange-50 text-orange-700 border-orange-200',
             default => 'bg-rose-50 text-rose-700 border-rose-200',
         };
     }

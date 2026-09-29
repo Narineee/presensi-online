@@ -15,13 +15,14 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Magang\PenilaianSayaController;
 use App\Http\Controllers\Pembimbing\AktivitasValidasiController;
 use App\Http\Controllers\Pembimbing\DashboardController as PembimbingDashboardController;
+use App\Http\Controllers\Pembimbing\MonitoringPresensiController as PembimbingMonitoringPresensiController;
 use App\Http\Controllers\Pembimbing\PengajuanIzinValidasiController;
 use App\Http\Controllers\Pembimbing\PenilaianMagangController;
 use App\Http\Controllers\PengajuanIzinController;
 use App\Http\Controllers\PresensiController;
 use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WajahController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/rekam-wajah', [WajahController::class, 'create'])->name('wajah.create');
 Route::post('/rekam-wajah', [WajahController::class, 'store'])->name('wajah.store');
@@ -108,6 +109,7 @@ Route::middleware(['auth', 'role:magang'])->group(function () {
     Route::get('/presensi', [PresensiController::class, 'index'])->name('presensi.index');
     Route::post('/presensi/masuk', [PresensiController::class, 'storeMasuk'])->name('presensi.masuk');
     Route::post('/presensi/keluar', [PresensiController::class, 'storeKeluar'])->name('presensi.keluar');
+    Route::post('/presensi/verifikasi-wajah', [PresensiController::class, 'verifikasiWajah'])->name('presensi.verifikasi-wajah');
 
     // CRUD Aktivitas Harian
     Route::get('/aktivitas/cetak', [AktivitasController::class, 'cetak'])->name('aktivitas.cetak');
@@ -131,6 +133,10 @@ Route::middleware(['auth', 'role:pembimbing'])
     ->group(function () {
 
         Route::get('/dashboard', [PembimbingDashboardController::class, 'index'])->name('dashboard');
+
+        // Monitoring & Riwayat Presensi Peserta Binaan
+        Route::get('/presensi/cetak', [PembimbingMonitoringPresensiController::class, 'cetak'])->name('presensi.cetak');
+        Route::get('/presensi', [PembimbingMonitoringPresensiController::class, 'index'])->name('presensi.index');
 
         // Validasi Aktivitas Binaan
         Route::get('/aktivitas', [AktivitasValidasiController::class, 'index'])->name('aktivitas.index');

@@ -69,6 +69,17 @@
                 @enderror
             </div>
 
+            <!-- Opsi Kriteria Presensi Otomatis (Objektif) -->
+            <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-1">
+                <label class="flex items-start gap-3 cursor-pointer select-none">
+                    <input type="checkbox" name="is_presensi" value="1" {{ old('is_presensi', $kriteria->is_presensi) ? 'checked' : '' }} class="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4">
+                    <div>
+                        <span class="text-xs font-bold text-slate-800">Gunakan sebagai Kriteria Penilaian Presensi Otomatis (Objektif)</span>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Jika dicentang, nilai kriteria ini akan dihitung secara otomatis oleh sistem berdasarkan total menit kerja presensi digital (8 jam/hari, potong 50% jika lupa checkout, izin resmi hadir penuh, tanggal merah tidak memotong).</p>
+                    </div>
+                </label>
+            </div>
+
             <!-- Tombol Aksi -->
             <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
                 <a href="{{ route('admin.kriteria.index') }}" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition">

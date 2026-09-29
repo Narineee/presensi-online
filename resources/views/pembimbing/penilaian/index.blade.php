@@ -218,7 +218,7 @@
                                         {{ $magang->penilaian->predikat }}
                                     </span>
                                     <span class="text-[10px] text-slate-400 block mt-0.5">
-                                        {{ match($magang->penilaian->predikat) { 'A' => 'Sangat Baik', 'B' => 'Baik', 'C' => 'Cukup', default => 'Kurang' } }}
+                                        {{ $magang->penilaian->keterangan_predikat }}
                                     </span>
                                 @else
                                     <span class="text-slate-300">-</span>

@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Magang;
 
 use App\Http\Controllers\Controller;
 use App\Models\Penilaian;
+use App\Services\PresensiScoreService;
 use Illuminate\Support\Facades\Auth;
 
 class PenilaianSayaController extends Controller
 {
+    public function __construct(private PresensiScoreService $presensiScoreService) {}
+
     /**
      * Menampilkan lembar nilai akhir anak magang yang sedang login.
      */
@@ -28,6 +31,8 @@ class PenilaianSayaController extends Controller
             ])
             ->first();
 
-        return view('magang.penilaian.index', compact('magang', 'penilaian'));
+        $presensiScore = $this->presensiScoreService->calculateScore($magang);
+
+        return view('magang.penilaian.index', compact('magang', 'penilaian', 'presensiScore'));
     }
 }

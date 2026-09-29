@@ -59,7 +59,7 @@
         aria-hidden="true"
     ></div>
 
-    <!-- Responsive Sidebar (Sesuai PRD tampilan.md "fitur pembimbing (ada sidebar)") -->
+    <!-- Responsive Sidebar -->
     <aside
         id="pembimbing-sidebar"
         class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 flex flex-col shrink-0 transform -translate-x-full md:translate-x-0 md:static md:w-64 transition-transform duration-300 ease-in-out shadow-xl md:shadow-none"
@@ -91,7 +91,7 @@
             </button>
         </div>
 
-        <!-- Sidebar Navigation (Urutan Sesuai PRD tampilan.md) -->
+        <!-- Sidebar Navigation -->
         <div class="flex-1 overflow-y-auto px-3.5 py-5 space-y-6 sidebar-scroll">
 
             <!-- 1. Menu Utama & Monitoring Peserta -->
@@ -112,6 +112,22 @@
                             <span>Dashboard Binaan</span>
                         </span>
                         @if(request()->routeIs('pembimbing.dashboard'))
+                            <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                        @endif
+                    </a>
+
+                    <!-- Riwayat Presensi Peserta Binaan -->
+                    <a
+                        href="{{ route('pembimbing.presensi.index') }}"
+                        class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold {{ request()->routeIs('pembimbing.presensi.*') ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }} transition"
+                    >
+                        <span class="flex items-center gap-3">
+                            <svg class="w-4 h-4 {{ request()->routeIs('pembimbing.presensi.*') ? 'text-white' : 'text-purple-600' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Riwayat Presensi</span>
+                        </span>
+                        @if(request()->routeIs('pembimbing.presensi.*'))
                             <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
                         @endif
                     </a>
@@ -199,7 +215,7 @@
         <!-- Top Navbar -->
         <header class="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 flex items-center justify-between shrink-0 sticky top-0 z-30">
             <div class="flex items-center gap-3">
-                <!-- Hamburger Button (Mobile Sidebar Toggle - Sesuai PRD "ada tombol sidebar") -->
+                <!-- Hamburger Button) -->
                 <button
                     type="button"
                     onclick="togglePembimbingSidebar()"
@@ -211,15 +227,6 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                     </svg>
                 </button>
-
-                <!-- Role Badge & Portal Info -->
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-slate-800 hidden sm:inline">Portal Pembimbing</span>
-                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-800 bg-purple-50 border border-purple-200 px-2.5 py-0.5 rounded-full">
-                        <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                        Validator Lapangan
-                    </span>
-                </div>
             </div>
 
             <!-- Header Right: User Info & Logout -->

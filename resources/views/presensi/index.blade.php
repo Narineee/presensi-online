@@ -1190,12 +1190,26 @@ document.addEventListener('DOMContentLoaded', function() {
         updateChallengeUI();
     }
 
-    // Auto-Capture Setelah Verifikasi Liveness Berhasil
+    // Auto-Capture Setelah Verifikasi Liveness Berhasil & Verifikasi Kecocokan Wajah ke Server
     async function completeLivenessAndCapture() {
         isLivenessActive = false; // hentikan pemrosesan frame liveness
 
+        const statusBox = document.getElementById('liveness-status-box');
+        const statusDot = document.getElementById('liveness-status-dot');
         const statusText = document.getElementById('liveness-status-text');
-        if (statusText) statusText.textContent = 'Memproses foto dan data wajah...';
+        const statusBadge = document.getElementById('liveness-badge');
+
+        if (statusBox) {
+            statusBox.className = 'p-3 rounded-xl border border-blue-200 bg-blue-50 text-xs flex items-center justify-between gap-2 transition-all';
+        }
+        if (statusDot) {
+            statusDot.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping shrink-0';
+        }
+        if (statusBadge) {
+            statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 shrink-0 uppercase tracking-wider animate-pulse';
+            statusBadge.textContent = 'Memeriksa Wajah...';
+        }
+        if (statusText) statusText.textContent = 'Mencocokkan wajah Anda dengan data pendaftaran di database...';
 
         // Ambil foto dari frame video saat ini
         const dataUrl = ambilFotoTerkompres(video, canvas);
@@ -1209,15 +1223,11 @@ document.addEventListener('DOMContentLoaded', function() {
             descriptor = await FaceID.descriptorFrom(canvas);
         } catch (err) {
             startNewLivenessSession();
-            const st = document.getElementById('liveness-status-text');
-            if (st) st.textContent = err.message + ' Ikuti instruksi sekali lagi.';
+            if (statusText) statusText.textContent = err.message + ' Ikuti instruksi sekali lagi.';
             return;
         }
 
-        if (inputFaceDescriptor) inputFaceDescriptor.value = JSON.stringify(descriptor);
-        isLivenessVerified = true;
-
-        // Efek kilat dan suara
+        // Efek kilat layar
         const flashEl = document.getElementById('camera-flash');
         if (flashEl) {
             flashEl.classList.remove('opacity-0');
@@ -1227,39 +1237,116 @@ document.addEventListener('DOMContentLoaded', function() {
                 flashEl.classList.add('opacity-0');
             }, 250);
         }
-        playTone(1050, 'triangle', 0.25);
 
-        // Tampilkan hasil foto, sembunyikan video dan panduan
-        if (preview) {
-            preview.src = dataUrl;
-            preview.classList.remove('hidden');
+        // Kirim AJAX ke server untuk mencocokkan wajah secara instan
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
+                || document.querySelector('input[name="_token"]')?.value;
+
+            const response = await fetch('{{ route('presensi.verifikasi-wajah') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    face_descriptor: JSON.stringify(descriptor)
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.match) {
+                // Wajah COCOK!
+                isLivenessVerified = true;
+                if (inputFaceDescriptor) inputFaceDescriptor.value = JSON.stringify(descriptor);
+                if (inputFotoMasuk) inputFotoMasuk.value = dataUrl;
+                if (inputFotoKeluar) inputFotoKeluar.value = dataUrl;
+
+                playTone(1050, 'triangle', 0.25);
+
+                // Tampilkan hasil foto, sembunyikan video dan panduan
+                if (preview) {
+                    preview.src = dataUrl;
+                    preview.classList.remove('hidden');
+                }
+                if (video) video.classList.add('hidden');
+
+                const guideOverlay = document.getElementById('face-guide-overlay');
+                if (guideOverlay) guideOverlay.classList.add('hidden');
+                const banner = document.getElementById('challenge-banner');
+                if (banner) banner.classList.add('hidden');
+
+                if (statusBox) {
+                    statusBox.className = 'p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-xs flex items-center justify-between gap-2 transition-all';
+                }
+                if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0';
+                if (statusText) statusText.textContent = `Wajah cocok & terverifikasi (Jarak: ${result.distance}). Silakan lanjutkan presensi.`;
+                if (statusBadge) {
+                    statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0 uppercase tracking-wider';
+                    statusBadge.textContent = 'Terverifikasi (Cocok)';
+                }
+
+                if (btnRetake) btnRetake.classList.remove('hidden');
+            } else {
+                // Wajah TIDAK COCOK!
+                isLivenessVerified = false;
+                if (inputFaceDescriptor) inputFaceDescriptor.value = '';
+                if (inputFotoMasuk) inputFotoMasuk.value = '';
+                if (inputFotoKeluar) inputFotoKeluar.value = '';
+
+                // Suara buzzer gagal
+                playTone(280, 'sawtooth', 0.35);
+
+                const guideOval = document.getElementById('guide-oval');
+                if (guideOval) guideOval.setAttribute('stroke', '#f43f5e');
+
+                if (statusBox) {
+                    statusBox.className = 'p-3 rounded-xl border border-rose-300 bg-rose-50 text-xs flex items-center justify-between gap-2 transition-all';
+                }
+                if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0';
+                if (statusBadge) {
+                    statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shrink-0 uppercase tracking-wider';
+                    statusBadge.textContent = 'Wajah Tidak Cocok!';
+                }
+                const failDistanceText = result.distance ? ` (Selisih: ${result.distance})` : '';
+                if (statusText) {
+                    statusText.textContent = (result.message || 'Wajah tidak cocok dengan akun terdaftar!') + failDistanceText + ' Mengulang dalam 3 detik...';
+                }
+
+                if (btnRetake) btnRetake.classList.remove('hidden');
+
+                // Otomatis mulai ulang sesi liveness setelah 3.5 detik
+                setTimeout(() => {
+                    if (!isLivenessVerified) {
+                        startNewLivenessSession();
+                    }
+                }, 3500);
+            }
+        } catch (netErr) {
+            console.error('Error saat verifikasi wajah ke server:', netErr);
+            isLivenessVerified = false;
+            if (inputFaceDescriptor) inputFaceDescriptor.value = '';
+            if (inputFotoMasuk) inputFotoMasuk.value = '';
+            if (inputFotoKeluar) inputFotoKeluar.value = '';
+
+            playTone(280, 'sawtooth', 0.3);
+
+            if (statusBox) {
+                statusBox.className = 'p-3 rounded-xl border border-rose-300 bg-rose-50 text-xs flex items-center justify-between gap-2 transition-all';
+            }
+            if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0';
+            if (statusBadge) {
+                statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shrink-0 uppercase tracking-wider';
+                statusBadge.textContent = 'Gagal Verifikasi';
+            }
+            if (statusText) statusText.textContent = 'Gagal menghubungi server untuk memverifikasi wajah. Mengulang kamera...';
+
+            setTimeout(() => {
+                startNewLivenessSession();
+            }, 3000);
         }
-        if (video) video.classList.add('hidden');
-
-        const guideOverlay = document.getElementById('face-guide-overlay');
-        if (guideOverlay) guideOverlay.classList.add('hidden');
-        const banner = document.getElementById('challenge-banner');
-        if (banner) banner.classList.add('hidden');
-
-        // Simpan foto ke input form
-        if (inputFotoMasuk) inputFotoMasuk.value = dataUrl;
-        if (inputFotoKeluar) inputFotoKeluar.value = dataUrl;
-
-        // Status terverifikasi
-        const statusBox = document.getElementById('liveness-status-box');
-        if (statusBox) {
-            statusBox.className = 'p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-xs flex items-center justify-between gap-2 transition-all';
-        }
-        const statusDot = document.getElementById('liveness-status-dot');
-        if (statusDot) statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0';
-        if (statusText) statusText.textContent = 'Verifikasi berhasil. Foto presensi sudah diambil.';
-        const statusBadge = document.getElementById('liveness-badge');
-        if (statusBadge) {
-            statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0 uppercase tracking-wider';
-            statusBadge.textContent = 'Terverifikasi';
-        }
-
-        if (btnRetake) btnRetake.classList.remove('hidden');
     }
 
     // Listener Hasil Frame FaceMesh MediaPipe Realtime
@@ -1784,12 +1871,12 @@ document.addEventListener('DOMContentLoaded', function() {
         formMasuk.addEventListener('submit', function(e) {
             if (!isLivenessVerified || !isValidSelfie(inputFotoMasuk.value)) {
                 e.preventDefault();
-                alert('Verifikasi wajah (Liveness Detection) belum selesai!\n\nSilakan ikuti instruksi tantangan gerakan di depan kamera hingga foto otomatis terambil.');
+                alert('Verifikasi wajah belum selesai atau tidak valid!\n\nSilakan ikuti instruksi tantangan gerakan di depan kamera hingga foto dan kecocokan wajah diverifikasi.');
                 return;
             }
             if (!inputFaceDescriptor || !inputFaceDescriptor.value) {
                 e.preventDefault();
-                alert('Data verifikasi wajah belum tersedia. Silakan ulangi verifikasi wajah.');
+                alert('Wajah Anda belum terverifikasi atau tidak cocok dengan data akun terdaftar! Silakan ulangi verifikasi wajah di kamera.');
                 return;
             }
             if (!inputLokasiMasuk.value) {
@@ -1812,7 +1899,12 @@ document.addEventListener('DOMContentLoaded', function() {
         formKeluar.addEventListener('submit', function(e) {
             if (!isLivenessVerified || !isValidSelfie(inputFotoKeluar.value)) {
                 e.preventDefault();
-                alert('Verifikasi wajah (Liveness Detection) kepulangan belum selesai!\n\nSilakan ikuti instruksi tantangan gerakan di depan kamera hingga foto otomatis terambil.');
+                alert('Verifikasi wajah kepulangan belum selesai atau tidak valid!\n\nSilakan ikuti instruksi tantangan gerakan di depan kamera hingga foto dan kecocokan wajah diverifikasi.');
+                return;
+            }
+            if (!inputFaceDescriptor || !inputFaceDescriptor.value) {
+                e.preventDefault();
+                alert('Wajah Anda belum terverifikasi atau tidak cocok dengan data akun terdaftar! Silakan ulangi verifikasi wajah di kamera.');
                 return;
             }
             if (!inputLokasiKeluar.value) {

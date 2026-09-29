@@ -5,63 +5,26 @@
 @section('styles')
 <style>
     @media print {
-        /* Sembunyikan elemen non-cetak */
-        header, footer, .no-print, nav, .btn-print-group {
-            display: none !important;
-        }
-
-        *, *::before, *::after {
-            box-shadow: none !important;
-            scrollbar-width: none !important;
-            -ms-overflow-style: none !important;
-        }
-
-        *::-webkit-scrollbar,
-        ::-webkit-scrollbar {
-            display: none !important;
-            width: 0 !important;
-            height: 0 !important;
-        }
-
-        html, body {
-            background-color: white !important;
-            color: black !important;
-            font-size: 12pt;
-            margin: 0;
-            padding: 0;
-            width: 100% !important;
-            max-width: 100% !important;
-            overflow: visible !important;
-            overflow-x: clip !important;
-        }
-
-        main {
-            max-width: 100% !important;
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-
-        .print-sheet {
-            border: none !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-            width: 100% !important;
-        }
-
-        table {
-            border-collapse: collapse !important;
-            width: 100% !important;
-        }
-
-        th, td {
-            word-wrap: break-word !important;
-            overflow-wrap: break-word !important;
-        }
-
-        .page-break {
-            page-break-after: always;
-        }
+        header, footer, .no-print, nav, .btn-print-group { display: none !important; }
+        *, *::before, *::after { box-shadow: none !important; scrollbar-width: none !important; }
+        *::-webkit-scrollbar, ::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+        html, body { background-color: white !important; color: black !important; margin: 0; padding: 0; width: 100% !important; max-width: 100% !important; overflow: visible !important; overflow-x: clip !important; }
+        main { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+        .print-sheet { border: none !important; box-shadow: none !important; padding: 0 !important; width: 100% !important; }
+        .page-break { page-break-after: always; }
     }
+
+    /* Gaya khusus lembar nilai */
+    .nilai-table { width:100%; border-collapse:collapse; font-size:10pt; margin-top:6px; }
+    .nilai-table th, .nilai-table td { border:1px solid #000; padding:5px 7px; vertical-align:middle; }
+    .nilai-table th { background:#e5e5e5; text-align:center; font-weight:bold; }
+    .nilai-table td.c { text-align:center; }
+    .nilai-table tr { page-break-inside:avoid; }
+    .nilai-table tfoot td { font-weight:bold; background:#f3f3f3; }
+    .judul-bagian { font-size:10.5pt; font-weight:bold; margin:14px 0 4px; }
+    .kualifikasi { font-size:9pt; margin-top:10px; }
+    .kualifikasi table { border-collapse:collapse; }
+    .kualifikasi td { padding:0 14px 0 0; }
 </style>
 @endsection
 
@@ -98,162 +61,150 @@
         </div>
     </div>
 
-    <!-- Official Printable Score Sheet (A4 format) -->
-    <div class="print-sheet bg-white p-8 sm:p-12 rounded-3xl border border-slate-200/80 shadow-sm text-slate-800 space-y-6">
+    <!-- Lembar Penilaian Resmi (A4) -->
+    <div class="print-sheet bg-white p-8 sm:p-12 border border-slate-300">
 
-        <!-- KOP SURAT / DOKUMEN RESMI -->
-        <div class="border-b-2 border-slate-900 pb-4 text-center">
-            <div class="flex items-center justify-center gap-3 mb-2">
-                <div class="w-10 h-10 rounded-xl bg-purple-700 text-white flex items-center justify-center font-black text-base shadow-xs">
-                    PD
-                </div>
-                <div class="text-left">
-                    <h2 class="text-base font-black uppercase tracking-wider text-slate-900 leading-tight">SISTEM PRESENSI & MANAJEMEN DIGITAL</h2>
-                    <p class="text-[11px] text-slate-500 font-medium">Divisi {{ $penilaian->magang->divisi->nama_divisi ?? 'Operasional & Sumber Daya' }}</p>
-                </div>
-            </div>
-            <p class="text-[10px] text-slate-400">Jl. Protokol Teknologi No. 88, Pusat Inovasi Digital &bull; Email: admin@presensi-digital.local</p>
+        @include('admin.cetak.partials.kop-surat')
+
+        <div class="judul-laporan">
+            <h3>Lembar Penilaian Akhir Magang</h3>
+            <p>Praktik Kerja Lapangan (PKL) / Program Internship</p>
         </div>
 
-        <!-- Judul Lembar Penilaian -->
-        <div class="text-center pt-2">
-            <h1 class="text-lg font-black uppercase tracking-wide text-slate-900">LEMBAR PENILAIAN AKHIR MAGANG</h1>
-            <p class="text-xs text-slate-500 mt-0.5">PRAKTIK KERJA LAPANGAN (PKL) / PROGRAM INTERNSHIP</p>
-        </div>
+        <!-- Identitas Peserta -->
+        <table class="info-table">
+            <tr><td class="k" style="width:170px">Nama Peserta Magang</td><td class="s">:</td><td><strong>{{ $penilaian->magang->nama_lengkap }}</strong></td></tr>
+            <tr><td class="k">Nomor Induk (NIS/NIM)</td><td class="s">:</td><td>{{ $penilaian->magang->no_induk }}</td></tr>
+            <tr><td class="k">Asal Lembaga / Kampus</td><td class="s">:</td><td>{{ $penilaian->magang->instansi_pendidikan }}</td></tr>
+            <tr><td class="k">Program Studi / Jurusan</td><td class="s">:</td><td>{{ $penilaian->magang->jurusan ?? '-' }}</td></tr>
+            <tr><td class="k">Unit / Divisi Penempatan</td><td class="s">:</td><td>{{ $penilaian->magang->divisi->nama_divisi ?? '-' }}</td></tr>
+            <tr>
+                <td class="k">Periode Pelaksanaan</td><td class="s">:</td>
+                <td>
+                    {{ $penilaian->magang->tanggal_mulai ? $penilaian->magang->tanggal_mulai->isoFormat('D MMMM Y') : '-' }}
+                    s/d
+                    {{ $penilaian->magang->tanggal_selesai ? $penilaian->magang->tanggal_selesai->isoFormat('D MMMM Y') : '-' }}
+                </td>
+            </tr>
+        </table>
 
-        <!-- Data Identitas Peserta Magang -->
-        <div class="bg-slate-50/80 p-4 rounded-xl border border-slate-200/80 text-xs">
-            <table class="w-full">
-                <tr class="py-1">
-                    <td class="w-40 font-semibold text-slate-600 py-1">Nama Peserta Magang</td>
-                    <td class="w-4 py-1">:</td>
-                    <td class="font-bold text-slate-900 py-1">{{ $penilaian->magang->nama_lengkap }}</td>
-                </tr>
-                <tr class="py-1">
-                    <td class="font-semibold text-slate-600 py-1">Nomor Induk (NIS/NIM)</td>
-                    <td class="py-1">:</td>
-                    <td class="text-slate-800 py-1">{{ $penilaian->magang->no_induk }}</td>
-                </tr>
-                <tr class="py-1">
-                    <td class="font-semibold text-slate-600 py-1">Asal Lembaga / Kampus</td>
-                    <td class="py-1">:</td>
-                    <td class="text-slate-800 py-1">{{ $penilaian->magang->instansi_pendidikan }}</td>
-                </tr>
-                <tr class="py-1">
-                    <td class="font-semibold text-slate-600 py-1">Program Studi / Jurusan</td>
-                    <td class="py-1">:</td>
-                    <td class="text-slate-800 py-1">{{ $penilaian->magang->jurusan ?? '-' }}</td>
-                </tr>
-                <tr class="py-1">
-                    <td class="font-semibold text-slate-600 py-1">Unit / Divisi Penempatan</td>
-                    <td class="py-1">:</td>
-                    <td class="text-slate-800 py-1">{{ $penilaian->magang->divisi->nama_divisi ?? '-' }}</td>
-                </tr>
-                <tr class="py-1">
-                    <td class="font-semibold text-slate-600 py-1">Periode Pelaksanaan</td>
-                    <td class="py-1">:</td>
-                    <td class="text-slate-800 py-1">
-                        {{ $penilaian->magang->tanggal_mulai ? $penilaian->magang->tanggal_mulai->format('d F Y') : '-' }}
-                        s/d
-                        {{ $penilaian->magang->tanggal_selesai ? $penilaian->magang->tanggal_selesai->format('d F Y') : '-' }}
-                    </td>
-                </tr>
-            </table>
-        </div>
-
-        <!-- Tabel Rincian Nilai Kriteria -->
-        <div>
-            <table class="w-full text-xs border border-slate-300 border-collapse">
-                <thead>
-                    <tr class="bg-slate-100 text-slate-800 font-bold border-b border-slate-300 text-center">
-                        <th class="border border-slate-300 py-2.5 px-3 w-12">No</th>
-                        <th class="border border-slate-300 py-2.5 px-4 text-left">Unsur / Kriteria Penilaian</th>
-                        <th class="border border-slate-300 py-2.5 px-3 w-24">Bobot</th>
-                        <th class="border border-slate-300 py-2.5 px-3 w-28">Nilai Angka (0-100)</th>
-                        <th class="border border-slate-300 py-2.5 px-3 w-28">Nilai Terbobot</th>
-                    </tr>
-                </thead>
+        @if(isset($presensiScore))
+            <!-- Rincian Evaluasi Presensi Digital -->
+            <div class="judul-bagian">A. Rincian Evaluasi Presensi Digital (Objektif)</div>
+            <table class="nilai-table">
                 <tbody>
-                    @foreach($penilaian->detail as $index => $detail)
-                        @php
-                            $bobot = $detail->kriteria->bobot ?? 0;
-                            $terbobot = round(($detail->nilai * $bobot) / 100, 2);
-                        @endphp
-                        <tr class="hover:bg-slate-50/50">
-                            <td class="border border-slate-300 py-2 px-3 text-center">{{ $loop->iteration }}</td>
-                            <td class="border border-slate-300 py-2 px-4 font-medium text-slate-900">{{ $detail->kriteria->nama ?? 'Kriteria #' . $detail->kriteria_id }}</td>
-                            <td class="border border-slate-300 py-2 px-3 text-center">{{ $bobot }}%</td>
-                            <td class="border border-slate-300 py-2 px-3 text-center font-bold text-slate-800">{{ $detail->nilai }}</td>
-                            <td class="border border-slate-300 py-2 px-3 text-center font-semibold text-slate-700">{{ number_format($terbobot, 2) }}</td>
-                        </tr>
-                    @endforeach
+                    <tr>
+                        <td style="width:34%">Target Jam Kerja</td>
+                        <td>{{ number_format($presensiScore['target_menit']) }} menit ({{ $presensiScore['target_hari'] }} hari kerja aktif, 8 jam/hari)</td>
+                    </tr>
+                    <tr>
+                        <td>Total Realisasi</td>
+                        <td>{{ number_format($presensiScore['total_menit_realisasi']) }} menit</td>
+                    </tr>
+                    <tr>
+                        <td>Kehadiran &amp; Izin</td>
+                        <td>{{ $presensiScore['total_hari_hadir'] }} hari hadir; {{ $presensiScore['total_hari_izin'] }} hari izin (izin disetujui dihitung 480 menit penuh)</td>
+                    </tr>
+                    <tr>
+                        <td>Lupa Checkout / Terlambat</td>
+                        <td>{{ $presensiScore['total_hari_lupa_checkout'] }} hari lupa checkout; {{ $presensiScore['total_hari_terlambat'] }}x terlambat (potongan {{ $presensiScore['menit_terlambat_potong'] }} menit; checkout dipotong 50%)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Capaian Presensi</strong></td>
+                        <td><strong>{{ $presensiScore['skor_presensi'] }}% ({{ $presensiScore['predikat'] }})</strong></td>
+                    </tr>
                 </tbody>
-                <tfoot>
-                    <tr class="bg-slate-50 font-bold text-slate-900 border-t-2 border-slate-300">
-                        <td colspan="3" class="border border-slate-300 py-2.5 px-4 text-right uppercase tracking-wider">
-                            Total Nilai Akhir
+            </table>
+        @endif
+
+        <!-- Rincian Nilai Kriteria -->
+        <div class="judul-bagian">{{ isset($presensiScore) ? 'B.' : 'A.' }} Rincian Nilai Kriteria</div>
+        <table class="nilai-table">
+            <thead>
+                <tr>
+                    <th style="width:6%">No</th>
+                    <th>Unsur / Kriteria Penilaian</th>
+                    <th style="width:11%">Bobot</th>
+                    <th style="width:16%">Nilai Angka (0-100)</th>
+                    <th style="width:15%">Nilai Terbobot</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($penilaian->detail as $index => $detail)
+                    @php
+                        $bobot = $detail->kriteria->bobot ?? 0;
+                        $terbobot = round(($detail->nilai * $bobot) / 100, 2);
+                        $isPresensi = $detail->kriteria->is_presensi ?? false;
+                    @endphp
+                    <tr>
+                        <td class="c">{{ $loop->iteration }}</td>
+                        <td>
+                            {{ $detail->kriteria->nama ?? 'Kriteria #' . $detail->kriteria_id }}
+                            @if($isPresensi)
+                                <em style="font-size:8.5pt;">(Objektif - Presensi)</em>
+                            @endif
                         </td>
-                        <td class="border border-slate-300 py-2.5 px-3 text-center text-sm font-black text-purple-700">
-                            {{ $penilaian->total_nilai }}
-                        </td>
-                        <td class="border border-slate-300 py-2.5 px-3 text-center text-sm font-black text-purple-700">
-                            / 100
-                        </td>
+                        <td class="c">{{ $bobot }}%</td>
+                        <td class="c"><strong>{{ $detail->nilai }}</strong></td>
+                        <td class="c">{{ number_format($terbobot, 2) }}</td>
                     </tr>
-                    <tr class="bg-slate-50 font-bold text-slate-900">
-                        <td colspan="3" class="border border-slate-300 py-2.5 px-4 text-right uppercase tracking-wider">
-                            Predikat Kelulusan
-                        </td>
-                        <td colspan="2" class="border border-slate-300 py-2.5 px-4 text-center">
-                            <span class="text-sm font-black text-slate-900">{{ $penilaian->predikat }}</span>
-                            <span class="text-xs font-semibold text-slate-600 ml-1">({{ $penilaian->keterangan_predikat }})</span>
-                        </td>
-                    </tr>
-                </tfoot>
+                @endforeach
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" style="text-align:right; text-transform:uppercase;">Total Nilai Akhir</td>
+                    <td class="c">{{ $penilaian->total_nilai }}</td>
+                    <td class="c">/ 100</td>
+                </tr>
+                <tr>
+                    <td colspan="3" style="text-align:right; text-transform:uppercase;">Predikat Kelulusan</td>
+                    <td colspan="2" class="c">{{ $penilaian->predikat }} ({{ $penilaian->keterangan_predikat }})</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <!-- Standar Kualifikasi Nilai -->
+        <div class="kualifikasi">
+            <strong>Standar Kualifikasi Nilai:</strong>
+            <table>
+                <tr>
+                    <td>90 - 100 : A (Sangat Baik)</td>
+                    <td>80 - 89 : B (Baik)</td>
+                    <td>70 - 79 : C (Cukup Baik)</td>
+                    <td>60 - 69 : D (Kurang Baik)</td>
+                    <td>&lt; 60 : E (Tidak Baik)</td>
+                </tr>
             </table>
         </div>
 
-        <!-- Tabel Konversi Predikat -->
-        <div class="text-[11px] text-slate-600 bg-slate-50/50 p-3 rounded-lg border border-slate-200/80">
-            <span class="font-bold text-slate-700 block mb-1">Standar Kualifikasi Nilai:</span>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div>&bull; <span class="font-semibold">85 - 100</span> : A (Sangat Baik)</div>
-                <div>&bull; <span class="font-semibold">75 - 84</span> : B (Baik)</div>
-                <div>&bull; <span class="font-semibold">60 - 74</span> : C (Cukup)</div>
-                <div>&bull; <span class="font-semibold">&lt; 60</span> : D (Kurang)</div>
-            </div>
-        </div>
-
-        <!-- Tanda Tangan Dinamis (Pembimbing & Pimpinan Divisi) -->
-        <div class="pt-8 grid grid-cols-2 gap-8 text-xs text-center">
-            <!-- Tanda Tangan Pembimbing Lapangan -->
-            <div class="space-y-16">
-                <div>
-                    <p class="text-slate-500">Mengetahui & Mengesahkan,</p>
-                    <p class="font-bold text-slate-800">Pembimbing Lapangan</p>
-                </div>
-                <div>
-                    <p class="font-bold text-slate-900 underline text-sm">{{ $penilaian->pembimbing->nama_lengkap }}</p>
-                    <p class="text-slate-500">NIP. {{ $penilaian->pembimbing->nip ?? '-' }}</p>
-                    <p class="text-slate-400 text-[11px]">{{ $penilaian->pembimbing->jabatan ?? 'Pembimbing Lapangan' }}</p>
-                </div>
-            </div>
-
-            <!-- Tanda Tangan Pimpinan Divisi / Sub-Bagian -->
-            <div class="space-y-16">
-                <div>
-                    <p class="text-slate-500">Ditetapkan di Kota Terkait,</p>
-                    <p class="font-bold text-slate-800">{{ $penilaian->magang->divisi->jabatan_pimpinan ?? 'Kepala Sub-Bagian / Divisi' }}</p>
-                </div>
-                <div>
-                    <p class="font-bold text-slate-900 underline text-sm">{{ $penilaian->magang->divisi->nama_pimpinan ?? '-' }}</p>
-                    <p class="text-slate-500">NIP. {{ $penilaian->magang->divisi->nip_pimpinan ?? '-' }}</p>
-                    <p class="text-slate-400 text-[11px]">{{ $penilaian->magang->divisi->nama_divisi ?? 'Divisi Terkait' }}</p>
-                </div>
-            </div>
-        </div>
+        <!-- Tanda Tangan: Pembimbing Lapangan & Pimpinan Divisi -->
+        <style>
+            .ttd-nilai { width:100%; margin-top:24px; border-collapse:collapse; page-break-inside:avoid; font-size:10.5pt; }
+            .ttd-nilai td { width:50%; text-align:center; vertical-align:top; line-height:1.4; padding:0 10px; border:0; }
+            .ttd-nilai .ruang { height:70px; }
+            .ttd-nilai .nm { font-weight:bold; text-decoration:underline; }
+        </style>
+        <table class="ttd-nilai">
+            <tr>
+                <td>
+                    <div>Mengetahui &amp; Mengesahkan,</div>
+                    <div>Pembimbing Lapangan</div>
+                    <div class="ruang"></div>
+                    <div class="nm">{{ $penilaian->pembimbing->nama_lengkap }}</div>
+                    <div>NIP. {{ $penilaian->pembimbing->nip ?? '-' }}</div>
+                    <div>{{ $penilaian->pembimbing->jabatan ?? 'Pembimbing Lapangan' }}</div>
+                </td>
+                <td>
+                    <div>{{ $pengaturan->kota_surat ?? 'Banjarbaru' }}, {{ \Carbon\Carbon::now()->isoFormat('D MMMM Y') }}</div>
+                    <div>{{ $penilaian->magang->divisi->jabatan_pimpinan ?? 'Kepala Sub-Bagian / Divisi' }}</div>
+                    <div class="ruang"></div>
+                    <div class="nm">{{ $penilaian->magang->divisi->nama_pimpinan ?? '( .................................................. )' }}</div>
+                    <div>NIP. {{ $penilaian->magang->divisi->nip_pimpinan ?? '-' }}</div>
+                    <div>{{ $penilaian->magang->divisi->nama_divisi ?? 'Divisi Terkait' }}</div>
+                </td>
+            </tr>
+        </table>
 
     </div>
-
 </div>
 @endsection

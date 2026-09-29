@@ -132,7 +132,15 @@
                                 {{ $kriteria->firstItem() + $index }}
                             </td>
                             <td class="px-6 py-4">
-                                <div class="font-bold text-slate-900">{{ $item->nama }}</div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-slate-900">{{ $item->nama }}</span>
+                                    @if($item->is_presensi)
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                            <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            Objektif (Presensi)
+                                        </span>
+                                    @endif
+                                </div>
                                 <div class="text-[11px] text-slate-400 mt-0.5">ID Kriteria: #{{ $item->id }}</div>
                             </td>
                             <td class="px-6 py-4">

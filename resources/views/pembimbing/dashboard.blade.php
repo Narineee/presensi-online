@@ -28,10 +28,6 @@
     <div class="bg-gradient-to-r from-purple-800 via-indigo-800 to-purple-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-purple-900/10 border border-purple-700/50">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-purple-100 text-xs font-semibold backdrop-blur-sm mb-3">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>Portal Pembimbing Lapangan</span>
-                </div>
                 <h1 class="text-2xl sm:text-3xl font-black tracking-tight">
                     Selamat Datang, {{ $pembimbing->nama_lengkap ?? Auth::user()->username }}!
                 </h1>
@@ -84,16 +80,18 @@
         </a>
 
         <!-- Card 3: Kehadiran Hari Ini (Pantau Kehadiran) -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+        <a href="{{ route('pembimbing.presensi.index') }}" class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-purple-300 hover:shadow-md transition flex items-center justify-between group">
             <div>
                 <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Kehadiran Hari Ini</p>
                 <p class="text-2xl font-black text-emerald-600 mt-1">{{ $stats['hadir_hari_ini'] }} <span class="text-xs font-semibold text-slate-400">/ {{ $stats['total_magang'] }}</span></p>
-                <span class="text-[11px] font-medium text-emerald-600">Presensi tercatat</span>
+                <span class="inline-flex items-center text-[11px] font-semibold text-purple-600 mt-1 group-hover:translate-x-0.5 transition-transform">
+                    Lihat Riwayat &rarr;
+                </span>
             </div>
             <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold">
                 &check;
             </div>
-        </div>
+        </a>
 
         <!-- Card 4: Total Binaan -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
@@ -111,7 +109,17 @@
     </div>
 
     <!-- PANDUAN & PINTASAN TUGAS PEMBIMBING -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <a href="{{ route('pembimbing.presensi.index') }}" class="p-4 bg-white hover:bg-purple-50/50 rounded-2xl border border-slate-200/80 hover:border-purple-300 transition flex items-center gap-4 shadow-xs">
+            <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg shrink-0">
+                📅
+            </div>
+            <div>
+                <h2 class="text-xs font-bold text-slate-900">Riwayat Presensi</h2>
+                <p class="text-[11px] text-slate-500">Pantau absensi &amp; koordinat GPS</p>
+            </div>
+        </a>
+
         <a href="{{ route('pembimbing.aktivitas.index') }}" class="p-4 bg-white hover:bg-purple-50/50 rounded-2xl border border-slate-200/80 hover:border-purple-300 transition flex items-center gap-4 shadow-xs">
             <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg shrink-0">
                 📝
@@ -138,7 +146,7 @@
             </div>
             <div>
                 <h2 class="text-xs font-bold text-slate-900">Penilaian Akhir Magang</h2>
-                <p class="text-[11px] text-slate-500">Input lembar nilai &amp; kriteria kompetensi</p>
+                <p class="text-[11px] text-slate-500">Input lembar nilai &amp; kompetensi</p>
             </div>
         </a>
     </div>
@@ -220,18 +228,24 @@
                             </div>
 
                             <!-- Footer Aksi Peserta -->
-                            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                                @if($magang->penilaian)
-                                    <a href="{{ route('pembimbing.penilaian.show', $magang->penilaian->id) }}" class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 transition">
-                                        <span>&check; Nilai: {{ number_format($magang->penilaian->nilai_akhir, 1) }}</span>
-                                    </a>
-                                @else
-                                    <a href="{{ route('pembimbing.penilaian.create', ['magang_id' => $magang->id]) }}" class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200 transition">
-                                        <span>&plus; Input Nilai</span>
-                                    </a>
-                                @endif
+                            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-1.5 flex-wrap">
+                                <div class="flex items-center gap-1.5">
+                                    @if($magang->penilaian)
+                                        <a href="{{ route('pembimbing.penilaian.show', $magang->penilaian->id) }}" class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-xl border border-emerald-200 transition">
+                                            <span>&check; Nilai: {{ number_format($magang->penilaian->nilai_akhir, 1) }}</span>
+                                        </a>
+                                    @else
+                                        <a href="{{ route('pembimbing.penilaian.create', ['magang_id' => $magang->id]) }}" class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 px-2.5 py-1.5 rounded-xl border border-amber-200 transition">
+                                            <span>&plus; Nilai</span>
+                                        </a>
+                                    @endif
 
-                                <a href="{{ route('pembimbing.aktivitas.index') }}" class="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-xl transition">
+                                    <a href="{{ route('pembimbing.presensi.index', ['magang_id' => $magang->id]) }}" class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-xl border border-blue-200 transition" title="Lihat Riwayat Presensi {{ $magang->nama_lengkap }}">
+                                        <span>Presensi</span>
+                                    </a>
+                                </div>
+
+                                <a href="{{ route('pembimbing.aktivitas.index') }}" class="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 rounded-xl transition">
                                     <span>Aktivitas &rarr;</span>
                                 </a>
                             </div>
@@ -254,8 +268,13 @@
                     Monitoring presensi masuk &amp; pulang peserta binaan per hari ini, {{ \Carbon\Carbon::now()->translatedFormat('l, d F Y') }}.
                 </p>
             </div>
-            <div class="text-xs font-semibold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/80">
-                Total Hadir: <span class="font-bold text-emerald-600">{{ $presensiHariIni->count() }}</span> dari {{ $stats['total_magang'] }} peserta
+            <div class="flex items-center gap-2 flex-wrap">
+                <div class="text-xs font-semibold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/80">
+                    Total Hadir: <span class="font-bold text-emerald-600">{{ $presensiHariIni->count() }}</span> dari {{ $stats['total_magang'] }} peserta
+                </div>
+                <a href="{{ route('pembimbing.presensi.index') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold border border-purple-200 transition">
+                    <span>Lihat Riwayat Lengkap &rarr;</span>
+                </a>
             </div>
         </div>
 

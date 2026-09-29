@@ -9,10 +9,6 @@
     <div class="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-md border border-slate-800">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div class="space-y-2">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-xs font-semibold">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>Sesi Aktif Administrator</span>
-                </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
                     Selamat Datang, {{ Auth::user()->username }}!
                 </h1>
@@ -57,7 +53,6 @@
             <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Aktivitas &amp; Kehadiran Hari Ini ({{ \Carbon\Carbon::now()->isoFormat('D MMMM Y') }})
             </h2>
-            <span class="text-[11px] text-slate-400 font-medium">Realtime sync</span>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -185,11 +180,8 @@
         <div class="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-xs space-y-4">
             <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-blue-600"></span>
-                <span>Aksi Tambah Data Cepat (Admin)</span>
+                <span>Tambah Data Cepat</span>
             </h3>
-            <p class="text-xs text-slate-500 leading-relaxed">
-                Admin menambahkan akun, menentukan divisi penempatan, pembimbing lapangan, dan periode pelaksanaan. Rincian profil lainnya dilengkapi mandiri oleh peserta magang.
-            </p>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                 <a href="{{ route('admin.magang.create') }}" class="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 hover:bg-amber-100/60 transition flex items-center gap-3 text-xs font-bold text-amber-900">
                     <span class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-base">+</span>
@@ -210,11 +202,8 @@
         <div class="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-xs space-y-4">
             <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
-                <span>Cetak Rekapitulasi &amp; Konfigurasi TTD</span>
+                <span>Cetak Rekapitulasi &amp; Konfigurasi</span>
             </h3>
-            <p class="text-xs text-slate-500 leading-relaxed">
-                Akses dokumen cetak rekap kehadiran &amp; aktivitas, serta atur nama pejabat pimpinan instansi untuk tanda tangan resmi.
-            </p>
             <div class="space-y-2.5 pt-1">
                 <a href="{{ route('admin.presensi.cetak') }}" target="_blank" class="p-3 rounded-2xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 transition flex items-center justify-between text-xs">
                     <div class="flex items-center gap-3">
