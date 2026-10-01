@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'hari_libur' => [
+        'enabled' => (bool) env('HARI_LIBUR_API_ENABLED', true),
+        'url' => env('HARI_LIBUR_API_URL', 'https://use.apiindonesia.id/api/v1/libur'),
+        'key' => env('HARI_LIBUR_API_KEY', ''),
+        'timeout' => (int) env('HARI_LIBUR_API_TIMEOUT', 15),
+    ],
+
 ];
