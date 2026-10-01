@@ -38,8 +38,11 @@
                         <td>{{ \Carbon\Carbon::parse($item->tanggal)->isoFormat('D MMM Y') }}</td>
                         <td>
                             <strong>{{ $item->nama_lengkap }}</strong>
-                            @if($item->pengguna && $item->pengguna->magang && $item->pengguna->magang->divisi)
-                                <div class="sub">{{ $item->pengguna->magang->divisi->nama_divisi }}</div>
+                            @php
+                                $divisiRow = $item->pengguna?->magang?->getDivisiAt($item->tanggal) ?? $item->pengguna?->magang?->divisi;
+                            @endphp
+                            @if($divisiRow)
+                                <div class="sub">{{ $divisiRow->nama_divisi }}</div>
                             @endif
                         </td>
                         <td class="c" style="text-transform:uppercase;">{{ $item->mode_kerja }}</td>

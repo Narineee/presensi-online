@@ -21,13 +21,14 @@
         <table class="rekap-table">
             <thead>
                 <tr>
-                    <th style="width:5%">No</th>
-                    <th style="width:12%">Tanggal</th>
-                    <th style="width:18%">Nama Peserta</th>
-                    <th style="width:33%">Uraian Tugas / Pekerjaan Harian</th>
-                    <th style="width:8%">Progres</th>
-                    <th style="width:10%">Status</th>
-                    <th style="width:14%">Catatan Pembimbing</th>
+                    <th style="width:4%">No</th>
+                    <th style="width:11%">Tanggal</th>
+                    <th style="width:16%">Nama Peserta</th>
+                    <th style="width:17%">Pekerjaan</th>
+                    <th style="width:24%">Uraian Tugas / Pekerjaan Harian</th>
+                    <th style="width:7%">Progres</th>
+                    <th style="width:9%">Status</th>
+                    <th style="width:12%">Catatan Pembimbing</th>
                 </tr>
             </thead>
             <tbody>
@@ -37,12 +38,25 @@
                         <td>{{ \Carbon\Carbon::parse($item->tanggal)->isoFormat('D MMM Y') }}</td>
                         <td>
                             <strong>{{ $item->nama_lengkap }}</strong>
-                            @if($item->pengguna && $item->pengguna->magang && $item->pengguna->magang->divisi)
-                                <div class="sub">{{ $item->pengguna->magang->divisi->nama_divisi }}</div>
+                            @php
+                                $divisiRow = $item->pengguna?->magang?->getDivisiAt($item->tanggal) ?? $item->pengguna?->magang?->divisi;
+                            @endphp
+                            @if($divisiRow)
+                                <div class="sub">{{ $divisiRow->nama_divisi }}</div>
                             @endif
                         </td>
+                        <td>
+                            <strong>{{ $item->pekerjaan?->judul ?? 'Pekerjaan Umum' }}</strong>
+                            <div class="sub">({{ ($item->pekerjaan && $item->pekerjaan->isRutin()) ? 'Rutin' : 'Proyek' }})</div>
+                        </td>
                         <td>{{ $item->isi }}</td>
-                        <td class="c">{{ $item->progress }}%</td>
+                        <td class="c">
+                            @if($item->pekerjaan && $item->pekerjaan->isRutin())
+                                -
+                            @else
+                                {{ $item->progress }}%
+                            @endif
+                        </td>
                         <td class="c">
                             @if($item->status === 'approve') Disetujui
                             @elseif($item->status === 'pending') Menunggu
@@ -58,7 +72,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="c" style="padding:16px;">Tidak ada catatan aktivitas yang sesuai dengan parameter filter yang dipilih.</td>
+                        <td colspan="8" class="c" style="padding:16px;">Tidak ada catatan aktivitas yang sesuai dengan parameter filter yang dipilih.</td>
                     </tr>
                 @endforelse
             </tbody>

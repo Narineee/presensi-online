@@ -135,7 +135,7 @@ Route::middleware(['auth', 'role:magang'])->group(function () {
     Route::put('/profil', [ProfileController::class, 'update'])->name('profil.update');
 
     // Rekapitulasi & Cetak Dokumen Hub
-    // Route::get('/rekap', [PresensiController::class, 'rekapHub'])->name('magang.rekap');
+    Route::get('/rekap', [PresensiController::class, 'rekapHub'])->name('magang.rekap');
 });
 
 // ==============================

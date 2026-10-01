@@ -62,7 +62,9 @@
                                     @endif
                                     <div>
                                         <div class="flex items-center gap-1.5">
-                                            <span class="font-bold text-slate-900">{{ $item->nama_lengkap }}</span>
+                                            <a href="{{ route('admin.magang.show', $item->id) }}" class="font-bold text-slate-900 hover:text-blue-600 transition" title="Lihat Detail Peserta & Penempatan">
+                                                {{ $item->nama_lengkap }}
+                                            </a>
                                             @if ($item->jenis_kelamin === 'L')
                                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60" title="Laki-laki">L</span>
                                             @elseif ($item->jenis_kelamin === 'P')
@@ -87,7 +89,19 @@
                                 </div>
                                 <div class="mt-1">
                                     <span class="text-slate-400">Divisi:</span>
-                                    <span class="font-semibold text-blue-600 block">{{ $item->divisi->nama_divisi ?? '-' }}</span>
+                                    @php
+                                        $penempatanAktif = $item->penempatanAktif;
+                                        $divisiTampil = $penempatanAktif ? $penempatanAktif->divisi : $item->divisi;
+                                    @endphp
+                                    <span class="font-semibold text-blue-600 block">
+                                        {{ $divisiTampil->nama_divisi ?? '-' }}
+                                        @if ($penempatanAktif)
+                                            <span class="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                                                <span class="w-1 h-1 rounded-full bg-emerald-500"></span>
+                                                Rotasi
+                                            </span>
+                                        @endif
+                                    </span>
                                 </div>
                             </td>
                             <td class="px-6 py-4 text-xs">
@@ -146,6 +160,14 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-center gap-2">
+                                    <!-- Tombol Detail / Penempatan Divisi -->
+                                    <a href="{{ route('admin.magang.show', $item->id) }}" class="p-2 rounded-lg text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition" title="Detail & Penempatan Divisi">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                    </a>
+
                                     <!-- Tombol Edit -->
                                     <a href="{{ route('admin.magang.edit', $item->id) }}" class="p-2 rounded-lg text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-200 transition" title="Edit Data Magang">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

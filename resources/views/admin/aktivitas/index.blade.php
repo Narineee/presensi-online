@@ -141,6 +141,7 @@
                     <tr>
                         <th class="px-6 py-4">No</th>
                         <th class="px-6 py-4">Peserta Magang</th>
+                        <th class="px-6 py-4">Pekerjaan</th>
                         <th class="px-6 py-4">Tanggal</th>
                         <th class="px-6 py-4">Uraian Aktivitas</th>
                         <th class="px-6 py-4">Progres</th>
@@ -160,6 +161,16 @@
                                     {{ $item->pengguna->magang->divisi->nama_divisi ?? '-' }}
                                 </div>
                             </td>
+                            <td class="px-6 py-4 max-w-xs">
+                                @if($item->pekerjaan)
+                                    <div class="font-bold text-slate-900 text-xs">{{ $item->pekerjaan->judul }}</div>
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold {{ $item->pekerjaan->isProyek() ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-700' }}">
+                                        {{ $item->pekerjaan->isProyek() ? 'Proyek' : 'Rutin' }}
+                                    </span>
+                                @else
+                                    <span class="text-slate-400 italic">Umum</span>
+                                @endif
+                            </td>
                             <td class="px-6 py-4 font-mono whitespace-nowrap text-slate-700">
                                 {{ $item->tanggal->format('d/m/Y') }}
                             </td>
@@ -167,12 +178,16 @@
                                 <p class="text-slate-800 line-clamp-3 leading-relaxed font-medium">{{ $item->isi }}</p>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-16 bg-slate-100 rounded-full h-2 overflow-hidden">
-                                        <div class="bg-blue-600 h-2 rounded-full" style="width: {{ $item->progress }}%"></div>
+                                @if($item->pekerjaan && $item->pekerjaan->isRutin())
+                                    <span class="text-slate-400 text-xs font-semibold">&mdash;</span>
+                                @else
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-16 bg-slate-100 rounded-full h-2 overflow-hidden">
+                                            <div class="bg-blue-600 h-2 rounded-full" style="width: {{ $item->progress }}%"></div>
+                                        </div>
+                                        <span class="font-mono text-xs font-bold text-slate-700">{{ $item->progress }}%</span>
                                     </div>
-                                    <span class="font-mono text-xs font-bold text-slate-700">{{ $item->progress }}%</span>
-                                </div>
+                                @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 @if($item->status === 'approve')
@@ -204,7 +219,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-12 text-center text-slate-400">
+                            <td colspan="8" class="px-6 py-12 text-center text-slate-400">
                                 Belum ada log aktivitas harian yang sesuai filter.
                             </td>
                         </tr>

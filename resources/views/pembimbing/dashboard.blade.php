@@ -109,44 +109,54 @@
     </div>
 
     <!-- PANDUAN & PINTASAN TUGAS PEMBIMBING -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <a href="{{ route('pembimbing.presensi.index') }}" class="p-4 bg-white hover:bg-purple-50/50 rounded-2xl border border-slate-200/80 hover:border-purple-300 transition flex items-center gap-4 shadow-xs">
-            <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg shrink-0">
-                📅
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+        <a href="{{ route('pembimbing.pekerjaan.index') }}" class="p-4 bg-white hover:bg-purple-50/50 rounded-2xl border border-slate-200/80 hover:border-purple-300 transition flex items-center gap-3.5 shadow-xs">
+            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg shrink-0">
+                💼
             </div>
             <div>
-                <h2 class="text-xs font-bold text-slate-900">Riwayat Presensi</h2>
-                <p class="text-[11px] text-slate-500">Pantau absensi &amp; koordinat GPS</p>
+                <h2 class="text-xs font-bold text-slate-900">Pekerjaan &amp; Proyek</h2>
+                <p class="text-[11px] text-slate-500">Kelola penugasan binaan</p>
             </div>
         </a>
 
-        <a href="{{ route('pembimbing.aktivitas.index') }}" class="p-4 bg-white hover:bg-purple-50/50 rounded-2xl border border-slate-200/80 hover:border-purple-300 transition flex items-center gap-4 shadow-xs">
+        <a href="{{ route('pembimbing.aktivitas.index') }}" class="p-4 bg-white hover:bg-purple-50/50 rounded-2xl border border-slate-200/80 hover:border-purple-300 transition flex items-center gap-3.5 shadow-xs">
             <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg shrink-0">
                 📝
             </div>
             <div>
                 <h2 class="text-xs font-bold text-slate-900">Validasi Aktivitas</h2>
-                <p class="text-[11px] text-slate-500">Tinjau uraian tugas &amp; foto peserta</p>
+                <p class="text-[11px] text-slate-500">Tinjau uraian harian</p>
             </div>
         </a>
 
-        <a href="{{ route('pembimbing.izin.index') }}" class="p-4 bg-white hover:bg-purple-50/50 rounded-2xl border border-slate-200/80 hover:border-purple-300 transition flex items-center gap-4 shadow-xs">
+        <a href="{{ route('pembimbing.presensi.index') }}" class="p-4 bg-white hover:bg-purple-50/50 rounded-2xl border border-slate-200/80 hover:border-purple-300 transition flex items-center gap-3.5 shadow-xs">
+            <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg shrink-0">
+                📅
+            </div>
+            <div>
+                <h2 class="text-xs font-bold text-slate-900">Riwayat Presensi</h2>
+                <p class="text-[11px] text-slate-500">Pantau absensi &amp; GPS</p>
+            </div>
+        </a>
+
+        <a href="{{ route('pembimbing.izin.index') }}" class="p-4 bg-white hover:bg-purple-50/50 rounded-2xl border border-slate-200/80 hover:border-purple-300 transition flex items-center gap-3.5 shadow-xs">
             <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-lg shrink-0">
                 🩺
             </div>
             <div>
-                <h2 class="text-xs font-bold text-slate-900">Verifikasi Izin &amp; Sakit</h2>
-                <p class="text-[11px] text-slate-500">Periksa surat izin &amp; berkas pendukung</p>
+                <h2 class="text-xs font-bold text-slate-900">Verifikasi Izin</h2>
+                <p class="text-[11px] text-slate-500">Surat izin &amp; berkas</p>
             </div>
         </a>
 
-        <a href="{{ route('pembimbing.penilaian.index') }}" class="p-4 bg-white hover:bg-purple-50/50 rounded-2xl border border-slate-200/80 hover:border-purple-300 transition flex items-center gap-4 shadow-xs">
+        <a href="{{ route('pembimbing.penilaian.index') }}" class="p-4 bg-white hover:bg-purple-50/50 rounded-2xl border border-slate-200/80 hover:border-purple-300 transition flex items-center gap-3.5 shadow-xs">
             <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-lg shrink-0">
                 ⭐
             </div>
             <div>
-                <h2 class="text-xs font-bold text-slate-900">Penilaian Akhir Magang</h2>
-                <p class="text-[11px] text-slate-500">Input lembar nilai &amp; kompetensi</p>
+                <h2 class="text-xs font-bold text-slate-900">Penilaian Akhir</h2>
+                <p class="text-[11px] text-slate-500">Lembar nilai magang</p>
             </div>
         </a>
     </div>
@@ -243,9 +253,13 @@
                                     <a href="{{ route('pembimbing.presensi.index', ['magang_id' => $magang->id]) }}" class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-xl border border-blue-200 transition" title="Lihat Riwayat Presensi {{ $magang->nama_lengkap }}">
                                         <span>Presensi</span>
                                     </a>
+
+                                    <a href="{{ route('pembimbing.pekerjaan.index', ['magang_id' => $magang->id]) }}" class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 rounded-xl border border-purple-200 transition" title="Kelola Pekerjaan {{ $magang->nama_lengkap }}">
+                                        <span>Pekerjaan</span>
+                                    </a>
                                 </div>
 
-                                <a href="{{ route('pembimbing.aktivitas.index') }}" class="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 rounded-xl transition">
+                                <a href="{{ route('pembimbing.aktivitas.index', ['magang_id' => $magang->id]) }}" class="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 rounded-xl transition">
                                     <span>Aktivitas &rarr;</span>
                                 </a>
                             </div>

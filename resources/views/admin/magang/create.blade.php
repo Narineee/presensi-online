@@ -23,11 +23,11 @@
         <form action="{{ route('admin.magang.store') }}" method="POST" enctype="multipart/form-data" class="space-y-8">
             @csrf
 
-            <!-- Section 1: Profil Anak Magang -->
+            <!-- Section 1: Data Pokok Peserta Magang -->
             <div>
                 <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
                     <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">1</span>
-                    <span>Profil Peserta Magang</span>
+                    <span>Data Pokok Peserta Magang</span>
                 </h3>
                 <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -49,26 +49,8 @@
                     </div>
 
                     <div>
-                        <label for="jenis_kelamin" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                            Jenis Kelamin (Opsional)
-                        </label>
-                        <select
-                            name="jenis_kelamin"
-                            id="jenis_kelamin"
-                            class="w-full px-4 py-2.5 rounded-xl border {{ $errors->has('jenis_kelamin') ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300' }} focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-sm text-slate-800 font-medium bg-white"
-                        >
-                            <option value="">-- Pilih Jenis Kelamin --</option>
-                            <option value="L" {{ old('jenis_kelamin') === 'L' ? 'selected' : '' }}>Laki-laki (L)</option>
-                            <option value="P" {{ old('jenis_kelamin') === 'P' ? 'selected' : '' }}>Perempuan (P)</option>
-                        </select>
-                        @error('jenis_kelamin')
-                            <p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div>
                         <label for="no_induk" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                            Nomor Induk (NIM / NIS) (Opsional)
+                            Nomor Induk (NIM / NIS) <span class="text-slate-400 font-normal">(Opsional)</span>
                         </label>
                         <input
                             type="text"
@@ -80,62 +62,14 @@
                         >
                     </div>
 
-                    <div>
-                        <label for="instansi_pendidikan" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                            Instansi / Sekolah / Kampus (Opsional)
-                        </label>
-                        <input
-                            type="text"
-                            name="instansi_pendidikan"
-                            id="instansi_pendidikan"
-                            value="{{ old('instansi_pendidikan') }}"
-                            placeholder="Contoh: Universitas Indonesia / SMKN 1"
-                            class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-sm text-slate-800 font-medium"
-                        >
-                    </div>
-
-                    <div>
-                        <label for="jurusan" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                            Jurusan / Program Studi (Opsional)
-                        </label>
-                        <input
-                            type="text"
-                            name="jurusan"
-                            id="jurusan"
-                            value="{{ old('jurusan') }}"
-                            placeholder="Contoh: Teknik Informatika / RPL"
-                            class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-sm text-slate-800 font-medium"
-                        >
-                    </div>
-
-                    <div>
-                        <label for="no_hp" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                            No. WhatsApp / HP (Opsional)
-                        </label>
-                        <input
-                            type="text"
-                            name="no_hp"
-                            id="no_hp"
-                            value="{{ old('no_hp') }}"
-                            placeholder="Contoh: 085211223344"
-                            class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-sm text-slate-800 font-medium"
-                        >
-                    </div>
-
-                    <div>
-                        <label for="foto" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                            Foto Profil (Opsional, Max 2MB)
-                        </label>
-                        <input
-                            type="file"
-                            name="foto"
-                            id="foto"
-                            accept="image/*"
-                            class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
-                        >
-                        @error('foto')
-                            <p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>
-                        @enderror
+                    <div class="sm:col-span-2 p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 text-xs text-blue-800 flex items-start gap-2.5">
+                        <svg class="w-4 h-4 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                        </svg>
+                        <div>
+                            <span class="font-bold">Ketentuan Pengisian:</span>
+                            Admin hanya perlu menginput Nama Lengkap dan Nomor Induk. Biodata lanjutan (seperti asal instansi/kampus, jurusan, jenis kelamin, nomor kontak WhatsApp, dan pasfoto) akan dilengkapi secara mandiri oleh peserta magang melalui menu <strong>Profil Akun</strong> setelah login.
+                        </div>
                     </div>
                 </div>
             </div>
