@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Aktivitas;
 use App\Models\Divisi;
 use App\Models\Magang;
 use App\Models\Pembimbing;
+use App\Models\PenempatanMagang;
 use App\Models\Pengguna;
+use App\Models\Presensi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -15,8 +18,8 @@ class MagangController extends Controller
     // Menampilkan daftar semua anak magang
     public function index()
     {
-        // Ambil data magang beserta relasi akun pengguna, pembimbing, dan divisi
-        $magang = Magang::with(['pengguna', 'pembimbing', 'divisi'])
+        // Ambil data magang beserta relasi akun pengguna, pembimbing, divisi, dan riwayat penempatan
+        $magang = Magang::with(['pengguna', 'pembimbing', 'divisi', 'penempatanMagang.divisi'])
             ->latest()
             ->paginate(10);
 
@@ -36,28 +39,31 @@ class MagangController extends Controller
     // Menyimpan data anak magang baru beserta akun loginnya
     public function store(Request $request)
     {
-        // Validasi input profil dan akun login
+        // Validasi input pokok magang dan akun login (biodata lanjutan dilengkapi mandiri oleh peserta)
         $request->validate([
-            // Profil Magang
+            // Profil Pokok Magang
             'nama_lengkap' => 'required|string|max:100',
-            'jenis_kelamin' => 'nullable|in:L,P',
             'no_induk' => 'nullable|string|max:30',
+            'jenis_kelamin' => 'nullable|in:L,P',
             'jurusan' => 'nullable|string|max:100',
             'instansi_pendidikan' => 'nullable|string|max:150',
             'no_hp' => 'nullable|string|max:20',
+            'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+
+            // Pembimbing & Penempatan Divisi
             'pembimbing_id' => 'required|exists:pembimbing,id',
             'divisi_id' => 'nullable|exists:divisi,id',
+
+            // Periode Magang & Status
             'tanggal_mulai' => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
             'status' => 'required|in:aktif,selesai,cuti',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
 
             // Akun Login Pengguna
             'username' => 'required|string|max:50|unique:pengguna,username',
             'password' => 'required|string|min:6',
         ], [
             'nama_lengkap.required' => 'Nama lengkap magang wajib diisi.',
-            'jenis_kelamin.in' => 'Pilihan jenis kelamin harus Laki-laki (L) atau Perempuan (P).',
             'pembimbing_id.required' => 'Pilih pembimbing untuk anak magang.',
             'pembimbing_id.exists' => 'Pembimbing yang dipilih tidak ditemukan.',
             'tanggal_mulai.required' => 'Tanggal mulai magang wajib diisi.',
@@ -67,8 +73,6 @@ class MagangController extends Controller
             'username.unique' => 'Username ini sudah digunakan, silakan pilih username lain.',
             'password.required' => 'Password akun login wajib diisi.',
             'password.min' => 'Password minimal 6 karakter.',
-            'foto.image' => 'File foto harus berupa gambar (jpg, jpeg, png).',
-            'foto.max' => 'Ukuran file foto maksimal 2MB.',
         ]);
 
         // Simpan foto jika ada yang diunggah
@@ -86,7 +90,7 @@ class MagangController extends Controller
         ]);
 
         // 2. Buat profil magang di tabel magang
-        Magang::create([
+        $magang = Magang::create([
             'pengguna_id' => $pengguna->id,
             'pembimbing_id' => $request->pembimbing_id,
             'divisi_id' => $request->divisi_id,
@@ -102,13 +106,63 @@ class MagangController extends Controller
             'status' => $request->status ?? 'aktif',
         ]);
 
-        return redirect()->route('admin.magang.index')->with('success', 'Data magang dan akun login berhasil ditambahkan!');
+        // 3. Jika divisi_id diisi oleh admin, catat otomatis sebagai riwayat penempatan awal
+        if ($request->filled('divisi_id')) {
+            PenempatanMagang::create([
+                'magang_id' => $magang->id,
+                'divisi_id' => $request->divisi_id,
+                'tanggal_mulai' => $request->tanggal_mulai,
+                'tanggal_selesai' => $request->tanggal_selesai,
+            ]);
+        }
+
+        return redirect()->route('admin.magang.index')->with('success', 'Data magang dan akun login berhasil ditambahkan! Biodata lanjutan dapat dilengkapi mandiri oleh peserta melalui profil.');
     }
 
-    // Menampilkan detail magang (dialihkan ke form edit)
+    // Menampilkan detail peserta magang beserta tab riwayat penempatan, presensi, aktivitas, dll.
     public function show($id)
     {
-        return redirect()->route('admin.magang.edit', $id);
+        $magang = Magang::with([
+            'pengguna',
+            'pembimbing',
+            'divisi',
+            'penempatanMagang.divisi',
+            'penilaian',
+        ])->findOrFail($id);
+
+        $divisiList = Divisi::orderBy('nama_divisi')->get();
+
+        // Data presensi peserta
+        $presensiQuery = Presensi::where('pengguna_id', $magang->pengguna_id);
+        $presensiStats = [
+            'total' => (clone $presensiQuery)->count(),
+            'hadir' => (clone $presensiQuery)->where('status', 'hadir')->count(),
+            'terlambat' => (clone $presensiQuery)->where('status', 'terlambat')->count(),
+            'izin' => (clone $presensiQuery)->where('status', 'izin')->count(),
+        ];
+        $presensiList = (clone $presensiQuery)->orderBy('tanggal', 'desc')->take(10)->get();
+
+        // Data aktivitas peserta
+        $aktivitasQuery = Aktivitas::where('pengguna_id', $magang->pengguna_id)->with('pekerjaan');
+        $aktivitasStats = [
+            'total' => (clone $aktivitasQuery)->count(),
+            'approve' => (clone $aktivitasQuery)->where('status', 'approve')->count(),
+            'pending' => (clone $aktivitasQuery)->where('status', 'pending')->count(),
+            'revisi' => (clone $aktivitasQuery)->where('status', 'revisi')->count(),
+        ];
+        $aktivitasList = (clone $aktivitasQuery)->orderBy('tanggal', 'desc')->take(10)->get();
+
+        $activeTab = request('tab', 'penempatan');
+
+        return view('admin.magang.show', compact(
+            'magang',
+            'divisiList',
+            'activeTab',
+            'presensiStats',
+            'presensiList',
+            'aktivitasStats',
+            'aktivitasList'
+        ));
     }
 
     // Menampilkan form edit anak magang
@@ -213,7 +267,7 @@ class MagangController extends Controller
         if ($magang->face_foto) {
             Storage::disk('local')->delete($magang->face_foto);
         }
-        
+
         // Hapus profil magang
         $magang->delete();
 
@@ -224,6 +278,7 @@ class MagangController extends Controller
 
         return redirect()->route('admin.magang.index')->with('success', 'Data magang dan akun login berhasil dihapus!');
     }
+
     // Menampilkan foto wajah terdaftar (privat, hanya lewat route admin)
     public function fotoWajah($id)
     {
