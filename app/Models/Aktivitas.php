@@ -10,6 +10,8 @@ class Aktivitas extends Model
 
     protected $fillable = [
         'pengguna_id',
+        'pekerjaan_id',
+        'judul',
         'tanggal',
         'isi',
         'progress',
@@ -28,6 +30,11 @@ class Aktivitas extends Model
     public function pengguna()
     {
         return $this->belongsTo(Pengguna::class);
+    }
+
+    public function pekerjaan()
+    {
+        return $this->belongsTo(Pekerjaan::class, 'pekerjaan_id');
     }
 
     public function validator()

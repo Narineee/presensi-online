@@ -33,4 +33,10 @@ class Pembimbing extends Model
     {
         return $this->hasMany(Penilaian::class, 'pembimbing_id');
     }
+
+    // Relasi ke seluruh pekerjaan yang dibuat pembimbing
+    public function pekerjaan()
+    {
+        return $this->hasMany(Pekerjaan::class, 'pembimbing_id');
+    }
 }

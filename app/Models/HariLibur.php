@@ -12,12 +12,60 @@ class HariLibur extends Model
 
     protected $fillable = [
         'tanggal',
+        'nama',
+        'jenis',
+        'sumber',
+        'external_id',
         'keterangan',
     ];
 
     protected $casts = [
-        'tanggal' => 'date',
+        'tanggal' => 'date:Y-m-d',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (HariLibur $model) {
+            if (empty($model->keterangan)) {
+                $model->keterangan = $model->nama ?? 'Hari Libur';
+            }
+            if (empty($model->nama)) {
+                $model->nama = $model->keterangan ?? 'Hari Libur';
+            }
+        });
+    }
+
+    public function getTahunAttribute(): int
+    {
+        return $this->tanggal ? $this->tanggal->year : 0;
+    }
+
+    public function scopeTahun($query, $tahun)
+    {
+        if ($tahun) {
+            $query->whereYear('tanggal', $tahun);
+        }
+
+        return $query;
+    }
+
+    public function scopeJenis($query, $jenis)
+    {
+        if ($jenis) {
+            $query->where('jenis', $jenis);
+        }
+
+        return $query;
+    }
+
+    public function scopeSumber($query, $sumber)
+    {
+        if ($sumber) {
+            $query->where('sumber', $sumber);
+        }
+
+        return $query;
+    }
 
     /**
      * Daftar tanggal merah / hari libur nasional Indonesia (sebagai fallback & acuan standar).
@@ -102,7 +150,7 @@ class HariLibur extends Model
 
         $liburDb = static::whereDate('tanggal', $dateStr)->first();
         if ($liburDb) {
-            return $liburDb->keterangan;
+            return $liburDb->nama ?: $liburDb->keterangan;
         }
 
         $defaultHolidays = static::getDaftarLiburNasionalBawaan();

@@ -48,6 +48,14 @@ class Divisi extends Model
     }
 
     /**
+     * Relasi ke seluruh riwayat penempatan magang pada divisi ini.
+     */
+    public function penempatanMagang(): HasMany
+    {
+        return $this->hasMany(PenempatanMagang::class, 'divisi_id');
+    }
+
+    /**
      * Scope pencarian berdasarkan nama divisi atau nama/jabatan pimpinan.
      */
     public function scopeSearch(Builder $query, ?string $term): Builder

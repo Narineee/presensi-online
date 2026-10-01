@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Magang extends Model
 {
@@ -46,7 +48,7 @@ class Magang extends Model
         'face_registered_at' => 'datetime',
     ];
 
-    protected $hidden = ['face_descriptors']; 
+    protected $hidden = ['face_descriptors'];
 
     // Relasi ke akun login pengguna
     public function pengguna()
@@ -70,5 +72,66 @@ class Magang extends Model
     public function penilaian()
     {
         return $this->hasOne(Penilaian::class, 'magang_id');
+    }
+
+    // Relasi ke pekerjaan yang diberikan pembimbing
+    public function pekerjaan()
+    {
+        return $this->hasMany(Pekerjaan::class, 'magang_id');
+    }
+
+    /**
+     * Relasi ke seluruh riwayat penempatan divisi peserta magang.
+     */
+    public function penempatanMagang(): HasMany
+    {
+        return $this->hasMany(PenempatanMagang::class, 'magang_id')->orderBy('tanggal_mulai', 'asc');
+    }
+
+    /**
+     * Mengambil data penempatan divisi yang aktif pada tanggal tertentu.
+     */
+    public function getPenempatanAt($date): ?PenempatanMagang
+    {
+        $targetDate = $date ? Carbon::parse($date)->toDateString() : Carbon::today()->toDateString();
+
+        if ($this->relationLoaded('penempatanMagang')) {
+            return $this->penempatanMagang->first(function ($p) use ($targetDate) {
+                $mulai = $p->tanggal_mulai ? $p->tanggal_mulai->toDateString() : null;
+                $selesai = $p->tanggal_selesai ? $p->tanggal_selesai->toDateString() : null;
+
+                return $mulai && $selesai && $mulai <= $targetDate && $selesai >= $targetDate;
+            });
+        }
+
+        return $this->penempatanMagang()
+            ->with('divisi')
+            ->where('tanggal_mulai', '<=', $targetDate)
+            ->where('tanggal_selesai', '>=', $targetDate)
+            ->first();
+    }
+
+    /**
+     * Mengambil model Divisi yang berlaku pada tanggal tertentu:
+     * - Pertama, dicari dari riwayat penempatan divisi yang mencakup tanggal tersebut.
+     * - Jika tidak ada penempatan yang cocok, fallback ke divisi default peserta.
+     */
+    public function getDivisiAt($date): ?Divisi
+    {
+        $penempatan = $this->getPenempatanAt($date);
+
+        if ($penempatan && $penempatan->divisi) {
+            return $penempatan->divisi;
+        }
+
+        return $this->divisi;
+    }
+
+    /**
+     * Accessor untuk mendapatkan penempatan divisi yang sedang aktif hari ini.
+     */
+    public function getPenempatanAktifAttribute(): ?PenempatanMagang
+    {
+        return $this->getPenempatanAt(Carbon::today());
     }
 }
