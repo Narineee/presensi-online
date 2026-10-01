@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Aktivitas;
 use App\Models\Divisi;
 use App\Models\Pembimbing;
+use App\Models\PengajuanIzin;
 use App\Models\Pengaturan;
 use App\Models\Pengguna;
 use App\Models\Presensi;
@@ -60,6 +61,17 @@ class PresensiController extends Controller
                 ->whereMonth('tanggal', $currentMonth)
                 ->where('status', 'hadir')
                 ->count(),
+            'tepat_waktu' => Presensi::where('pengguna_id', $user->id)
+                ->whereYear('tanggal', $currentYear)
+                ->whereMonth('tanggal', $currentMonth)
+                ->where('status', 'hadir')
+                ->whereTime('jam_masuk', '<=', '08:00:00')
+                ->count(),
+            'total_izin' => PengajuanIzin::where('pengguna_id', $user->id)
+                ->whereYear('tanggal_mulai', $currentYear)
+                ->whereMonth('tanggal_mulai', $currentMonth)
+                ->where('status_approval', 'disetujui')
+                ->count(),
             'total_onsite' => Presensi::where('pengguna_id', $user->id)
                 ->whereYear('tanggal', $currentYear)
                 ->whereMonth('tanggal', $currentMonth)
@@ -102,6 +114,54 @@ class PresensiController extends Controller
         $officeLocation = $this->getOfficeLocation($user);
 
         return view('presensi.index', compact('user', 'todayPresensi', 'riwayat', 'stats', 'hasAktivitasToday', 'countAktivitasToday', 'officeLocation', 'timeStatus'));
+    }
+
+    /**
+     * Menampilkan pusat Rekapitulasi & Dokumen peserta magang (sesuai PRD Rekap-riwayat.png).
+     */
+    public function rekapHub(Request $request)
+    {
+        $user = Auth::user();
+        $magang = $user->magang;
+
+        // Hitung total hari kerja & kehadiran
+        $totalHadir = Presensi::where('pengguna_id', $user->id)
+            ->where('status', 'hadir')
+            ->count();
+
+        // Periode magang
+        $targetHari = 80;
+        $progresPeriode = 0;
+        if ($magang && $magang->tanggal_mulai && $magang->tanggal_selesai) {
+            $mulai = Carbon::parse($magang->tanggal_mulai);
+            $selesai = Carbon::parse($magang->tanggal_selesai);
+            $totalDurasiHari = max(1, $mulai->diffInDays($selesai));
+            $hariBerjalan = $mulai->diffInDays(Carbon::now());
+            if (Carbon::now()->lt($mulai)) {
+                $progresPeriode = 0;
+            } elseif (Carbon::now()->gt($selesai)) {
+                $progresPeriode = 100;
+            } else {
+                $progresPeriode = min(100, (int) round(($hariBerjalan / $totalDurasiHari) * 100));
+            }
+            $targetHari = max(1, (int) round($totalDurasiHari * (5 / 7)));
+        }
+
+        $persenKehadiran = min(100, (int) round(($totalHadir / max(1, $targetHari)) * 100));
+        $jamMagang = $totalHadir * 8;
+
+        $totalAktivitas = Aktivitas::where('pengguna_id', $user->id)->count();
+
+        $stats = [
+            'total_hadir' => $totalHadir,
+            'target_hari' => $targetHari,
+            'persen_kehadiran' => $persenKehadiran,
+            'jam_magang' => $jamMagang,
+            'total_aktivitas' => $totalAktivitas,
+            'progres_periode' => $progresPeriode,
+        ];
+
+        return view('user.rekap', compact('user', 'magang', 'stats'));
     }
 
     /**
@@ -368,7 +428,8 @@ class PresensiController extends Controller
             'total_wfh' => $presensi->where('mode_kerja', 'wfh')->count(),
         ];
 
-        $divisi = $user->magang?->divisi ?? Divisi::first();
+        $targetDate = $tanggalMulai ?? ($bulan ? Carbon::parse($bulan.'-01')->toDateString() : Carbon::today()->toDateString());
+        $divisi = $user->magang?->getDivisiAt($targetDate) ?? $user->magang?->divisi ?? Divisi::first();
         $pembimbing = $user->magang?->pembimbing ?? Pembimbing::first();
         $pengaturan = Pengaturan::getPengaturan();
 
@@ -389,9 +450,10 @@ class PresensiController extends Controller
             'nama' => 'Kantor Utama',
         ];
 
-        if ($user && $user->magang && $user->magang->divisi) {
-            $divisi = $user->magang->divisi;
-            if ($divisi->latitude && $divisi->longitude) {
+        if ($user && $user->magang) {
+            // Mengambil divisi aktif hari ini berdasarkan penempatan divisi peserta
+            $divisi = $user->magang->getDivisiAt(Carbon::today()) ?? $user->magang->divisi;
+            if ($divisi && $divisi->latitude && $divisi->longitude) {
                 return [
                     'lat' => (float) $divisi->latitude,
                     'lng' => (float) $divisi->longitude,

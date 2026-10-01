@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Aktivitas;
 use App\Models\Divisi;
+use App\Models\Pekerjaan;
 use App\Models\Pembimbing;
 use App\Models\Pengaturan;
 use App\Models\Pengguna;
@@ -20,11 +21,17 @@ class AktivitasController extends Controller
     {
         $user = Auth::user();
 
-        $query = Aktivitas::where('pengguna_id', $user->id);
+        $query = Aktivitas::where('pengguna_id', $user->id)
+            ->with('pekerjaan');
 
         // Filter berdasarkan status (pending, approve, revisi)
         if ($request->filled('status')) {
             $query->where('status', $request->status);
+        }
+
+        // Filter berdasarkan pekerjaan
+        if ($request->filled('pekerjaan_id')) {
+            $query->where('pekerjaan_id', $request->pekerjaan_id);
         }
 
         // Filter berdasarkan tanggal
@@ -50,7 +57,11 @@ class AktivitasController extends Controller
             'revisi' => Aktivitas::where('pengguna_id', $user->id)->where('status', 'revisi')->count(),
         ];
 
-        return view('aktivitas.index', compact('aktivitas', 'stats'));
+        $pekerjaanList = $user->magang
+            ? $user->magang->pekerjaan()->orderBy('judul', 'asc')->get()
+            : collect();
+
+        return view('aktivitas.index', compact('aktivitas', 'stats', 'pekerjaanList'));
     }
 
     /**
@@ -58,7 +69,14 @@ class AktivitasController extends Controller
      */
     public function create()
     {
-        return view('aktivitas.create');
+        $user = Auth::user();
+        $magang = $user->magang;
+
+        $pekerjaanList = $magang
+            ? $magang->pekerjaan()->where('status', 'aktif')->orderBy('jenis', 'asc')->orderBy('judul', 'asc')->get()
+            : collect();
+
+        return view('aktivitas.create', compact('pekerjaanList'));
     }
 
     /**
@@ -66,28 +84,39 @@ class AktivitasController extends Controller
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
+        $magang = $user->magang;
+
+        $allowedPekerjaanIds = $magang
+            ? $magang->pekerjaan()->where('status', 'aktif')->pluck('id')->toArray()
+            : [];
 
         // Validasi input data
         $request->validate([
+            'pekerjaan_id' => ['required', 'in:'.implode(',', $allowedPekerjaanIds)],
+            'judul' => 'nullable|string|max:255',
             'tanggal' => 'required|date',
             'isi' => 'required|string|min:5',
-            'progress' => 'required|integer|min:0|max:100',
         ], [
+            'pekerjaan_id.required' => 'Pekerjaan magang wajib dipilih dari daftar tugas aktif.',
+            'pekerjaan_id.in' => 'Pekerjaan yang dipilih tidak valid atau bukan tugas aktif yang diberikan pembimbing kepada Anda.',
             'tanggal.required' => 'Tanggal aktivitas wajib diisi.',
             'tanggal.date' => 'Format tanggal tidak valid.',
             'isi.required' => 'Uraian aktivitas pekerjaan wajib diisi.',
             'isi.min' => 'Uraian aktivitas minimal 5 karakter.',
-            'progress.required' => 'Persentase progres wajib diisi.',
-            'progress.integer' => 'Progres harus berupa angka bulat antara 0 - 100.',
-            'progress.min' => 'Progres minimal 0%.',
-            'progress.max' => 'Progres maksimal 100%.',
         ]);
 
+        $pekerjaan = Pekerjaan::find($request->pekerjaan_id);
+        $progress = ($pekerjaan && $pekerjaan->isProyek()) ? ($pekerjaan->progress ?? 0) : 0;
+        $judul = $request->filled('judul') ? $request->judul : ($pekerjaan ? $pekerjaan->judul : null);
+
         Aktivitas::create([
-            'pengguna_id' => Auth::id(),
+            'pengguna_id' => $user->id,
+            'pekerjaan_id' => $request->pekerjaan_id,
+            'judul' => $judul,
             'tanggal' => $request->tanggal,
             'isi' => $request->isi,
-            'progress' => $request->progress,
+            'progress' => $progress,
             'status' => 'pending',
         ]);
 
@@ -106,6 +135,7 @@ class AktivitasController extends Controller
     public function show($id)
     {
         $aktivitas = Aktivitas::where('pengguna_id', Auth::id())
+            ->with(['pekerjaan', 'validator.pembimbing'])
             ->findOrFail($id);
 
         return view('aktivitas.show', compact('aktivitas'));
@@ -116,7 +146,9 @@ class AktivitasController extends Controller
      */
     public function edit($id)
     {
-        $aktivitas = Aktivitas::where('pengguna_id', Auth::id())
+        $user = Auth::user();
+        $aktivitas = Aktivitas::where('pengguna_id', $user->id)
+            ->with('pekerjaan')
             ->findOrFail($id);
 
         // Jika aktivitas sudah disetujui, tolak pengeditan
@@ -125,7 +157,19 @@ class AktivitasController extends Controller
                 ->with('error', 'Aktivitas yang telah disetujui oleh pembimbing tidak dapat diubah lagi.');
         }
 
-        return view('aktivitas.edit', compact('aktivitas'));
+        $pekerjaanList = $user->magang
+            ? $user->magang->pekerjaan()
+                ->where(function ($q) use ($aktivitas) {
+                    $q->where('status', 'aktif');
+                    if ($aktivitas->pekerjaan_id) {
+                        $q->orWhere('id', $aktivitas->pekerjaan_id);
+                    }
+                })
+                ->orderBy('judul', 'asc')
+                ->get()
+            : collect();
+
+        return view('aktivitas.edit', compact('aktivitas', 'pekerjaanList'));
     }
 
     /**
@@ -133,7 +177,8 @@ class AktivitasController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $aktivitas = Aktivitas::where('pengguna_id', Auth::id())
+        $user = Auth::user();
+        $aktivitas = Aktivitas::where('pengguna_id', $user->id)
             ->findOrFail($id);
 
         if (! $aktivitas->canBeEdited()) {
@@ -141,25 +186,36 @@ class AktivitasController extends Controller
                 ->with('error', 'Aktivitas yang telah disetujui oleh pembimbing tidak dapat diubah lagi.');
         }
 
+        $allowedPekerjaanIds = $user->magang
+            ? $user->magang->pekerjaan()->pluck('id')->toArray()
+            : [];
+
         $request->validate([
+            'pekerjaan_id' => ['required', 'in:'.implode(',', $allowedPekerjaanIds)],
+            'judul' => 'nullable|string|max:255',
             'tanggal' => 'required|date',
             'isi' => 'required|string|min:5',
-            'progress' => 'required|integer|min:0|max:100',
         ], [
+            'pekerjaan_id.required' => 'Pekerjaan magang wajib dipilih dari daftar tugas.',
+            'pekerjaan_id.in' => 'Pekerjaan yang dipilih tidak valid atau bukan tugas Anda.',
             'tanggal.required' => 'Tanggal aktivitas wajib diisi.',
             'isi.required' => 'Uraian aktivitas pekerjaan wajib diisi.',
             'isi.min' => 'Uraian aktivitas minimal 5 karakter.',
-            'progress.required' => 'Persentase progres wajib diisi.',
-            'progress.integer' => 'Progres harus berupa angka bulat 0 - 100.',
         ]);
 
         // Jika status sebelumnya adalah revisi, kembalikan ke pending agar divalidasi ulang
         $statusBaru = ($aktivitas->status === 'revisi') ? 'pending' : $aktivitas->status;
 
+        $pekerjaan = Pekerjaan::find($request->pekerjaan_id);
+        $progress = ($pekerjaan && $pekerjaan->isProyek()) ? ($pekerjaan->progress ?? $aktivitas->progress) : 0;
+        $judul = $request->filled('judul') ? $request->judul : ($pekerjaan ? $pekerjaan->judul : $aktivitas->judul);
+
         $aktivitas->update([
+            'pekerjaan_id' => $request->pekerjaan_id,
+            'judul' => $judul,
             'tanggal' => $request->tanggal,
             'isi' => $request->isi,
-            'progress' => $request->progress,
+            'progress' => $progress,
             'status' => $statusBaru,
         ]);
 
@@ -197,7 +253,7 @@ class AktivitasController extends Controller
         $user->load(['magang.divisi', 'magang.pembimbing']);
 
         $query = Aktivitas::where('pengguna_id', $user->id)
-            ->with('validator.pembimbing');
+            ->with(['pekerjaan', 'validator.pembimbing']);
 
         $bulan = $request->input('bulan', Carbon::today()->format('Y-m'));
         $tanggalMulai = $request->input('tanggal_mulai');
@@ -232,7 +288,8 @@ class AktivitasController extends Controller
             'revisi' => $aktivitas->where('status', 'revisi')->count(),
         ];
 
-        $divisi = $user->magang?->divisi ?? Divisi::first();
+        $targetDate = $tanggalMulai ?? ($bulan ? Carbon::parse($bulan.'-01')->toDateString() : Carbon::today()->toDateString());
+        $divisi = $user->magang?->getDivisiAt($targetDate) ?? $user->magang?->divisi ?? Divisi::first();
         $pembimbing = $user->magang?->pembimbing ?? Pembimbing::first();
         $pengaturan = Pengaturan::getPengaturan();
 
