@@ -17,7 +17,7 @@ class MonitoringAktivitasController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Aktivitas::with(['pengguna.magang', 'validator.pembimbing']);
+        $query = Aktivitas::with(['pengguna.magang', 'pekerjaan', 'validator.pembimbing']);
 
         // Filter rentang tanggal (tanggal_mulai & tanggal_akhir)
         if ($request->filled('tanggal_mulai') && $request->filled('tanggal_akhir')) {
@@ -60,7 +60,7 @@ class MonitoringAktivitasController extends Controller
      */
     public function cetak(Request $request)
     {
-        $query = Aktivitas::with(['pengguna.magang.divisi', 'validator.pembimbing']);
+        $query = Aktivitas::with(['pengguna.magang.divisi', 'pekerjaan', 'validator.pembimbing']);
 
         $tanggalMulai = $request->input('tanggal_mulai');
         $tanggalAkhir = $request->input('tanggal_akhir');
