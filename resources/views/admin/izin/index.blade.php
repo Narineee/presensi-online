@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Monitoring Izin & Sakit')
+@section('title', 'Monitoring Permohonan Ketidakhadiran')
 
 @section('content')
 <div class="space-y-6">
@@ -8,7 +8,7 @@
     <!-- Header Halaman -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Monitoring Pengajuan Izin & Sakit</h1>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Monitoring Pengajuan Ketidakhadiran</h1>
             <p class="text-sm text-slate-500 mt-1">Pantau seluruh permohonan ketidakhadiran, surat dokter, dan status verifikasi Peserta Magang.</p>
         </div>
     </div>

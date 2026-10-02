@@ -91,10 +91,10 @@
             <!-- Izin Menunggu -->
             <a href="{{ route('admin.izin.index') }}" class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-rose-400 hover:shadow-md transition flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Pengajuan Izin Pending</p>
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Pengajuan Permohonan Pending</p>
                     <p class="text-2xl font-black text-slate-900 mt-1">{{ $stats['izin_pending'] ?? 0 }} <span class="text-xs font-semibold text-slate-400">Pengajuan</span></p>
                     <span class="text-[11px] font-semibold text-rose-600 mt-1 inline-flex items-center gap-1">
-                        Buka Monitoring Izin &rarr;
+                        Buka Monitoring Ketidakhadiran &rarr;
                     </span>
                 </div>
                 <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">

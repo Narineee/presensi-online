@@ -27,14 +27,14 @@
     <!-- Header & Tombol Tambah -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Pengajuan Izin, Sakit & Cuti</h1>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Permohonan Ketidakhadiran</h1>
             <p class="text-sm text-slate-500 mt-1">Ajukan permohonan ketidakhadiran resmi dengan melampirkan surat dokter atau dokumen bukti.</p>
         </div>
         <a href="{{ route('izin.create') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-md shadow-blue-500/20 transition cursor-pointer">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
-            <span>Ajukan Izin Baru</span>
+            <span>Ajukan Permohonan Baru</span>
         </a>
     </div>
 
@@ -223,7 +223,7 @@
                                     <p class="text-sm font-semibold text-slate-700">Belum ada permohonan izin/sakit</p>
                                     <p class="text-xs text-slate-400 mt-1">Jika berhalangan hadir karena sakit atau keperluan, silakan ajukan di sini.</p>
                                     <a href="{{ route('izin.create') }}" class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition">
-                                        + Buat Pengajuan Izin
+                                        + Buat Permohonan Baru
                                     </a>
                                 </div>
                             </td>

@@ -60,7 +60,7 @@ class PengajuanIzinController extends Controller
             'tanggal_mulai' => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
             'alasan' => 'required|string|min:5',
-            'bukti_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+            'bukti_file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ], [
             'jenis_izin.required' => 'Pilih jenis permohonan (Sakit, Izin, atau Cuti).',
             'tanggal_mulai.required' => 'Tanggal mulai izin wajib diisi.',
@@ -68,6 +68,7 @@ class PengajuanIzinController extends Controller
             'tanggal_selesai.after_or_equal' => 'Tanggal selesai tidak boleh lebih awal dari tanggal mulai.',
             'alasan.required' => 'Alasan permohonan izin wajib diisi.',
             'alasan.min' => 'Alasan permohonan minimal 5 karakter.',
+            'bukti_file.required' => 'Bukti lampiran wajib diunggah.',
             'bukti_file.mimes' => 'File bukti harus berformat JPG, PNG, atau PDF.',
             'bukti_file.max' => 'Ukuran file bukti maksimal 2MB.',
         ]);
@@ -137,13 +138,20 @@ class PengajuanIzinController extends Controller
             'tanggal_mulai' => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
             'alasan' => 'required|string|min:5',
-            'bukti_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+            'bukti_file' => [
+                $izin->bukti_file ? 'nullable' : 'required',
+                'file',
+                'mimes:jpg,jpeg,png,pdf',
+                'max:2048',
+            ],
         ], [
             'jenis_izin.required' => 'Pilih jenis permohonan (Sakit, Izin, atau Cuti).',
             'tanggal_mulai.required' => 'Tanggal mulai izin wajib diisi.',
             'tanggal_selesai.required' => 'Tanggal selesai izin wajib diisi.',
             'tanggal_selesai.after_or_equal' => 'Tanggal selesai tidak boleh lebih awal dari tanggal mulai.',
             'alasan.required' => 'Alasan permohonan izin wajib diisi.',
+            'alasan.min' => 'Alasan permohonan minimal 5 karakter.',
+            'bukti_file.required' => 'Bukti lampiran wajib diunggah.',
             'bukti_file.mimes' => 'File bukti harus berformat JPG, PNG, atau PDF.',
             'bukti_file.max' => 'Ukuran file bukti maksimal 2MB.',
         ]);

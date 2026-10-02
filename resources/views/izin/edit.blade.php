@@ -126,7 +126,7 @@
             <!-- Upload File Bukti -->
             <div>
                 <label for="bukti_file" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Lampiran Bukti (Kosongkan jika tidak ingin mengubah)
+                    Lampiran Bukti (Surat Dokter / Dokumen Pendukung) @if(! $izin->bukti_file) <span class="text-rose-500">*</span> @else <span class="text-slate-400 font-normal">(Kosongkan jika tidak ingin mengubah)</span> @endif
                 </label>
                 @if($izin->bukti_file_url)
                     <div class="mb-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
@@ -141,9 +141,10 @@
                     name="bukti_file"
                     id="bukti_file"
                     accept=".jpg,.jpeg,.png,.pdf"
-                    class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                    {{ ! $izin->bukti_file ? 'required' : '' }}
+                    class="w-full px-3.5 py-2 rounded-xl border {{ $errors->has('bukti_file') ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300' }} text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
                 >
-                <p class="text-[11px] text-slate-400 mt-1">Format yang didukung: JPG, PNG, atau PDF. Maksimal 2MB.</p>
+                <p class="text-[11px] text-slate-400 mt-1">@if(! $izin->bukti_file) <span class="text-rose-500 font-semibold">* Wajib dilampirkan.</span> @endif Format yang didukung: JPG, PNG, atau PDF. Maksimal 2MB.</p>
                 @error('bukti_file')
                     <p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>
                 @enderror
