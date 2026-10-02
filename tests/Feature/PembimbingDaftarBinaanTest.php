@@ -9,6 +9,7 @@ use App\Models\Pembimbing;
 use App\Models\PengajuanIzin;
 use App\Models\Pengguna;
 use App\Models\Presensi;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -296,4 +297,3 @@ class PembimbingDaftarBinaanTest extends TestCase
         $response->assertSee('Total Keseluruhan (Akumulasi Masa Magang)');
     }
 }
-
