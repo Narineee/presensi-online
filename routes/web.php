@@ -16,6 +16,7 @@ use App\Http\Controllers\AktivitasController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Magang\PenilaianSayaController;
 use App\Http\Controllers\Pembimbing\AktivitasValidasiController;
+use App\Http\Controllers\Pembimbing\BinaanController;
 use App\Http\Controllers\Pembimbing\DashboardController as PembimbingDashboardController;
 use App\Http\Controllers\Pembimbing\MonitoringPresensiController as PembimbingMonitoringPresensiController;
 use App\Http\Controllers\Pembimbing\PekerjaanController as PembimbingPekerjaanController;
@@ -91,7 +92,7 @@ Route::middleware(['auth', 'role:admin'])
         // Monitoring Presensi Magang
         Route::get('presensi/cetak', [MonitoringPresensiController::class, 'cetak'])->name('presensi.cetak');
         Route::get('presensi', [MonitoringPresensiController::class, 'index'])->name('presensi.index');
-        
+
         // Monitoring Aktivitas Harian Magang
         Route::get('aktivitas/cetak', [MonitoringAktivitasController::class, 'cetak'])->name('aktivitas.cetak');
         Route::get('aktivitas', [MonitoringAktivitasController::class, 'index'])->name('aktivitas.index');
@@ -148,6 +149,10 @@ Route::middleware(['auth', 'role:pembimbing'])
     ->group(function () {
 
         Route::get('/dashboard', [PembimbingDashboardController::class, 'index'])->name('dashboard');
+
+        // Daftar Peserta Binaan & Rekapitulasi Presensi
+        Route::get('/binaan', [BinaanController::class, 'index'])->name('binaan.index');
+        Route::get('/binaan/{id}', [BinaanController::class, 'show'])->name('binaan.show');
 
         // Monitoring & Riwayat Presensi Peserta Binaan
         Route::get('/presensi/cetak', [PembimbingMonitoringPresensiController::class, 'cetak'])->name('presensi.cetak');
