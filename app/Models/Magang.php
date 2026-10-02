@@ -80,6 +80,11 @@ class Magang extends Model
         return $this->hasMany(Pekerjaan::class, 'magang_id');
     }
 
+    public function pengajuanTugasLuar(): HasMany
+    {
+        return $this->hasMany(PengajuanTugasLuar::class, 'magang_id');
+    }
+
     /**
      * Relasi ke seluruh riwayat penempatan divisi peserta magang.
      */

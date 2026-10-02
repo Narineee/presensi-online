@@ -6,6 +6,7 @@ use App\Models\Aktivitas;
 use App\Models\Divisi;
 use App\Models\Pembimbing;
 use App\Models\PengajuanIzin;
+use App\Models\PengajuanTugasLuar;
 use App\Models\Pengaturan;
 use App\Models\Pengguna;
 use App\Models\Presensi;
@@ -38,10 +39,17 @@ class PresensiController extends Controller
         // Ambil data presensi hari ini jika sudah pernah absen
         $todayPresensi = Presensi::where('pengguna_id', $user->id)
             ->whereDate('tanggal', $today)
+            ->with(['pengajuanTugasLuar', 'pengajuanTugasLuars'])
+            ->first();
+
+        // Ambil data pengajuan tugas luar hari ini jika ada
+        $todayTugasLuar = PengajuanTugasLuar::where('pengguna_id', $user->id)
+            ->whereDate('tanggal', $today)
+            ->latest()
             ->first();
 
         // Ambil riwayat presensi pengguna dengan pagination
-        $historyQuery = Presensi::where('pengguna_id', $user->id);
+        $historyQuery = Presensi::where('pengguna_id', $user->id)->with('pengajuanTugasLuar');
 
         // Filter bulan jika dipilih
         if ($request->filled('bulan') && preg_match('/^\d{4}-\d{2}$/', $request->bulan)) {
@@ -113,7 +121,7 @@ class PresensiController extends Controller
         // Ambil data lokasi kantor dan radius presensi
         $officeLocation = $this->getOfficeLocation($user);
 
-        return view('presensi.index', compact('user', 'todayPresensi', 'riwayat', 'stats', 'hasAktivitasToday', 'countAktivitasToday', 'officeLocation', 'timeStatus'));
+        return view('presensi.index', compact('user', 'todayPresensi', 'todayTugasLuar', 'riwayat', 'stats', 'hasAktivitasToday', 'countAktivitasToday', 'officeLocation', 'timeStatus'));
     }
 
     /**
@@ -193,23 +201,41 @@ class PresensiController extends Controller
             return redirect()->back()->with('error', 'Waktu presensi untuk hari ini telah berakhir (pukul 18.00 WITA).');
         }
 
-        $request->validate([
-            'mode_kerja' => 'required|in:onsite,wfh',
+        $rules = [
+            'mode_kerja' => 'required|in:onsite,wfh,tugas_luar',
             'lokasi_masuk' => 'required|string',
             'foto_masuk' => 'required|string',
             'face_descriptor' => 'required|string',
             'keterangan' => 'nullable|string|max:255',
-        ], [
-            'mode_kerja.required' => 'Pilih mode kerja (Onsite atau WFH).',
+        ];
+
+        $messages = [
+            'mode_kerja.required' => 'Pilih mode kerja (Onsite, WFH, atau Tugas Luar).',
             'lokasi_masuk.required' => 'Titik lokasi GPS wajib terdeteksi. Silakan izinkan akses lokasi di browser Anda.',
             'foto_masuk.required' => 'Foto selfie wajib diambil.',
             'face_descriptor.required' => 'Verifikasi wajah belum selesai. Silakan ulangi.',
             'keterangan.max' => 'Keterangan maksimal 255 karakter.',
-        ]);
+        ];
 
-        $inputAman = $request->except(['foto_masuk', 'face_descriptor']);
+        if ($request->mode_kerja === 'tugas_luar') {
+            $rules['tujuan'] = 'required|string|max:255';
+            $rules['keperluan'] = 'required|string';
+            $rules['waktu_mulai'] = 'required|string';
+            $rules['waktu_selesai'] = 'nullable|string';
+            $rules['bukti_tugas_luar'] = 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120';
 
-        // Onsite: cek radius kantor
+            $messages['tujuan.required'] = 'Tujuan/lokasi tugas luar wajib diisi.';
+            $messages['keperluan.required'] = 'Keperluan/kegiatan tugas luar wajib diisi.';
+            $messages['waktu_mulai.required'] = 'Waktu mulai tugas luar wajib diisi.';
+            $messages['bukti_tugas_luar.mimes'] = 'Bukti tugas luar harus berformat PDF, JPG, JPEG, atau PNG.';
+            $messages['bukti_tugas_luar.max'] = 'Ukuran file bukti tugas luar maksimal 5MB.';
+        }
+
+        $request->validate($rules, $messages);
+
+        $inputAman = $request->except(['foto_masuk', 'face_descriptor', 'bukti_tugas_luar']);
+
+        // Onsite: cek radius kantor (Jika Tugas Luar atau WFH, radius tidak dicek)
         $officeLocation = $this->getOfficeLocation($user);
         if ($request->mode_kerja === 'onsite') {
             $coords = explode(',', $request->lokasi_masuk);
@@ -242,6 +268,12 @@ class PresensiController extends Controller
             return redirect()->back()->withInput($inputAman)->with('error', 'Foto presensi gagal disimpan. Silakan ulangi verifikasi wajah.');
         }
 
+        // Simpan bukti tugas luar jika diunggah
+        $buktiPath = null;
+        if ($request->hasFile('bukti_tugas_luar')) {
+            $buktiPath = $request->file('bukti_tugas_luar')->store('tugas_luar', 'public');
+        }
+
         // Hitung keterlambatan (batas 08.00 WITA)
         $jamSekarang = Carbon::now();
         $jamMasukStr = $jamSekarang->format('H:i:s');
@@ -257,7 +289,12 @@ class PresensiController extends Controller
             $keteranganTambahan = $keteranganTambahan ? $keteranganTambahan.' '.$infoTerlambat : $infoTerlambat;
         }
 
-        Presensi::updateOrCreate(
+        if ($request->mode_kerja === 'tugas_luar') {
+            $ketTL = 'Tugas Luar: '.$request->tujuan;
+            $keteranganTambahan = $keteranganTambahan ? $ketTL.' | '.$keteranganTambahan : $ketTL;
+        }
+
+        $presensi = Presensi::updateOrCreate(
             ['pengguna_id' => $user->id, 'tanggal' => $today],
             [
                 'jam_masuk' => $jamMasukStr,
@@ -270,12 +307,92 @@ class PresensiController extends Controller
             ]
         );
 
-        $pesanSukses = 'Presensi masuk berhasil dicatat pukul '.$jamMasukStr.' WITA.';
-        if ($menitTerlambat > 0) {
-            $pesanSukses .= " Tercatat terlambat {$menitTerlambat} menit dari batas 08.00 WITA.";
+        // Jika mode kerja Tugas Luar (Skenario 1), buat record pengajuan tugas luar
+        if ($request->mode_kerja === 'tugas_luar') {
+            PengajuanTugasLuar::create([
+                'presensi_id' => $presensi->id,
+                'pengguna_id' => $user->id,
+                'magang_id' => $user->magang?->id,
+                'tanggal' => $today,
+                'tujuan' => $request->tujuan,
+                'keperluan' => $request->keperluan,
+                'waktu_mulai' => $request->waktu_mulai,
+                'waktu_selesai' => $request->waktu_selesai,
+                'bukti' => $buktiPath,
+                'status_verifikasi' => 'menunggu',
+            ]);
+        }
+
+        if ($request->mode_kerja === 'tugas_luar') {
+            $pesanSukses = 'Presensi masuk Tugas Luar berhasil dicatat pukul '.$jamMasukStr.' WITA dan sedang menunggu verifikasi pembimbing.';
+        } else {
+            $pesanSukses = 'Presensi masuk berhasil dicatat pukul '.$jamMasukStr.' WITA.';
+            if ($menitTerlambat > 0) {
+                $pesanSukses .= " Tercatat terlambat {$menitTerlambat} menit dari batas 08.00 WITA.";
+            }
         }
 
         return redirect()->route('presensi.index')->with('success', $pesanSukses);
+    }
+
+    /**
+     * Mengajukan Tugas Luar bagi peserta yang sudah melakukan presensi masuk (Skenario 2).
+     */
+    public function storeTugasLuar(Request $request)
+    {
+        $user = Auth::user();
+        $today = Carbon::today()->toDateString();
+
+        $todayPresensi = Presensi::where('pengguna_id', $user->id)
+            ->whereDate('tanggal', $today)
+            ->first();
+
+        if (! $todayPresensi || ! $todayPresensi->jam_masuk) {
+            return redirect()->back()->with('error', 'Anda harus melakukan presensi masuk terlebih dahulu sebelum mengajukan Tugas Luar.');
+        }
+
+        $existing = PengajuanTugasLuar::where('pengguna_id', $user->id)
+            ->whereDate('tanggal', $today)
+            ->whereIn('status_verifikasi', ['menunggu', 'disetujui'])
+            ->first();
+
+        if ($existing) {
+            return redirect()->back()->with('error', 'Anda sudah memiliki pengajuan Tugas Luar untuk hari ini.');
+        }
+
+        $request->validate([
+            'tujuan' => 'required|string|max:255',
+            'keperluan' => 'required|string',
+            'waktu_mulai' => 'required|string',
+            'waktu_selesai' => 'nullable|string',
+            'bukti_tugas_luar' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ], [
+            'tujuan.required' => 'Tujuan/lokasi tugas luar wajib diisi.',
+            'keperluan.required' => 'Keperluan/kegiatan tugas luar wajib diisi.',
+            'waktu_mulai.required' => 'Waktu mulai tugas luar wajib diisi.',
+            'bukti_tugas_luar.mimes' => 'Bukti tugas luar harus berformat PDF, JPG, JPEG, atau PNG.',
+            'bukti_tugas_luar.max' => 'Ukuran file bukti tugas luar maksimal 5MB.',
+        ]);
+
+        $buktiPath = null;
+        if ($request->hasFile('bukti_tugas_luar')) {
+            $buktiPath = $request->file('bukti_tugas_luar')->store('tugas_luar', 'public');
+        }
+
+        PengajuanTugasLuar::create([
+            'presensi_id' => $todayPresensi->id,
+            'pengguna_id' => $user->id,
+            'magang_id' => $user->magang?->id,
+            'tanggal' => $today,
+            'tujuan' => $request->tujuan,
+            'keperluan' => $request->keperluan,
+            'waktu_mulai' => $request->waktu_mulai,
+            'waktu_selesai' => $request->waktu_selesai,
+            'bukti' => $buktiPath,
+            'status_verifikasi' => 'menunggu',
+        ]);
+
+        return redirect()->route('presensi.index')->with('success', 'Pengajuan Tugas Luar berhasil dikirim dan menunggu verifikasi pembimbing.');
     }
 
     /**
@@ -333,9 +450,16 @@ class PresensiController extends Controller
 
         $inputAman = $request->except(['foto_keluar', 'face_descriptor']);
 
-        // Onsite: cek radius kantor
+        // Cek apakah peserta memiliki Tugas Luar hari ini (tidak kena validasi radius kantor)
+        $isTugasLuarToday = ($presensi->mode_kerja === 'tugas_luar')
+            || PengajuanTugasLuar::where('pengguna_id', $user->id)
+                ->whereDate('tanggal', $today)
+                ->whereIn('status_verifikasi', ['disetujui', 'menunggu'])
+                ->exists();
+
+        // Onsite biasa: cek radius kantor (hanya jika bukan sedang Tugas Luar)
         $officeLocation = $this->getOfficeLocation($user);
-        if ($presensi->mode_kerja === 'onsite') {
+        if (! $isTugasLuarToday && $presensi->mode_kerja === 'onsite') {
             $coords = explode(',', $request->lokasi_keluar);
             if (count($coords) === 2) {
                 $jarak = $this->calculateDistance(
@@ -398,7 +522,7 @@ class PresensiController extends Controller
         // Eager load relasi magang
         $user->load(['magang.divisi', 'magang.pembimbing']);
 
-        $query = Presensi::where('pengguna_id', $user->id);
+        $query = Presensi::where('pengguna_id', $user->id)->with('pengajuanTugasLuar');
 
         $bulan = $request->input('bulan', Carbon::today()->format('Y-m'));
         $tanggalMulai = $request->input('tanggal_mulai');
@@ -422,10 +546,15 @@ class PresensiController extends Controller
             ->orderBy('jam_masuk', 'asc')
             ->get();
 
+        $totalTL = $presensi->filter(fn ($p) => $p->is_tugas_luar || $p->mode_kerja === 'tugas_luar')->count();
+        $totalOnsite = $presensi->filter(fn ($p) => $p->mode_kerja === 'onsite' && ! $p->is_tugas_luar)->count();
+        $totalWfh = $presensi->filter(fn ($p) => $p->mode_kerja === 'wfh')->count();
+
         $stats = [
             'total_hadir' => $presensi->where('status', 'hadir')->count(),
-            'total_onsite' => $presensi->where('mode_kerja', 'onsite')->count(),
-            'total_wfh' => $presensi->where('mode_kerja', 'wfh')->count(),
+            'total_onsite' => $totalOnsite,
+            'total_wfh' => $totalWfh,
+            'total_tugas_luar' => $totalTL,
         ];
 
         $targetDate = $tanggalMulai ?? ($bulan ? Carbon::parse($bulan.'-01')->toDateString() : Carbon::today()->toDateString());

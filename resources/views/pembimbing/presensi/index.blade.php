@@ -156,6 +156,7 @@
                     <option value="">Semua Mode</option>
                     <option value="onsite" {{ request('mode_kerja') === 'onsite' ? 'selected' : '' }}>🏢 Onsite (Kantor)</option>
                     <option value="wfh" {{ request('mode_kerja') === 'wfh' ? 'selected' : '' }}>🏠 WFH (Remote)</option>
+                    <option value="tugas_luar" {{ request('mode_kerja') === 'tugas_luar' ? 'selected' : '' }}>🚗 Tugas Luar (TL)</option>
                 </select>
             </div>
 
@@ -228,7 +229,11 @@
 
                             <!-- Mode Kerja -->
                             <td class="px-5 py-4 text-center whitespace-nowrap">
-                                @if($item->mode_kerja === 'onsite')
+                                @if($item->is_tugas_luar || $item->mode_kerja === 'tugas_luar')
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                        🚗 Tugas Luar
+                                    </span>
+                                @elseif($item->mode_kerja === 'onsite')
                                     <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
                                         🏢 Onsite
                                     </span>
@@ -328,7 +333,11 @@
                             <!-- Status & Keterangan -->
                             <td class="px-5 py-4">
                                 <div class="flex items-center gap-1.5 flex-wrap">
-                                    @if($item->status === 'hadir')
+                                    @if($item->is_tugas_luar)
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                            Hadir &bull; Tugas Luar
+                                        </span>
+                                    @elseif($item->status === 'hadir')
                                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                             Hadir
                                         </span>

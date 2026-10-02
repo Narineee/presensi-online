@@ -6,6 +6,7 @@ use App\Models\HariLibur;
 use App\Models\KriteriaPenilaian;
 use App\Models\Magang;
 use App\Models\PengajuanIzin;
+use App\Models\PengajuanTugasLuar;
 use App\Models\Presensi;
 use Carbon\Carbon;
 
@@ -71,6 +72,14 @@ class PresensiScoreService
             ->whereDate('tanggal_mulai', '<=', $endDate->toDateString())
             ->whereDate('tanggal_selesai', '>=', $startDate->toDateString())
             ->get();
+
+        // Ambil data pengajuan tugas luar yang telah disetujui
+        $approvedTugasLuarList = PengajuanTugasLuar::where('pengguna_id', $magang->pengguna_id)
+            ->where('status_verifikasi', 'disetujui')
+            ->whereDate('tanggal', '<=', $endDate->toDateString())
+            ->whereDate('tanggal', '>=', $startDate->toDateString())
+            ->get()
+            ->keyBy(fn ($item) => Carbon::parse($item->tanggal)->toDateString());
 
         $targetHari = 0;
         $targetMenit = 0;
@@ -155,6 +164,36 @@ class PresensiScoreService
                     'menit' => $menit,
                     'is_hitung_target' => true,
                     'keterangan' => $jenisIzin.' (Disetujui Pembimbing - Hadir Penuh 480 Menit)',
+                ];
+
+                $current->addDay();
+
+                continue;
+            }
+
+            // KASUS A2: Tugas Luar (TL) Disetujui Pembimbing -> DIHITUNG HADIR PENUH (480 menit)
+            $tugasLuar = $approvedTugasLuarList->get($dateStr);
+            $isTugasLuar = $tugasLuar
+                || ($presensi && ($presensi->mode_kerja === 'tugas_luar' || stripos((string) $presensi->keterangan, 'tugas luar') !== false));
+
+            if ($isTugasLuar) {
+                $menit = self::MENIT_PER_HARI;
+                $totalMenitRealisasi += $menit;
+                $menitHadirNormal += $menit;
+                $totalHariHadir++;
+
+                $jamMasukFmt = ($presensi && $presensi->jam_masuk) ? substr($presensi->jam_masuk, 0, 5) : ($tugasLuar?->waktu_mulai ? substr($tugasLuar->waktu_mulai, 0, 5) : '08:00');
+                $jamKeluarFmt = ($presensi && $presensi->jam_keluar) ? substr($presensi->jam_keluar, 0, 5) : ($tugasLuar?->waktu_selesai ? substr($tugasLuar->waktu_selesai, 0, 5) : '16:00');
+
+                $rincianHarian[] = [
+                    'tanggal' => $dateStr,
+                    'hari' => $current->translatedFormat('l'),
+                    'status' => 'hadir',
+                    'jam_masuk' => $jamMasukFmt,
+                    'jam_keluar' => $jamKeluarFmt,
+                    'menit' => $menit,
+                    'is_hitung_target' => true,
+                    'keterangan' => 'Hadir — Tugas Luar ('.($tugasLuar?->tujuan ?? 'Tugas Luar').' - Disetujui Pembimbing)',
                 ];
 
                 $current->addDay();

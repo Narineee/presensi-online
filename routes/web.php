@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\MonitoringAktivitasController;
 use App\Http\Controllers\Admin\MonitoringPengajuanIzinController;
 use App\Http\Controllers\Admin\MonitoringPenilaianController;
 use App\Http\Controllers\Admin\MonitoringPresensiController;
+use App\Http\Controllers\Admin\MonitoringTugasLuarController;
 use App\Http\Controllers\Admin\PembimbingController;
 use App\Http\Controllers\Admin\PenempatanMagangController;
 use App\Http\Controllers\Admin\PengaturanController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\Pembimbing\MonitoringPresensiController as PembimbingMo
 use App\Http\Controllers\Pembimbing\PekerjaanController as PembimbingPekerjaanController;
 use App\Http\Controllers\Pembimbing\PengajuanIzinValidasiController;
 use App\Http\Controllers\Pembimbing\PenilaianMagangController;
+use App\Http\Controllers\Pembimbing\TugasLuarValidasiController;
 use App\Http\Controllers\PengajuanIzinController;
 use App\Http\Controllers\PresensiController;
 use App\Http\Controllers\ProfileController;
@@ -100,6 +102,9 @@ Route::middleware(['auth', 'role:admin'])
         // Monitoring Pengajuan Izin & Sakit
         Route::get('izin', [MonitoringPengajuanIzinController::class, 'index'])->name('izin.index');
 
+        // Monitoring Pengajuan Tugas Luar
+        Route::get('tugas-luar', [MonitoringTugasLuarController::class, 'index'])->name('tugas-luar.index');
+
         // Monitoring & Rekap Penilaian Akhir Magang
         Route::get('penilaian/cetak', [MonitoringPenilaianController::class, 'cetak'])->name('penilaian.cetak');
         Route::get('penilaian', [MonitoringPenilaianController::class, 'index'])->name('penilaian.index');
@@ -122,6 +127,7 @@ Route::middleware(['auth', 'role:magang'])->group(function () {
     Route::get('/presensi', [PresensiController::class, 'index'])->name('presensi.index');
     Route::post('/presensi/masuk', [PresensiController::class, 'storeMasuk'])->name('presensi.masuk');
     Route::post('/presensi/keluar', [PresensiController::class, 'storeKeluar'])->name('presensi.keluar');
+    Route::post('/presensi/tugas-luar', [PresensiController::class, 'storeTugasLuar'])->name('presensi.tugas-luar');
     Route::post('/presensi/verifikasi-wajah', [PresensiController::class, 'verifikasiWajah'])->name('presensi.verifikasi-wajah');
 
     // CRUD Aktivitas Harian
@@ -168,6 +174,10 @@ Route::middleware(['auth', 'role:pembimbing'])
         // Verifikasi Izin & Sakit Binaan
         Route::get('/izin', [PengajuanIzinValidasiController::class, 'index'])->name('izin.index');
         Route::post('/izin/{id}/validasi', [PengajuanIzinValidasiController::class, 'validasi'])->name('izin.validasi');
+
+        // Verifikasi Tugas Luar Binaan
+        Route::get('/tugas-luar', [TugasLuarValidasiController::class, 'index'])->name('tugas-luar.index');
+        Route::post('/tugas-luar/{id}/validasi', [TugasLuarValidasiController::class, 'validasi'])->name('tugas-luar.validasi');
 
         // Penilaian Akhir Magang
         Route::resource('penilaian', PenilaianMagangController::class);

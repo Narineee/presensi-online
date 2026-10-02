@@ -38,10 +38,10 @@
                     <tr>
                         <td class="c">{{ $index + 1 }}</td>
                         <td>{{ \Carbon\Carbon::parse($item->tanggal)->isoFormat('dddd, D MMMM Y') }}</td>
-                        <td class="c" style="text-transform:uppercase;">{{ $item->mode_kerja }}</td>
+                        <td class="c" style="text-transform:uppercase;">{{ ($item->is_tugas_luar || $item->mode_kerja === 'tugas_luar') ? 'TUGAS LUAR' : $item->mode_kerja }}</td>
                         <td class="c">{{ $item->jam_masuk ? substr($item->jam_masuk, 0, 5) . ' WITA' : '-' }}</td>
                         <td class="c">{{ $item->jam_keluar ? substr($item->jam_keluar, 0, 5) . ' WITA' : '-' }}</td>
-                        <td class="c" style="text-transform:capitalize;">{{ $item->status }}</td>
+                        <td class="c" style="text-transform:capitalize;">{{ $item->is_tugas_luar ? 'Hadir (TL)' : $item->status }}</td>
                         <td>{{ $item->keterangan ?? '-' }}</td>
                     </tr>
                 @empty
@@ -56,7 +56,8 @@
             <strong>Ringkasan:</strong>
             Total Hadir {{ $stats['total_hadir'] }} hari;
             Onsite (Kantor) {{ $stats['total_onsite'] }} hari;
-            WFH (Remote) {{ $stats['total_wfh'] }} hari.
+            WFH (Remote) {{ $stats['total_wfh'] }} hari;
+            Tugas Luar {{ $stats['total_tugas_luar'] ?? 0 }} hari.
         </div>
 
         @include('admin.cetak.partials.ttd-dua')

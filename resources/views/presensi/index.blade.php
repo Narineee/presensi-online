@@ -215,7 +215,7 @@
                     </div>
                 @endif
 
-                <form action="{{ route('presensi.masuk') }}" method="POST" id="form-presensi-masuk" class="space-y-6">
+                <form action="{{ route('presensi.masuk') }}" method="POST" id="form-presensi-masuk" enctype="multipart/form-data" class="space-y-6">
                     @csrf
                     <input type="hidden" name="foto_masuk" id="input_foto_masuk" value="">
                     <input type="hidden" name="lokasi_masuk" id="input_lokasi_masuk" value="">
@@ -226,16 +226,16 @@
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                             Mode Kerja Hari Ini <span class="text-rose-500">*</span>
                         </label>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <label class="relative flex items-center p-4 rounded-2xl border-2 border-slate-200 hover:border-blue-400 cursor-pointer transition has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/50">
                                 <input type="radio" name="mode_kerja" value="onsite" class="sr-only" checked>
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                                    <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg">
                                         🏢
                                     </div>
                                     <div>
                                         <div class="text-sm font-bold text-slate-900">Onsite (Di Kantor)</div>
-                                        <div class="text-xs text-slate-500">Bekerja langsung di lokasi kantor</div>
+                                        <div class="text-xs text-slate-500">Bekerja di area kantor</div>
                                     </div>
                                 </div>
                             </label>
@@ -243,15 +243,109 @@
                             <label class="relative flex items-center p-4 rounded-2xl border-2 border-slate-200 hover:border-blue-400 cursor-pointer transition has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/50">
                                 <input type="radio" name="mode_kerja" value="wfh" class="sr-only">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
+                                    <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-lg">
                                         🏠
                                     </div>
                                     <div>
                                         <div class="text-sm font-bold text-slate-900">WFH (Work From Home)</div>
-                                        <div class="text-xs text-slate-500">Bekerja dari rumah / remote</div>
+                                        <div class="text-xs text-slate-500">Bekerja dari rumah</div>
                                     </div>
                                 </div>
                             </label>
+
+                            <label class="relative flex items-center p-4 rounded-2xl border-2 border-slate-200 hover:border-indigo-400 cursor-pointer transition has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50/50">
+                                <input type="radio" name="mode_kerja" value="tugas_luar" class="sr-only">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-lg">
+                                        🚗
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-slate-900">Tugas Luar (TL)</div>
+                                        <div class="text-xs text-slate-500">Bertugas di luar kantor</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Form Rincian Khusus Tugas Luar (Skenario 1) -->
+                    <div id="container-tugas-luar" class="hidden p-5 rounded-2xl bg-indigo-50/60 border border-indigo-200 space-y-4">
+                        <div class="flex items-center gap-2 pb-2 border-b border-indigo-100">
+                            <span class="w-7 h-7 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">📋</span>
+                            <div>
+                                <h4 class="text-xs font-bold text-indigo-950 uppercase tracking-wider">Formulir Rincian Tugas Luar (TL)</h4>
+                                <p class="text-[11px] text-indigo-700">Lengkapi data penugasan luar kantor. Validasi radius kantor otomatis dinonaktifkan.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="input_tujuan_tl" class="block text-xs font-bold text-slate-700 mb-1">
+                                    Tujuan / Lokasi Penugasan <span class="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="tujuan"
+                                    id="input_tujuan_tl"
+                                    placeholder="Contoh: Kantor Bappeda Prov. Kalsel / Lapangan"
+                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                                >
+                            </div>
+
+                            <div>
+                                <label for="bukti_tugas_luar" class="block text-xs font-bold text-slate-700 mb-1">
+                                    Bukti Penugasan (Surat Tugas / Dokumen / Foto)
+                                </label>
+                                <input
+                                    type="file"
+                                    name="bukti_tugas_luar"
+                                    id="bukti_tugas_luar"
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    class="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs bg-white file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                >
+                                <span class="text-[10px] text-slate-400 mt-0.5 block">Format: PDF, JPG, JPEG, PNG (Maks. 5MB)</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="input_keperluan_tl" class="block text-xs font-bold text-slate-700 mb-1">
+                                Keperluan / Uraian Kegiatan <span class="text-rose-500">*</span>
+                            </label>
+                            <textarea
+                                name="keperluan"
+                                id="input_keperluan_tl"
+                                rows="2"
+                                placeholder="Contoh: Menghadiri rapat koordinasi teknis dan pendampingan implementasi aplikasi."
+                                class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                            ></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="input_waktu_mulai_tl" class="block text-xs font-bold text-slate-700 mb-1">
+                                    Waktu Mulai Tugas Luar <span class="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="time"
+                                    name="waktu_mulai"
+                                    id="input_waktu_mulai_tl"
+                                    value="{{ date('H:i') }}"
+                                    class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                >
+                            </div>
+
+                            <div>
+                                <label for="input_waktu_selesai_tl" class="block text-xs font-bold text-slate-700 mb-1">
+                                    Perkiraan Waktu Selesai (Opsional)
+                                </label>
+                                <input
+                                    type="time"
+                                    name="waktu_selesai"
+                                    id="input_waktu_selesai_tl"
+                                    placeholder="16:00"
+                                    class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                >
+                            </div>
                         </div>
                     </div>
 
@@ -479,14 +573,83 @@
                                 Presensi Masuk: <span class="font-mono text-emerald-700">{{ substr($todayPresensi->jam_masuk, 0, 5) }} WITA</span>
                             </h3>
                             <p class="text-xs text-emerald-700 mt-0.5">
-                                Mode Kerja: <strong class="capitalize">{{ $todayPresensi->mode_kerja }}</strong> &bull; Lokasi: {{ $todayPresensi->lokasi_masuk ?? '-' }}
+                                Mode Kerja: <strong class="capitalize">{{ $todayPresensi->mode_kerja === 'tugas_luar' ? 'Tugas Luar (TL)' : $todayPresensi->mode_kerja }}</strong> &bull; Lokasi: {{ $todayPresensi->lokasi_masuk ?? '-' }}
                             </p>
                         </div>
                     </div>
-                    <span class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white text-emerald-800 border border-emerald-200/80 text-center">
-                        Sedang Aktif Bekerja
-                    </span>
+                    
+                    <div class="flex flex-wrap items-center gap-2">
+                        @if(!$todayTugasLuar || $todayTugasLuar->isDitolak())
+                            <!-- Tombol Ajukan Tugas Luar (Skenario 2) -->
+                            <button
+                                type="button"
+                                onclick="openModalAjukanTugasLuar()"
+                                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition cursor-pointer"
+                            >
+                                <span>🚗</span>
+                                <span>+ Ajukan Tugas Luar</span>
+                            </button>
+                        @endif
+                        <span class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white text-emerald-800 border border-emerald-200/80 text-center">
+                            Sedang Aktif Bekerja
+                        </span>
+                    </div>
                 </div>
+
+                <!-- Banner Informasi Status Tugas Luar Hari Ini (Jika Ada) -->
+                @if($todayTugasLuar)
+                    @if($todayTugasLuar->isMenunggu())
+                        <div class="p-4 sm:p-5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 shadow-xs flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-10 h-10 rounded-xl bg-amber-200 text-amber-800 flex items-center justify-center font-bold text-lg shrink-0">
+                                    ⏳
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="text-xs font-bold text-amber-950 uppercase tracking-wider">Pengajuan Tugas Luar Menunggu Verifikasi</h4>
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-200 text-amber-900">Menunggu Pembimbing</span>
+                                    </div>
+                                    <p class="text-xs text-amber-800 mt-1">
+                                        Tujuan: <strong>{{ $todayTugasLuar->tujuan }}</strong> &bull; Waktu: <strong>{{ substr($todayTugasLuar->waktu_mulai, 0, 5) }} s/d {{ $todayTugasLuar->waktu_selesai ? substr($todayTugasLuar->waktu_selesai, 0, 5) : 'Selesai' }} WITA</strong>.
+                                        Jam masuk awal Anda tetap tersimpan ({{ substr($todayPresensi->jam_masuk, 0, 5) }} WITA) dan tidak berubah.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    @elseif($todayTugasLuar->isDisetujui())
+                        <div class="p-4 sm:p-5 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-950 shadow-xs flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shrink-0">
+                                    🚗
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="text-xs font-bold text-indigo-950 uppercase tracking-wider">Tugas Luar (TL) Disetujui Pembimbing</h4>
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">&check; Hadir — Tugas Luar</span>
+                                    </div>
+                                    <p class="text-xs text-indigo-800 mt-1">
+                                        Tujuan: <strong>{{ $todayTugasLuar->tujuan }}</strong> &bull; Waktu: <strong>{{ substr($todayTugasLuar->waktu_mulai, 0, 5) }} s/d {{ $todayTugasLuar->waktu_selesai ? substr($todayTugasLuar->waktu_selesai, 0, 5) : 'Selesai' }} WITA</strong> &bull; Verifikator: <strong>{{ $todayTugasLuar->nama_validator }}</strong>.
+                                        Batasan radius kantor saat presensi kepulangan telah otomatis dinonaktifkan.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    @elseif($todayTugasLuar->isDitolak())
+                        <div class="p-4 sm:p-5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-950 shadow-xs flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-10 h-10 rounded-xl bg-rose-200 text-rose-800 flex items-center justify-center font-bold text-lg shrink-0">
+                                    ⛔
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-rose-950 uppercase tracking-wider">Pengajuan Tugas Luar Ditolak</h4>
+                                    <p class="text-xs text-rose-800 mt-1">
+                                        Alasan: {{ $todayTugasLuar->catatan_pembimbing ?: 'Tidak memenuhi syarat penugasan.' }} (Oleh: {{ $todayTugasLuar->nama_validator }}).
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                @endif
 
                 <!-- Form Absen Pulang -->
                 <div class="pt-4 border-t border-slate-100 space-y-4">
@@ -585,6 +748,7 @@
                             <input type="hidden" name="lokasi_keluar" id="input_lokasi_keluar" value="">
                             <input type="hidden" name="face_descriptor" id="input_face_descriptor" value="">
                             <input type="hidden" id="today-mode-kerja" value="{{ $todayPresensi->mode_kerja }}">
+                            <input type="hidden" id="is-tugas-luar-today" value="{{ ($todayTugasLuar && ($todayTugasLuar->isMenunggu() || $todayTugasLuar->isDisetujui())) ? '1' : '0' }}">
 
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <!-- Kamera Pulang & Realtime Liveness Detection -->
@@ -875,7 +1039,11 @@
                                 {{ \Carbon\Carbon::parse($item->tanggal)->isoFormat('D MMM Y') }}
                             </td>
                             <td class="px-6 py-4">
-                                @if ($item->mode_kerja === 'onsite')
+                                @if ($item->is_tugas_luar || $item->mode_kerja === 'tugas_luar')
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                        🚗 Tugas Luar
+                                    </span>
+                                @elseif ($item->mode_kerja === 'onsite')
                                     <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
                                         🏢 Onsite
                                     </span>
@@ -892,9 +1060,15 @@
                                 {{ $item->jam_keluar ? substr($item->jam_keluar, 0, 5) . ' WITA' : '-' }}
                             </td>
                             <td class="px-6 py-4">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800">
-                                    {{ $item->status }}
-                                </span>
+                                @if ($item->is_tugas_luar)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-indigo-100 text-indigo-800">
+                                        Hadir — Tugas Luar
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800">
+                                        {{ $item->status }}
+                                    </span>
+                                @endif
                                 @if (str_contains($item->keterangan ?? '', 'Terlambat'))
                                     <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-rose-100 text-rose-700 ml-1">
                                         Terlambat
@@ -935,6 +1109,131 @@
                 {{ $riwayat->links() }}
             </div>
         @endif
+    </div>
+
+    <!-- MODAL PENGAJUAN TUGAS LUAR (SKENARIO 2: SETELAH PRESENSI ONSITE) -->
+    <div id="modal-ajukan-tugas-luar" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-100 my-8 transition-all animate-in fade-in zoom-in-95 duration-200">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-lg font-bold">
+                        🚗
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base">Ajukan Tugas Luar (TL)</h3>
+                        <p class="text-xs text-slate-500">Penugasan kedinasan di luar kantor instansi</p>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    onclick="closeModalAjukanTugasLuar()"
+                    class="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Modal Info Banner -->
+            <div class="mt-4 p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 text-xs text-indigo-900 flex items-start gap-2.5">
+                <span class="text-base shrink-0">💡</span>
+                <p class="leading-relaxed">
+                    Jam presensi masuk awal Anda tetap tersimpan dan tidak berubah. Pengajuan ini akan diteruskan ke Pembimbing untuk verifikasi.
+                </p>
+            </div>
+
+            <!-- Modal Form -->
+            <form action="{{ route('presensi.tugas-luar') }}" method="POST" enctype="multipart/form-data" class="mt-5 space-y-4">
+                @csrf
+
+                <div>
+                    <label for="modal_tujuan_tl" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Tujuan / Lokasi Penugasan <span class="text-rose-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="tujuan"
+                        id="modal_tujuan_tl"
+                        required
+                        placeholder="Contoh: Kantor Dinas Kominfo / Pengadilan Tinggi"
+                        class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                    >
+                </div>
+
+                <div>
+                    <label for="modal_keperluan_tl" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Keperluan / Uraian Tugas <span class="text-rose-500">*</span>
+                    </label>
+                    <textarea
+                        name="keperluan"
+                        id="modal_keperluan_tl"
+                        rows="3"
+                        required
+                        placeholder="Uraikan agenda penugasan atau kegiatan dinas yang akan dilaksanakan..."
+                        class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                    ></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label for="modal_waktu_mulai_tl" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Waktu Mulai <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="time"
+                            name="waktu_mulai"
+                            id="modal_waktu_mulai_tl"
+                            required
+                            value="{{ date('H:i') }}"
+                            class="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="modal_waktu_selesai_tl" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Perkiraan Selesai (Opsional)
+                        </label>
+                        <input
+                            type="time"
+                            name="waktu_selesai"
+                            id="modal_waktu_selesai_tl"
+                            placeholder="16:00"
+                            class="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                        >
+                    </div>
+                </div>
+
+                <div>
+                    <label for="modal_bukti_tl" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Bukti Penugasan (Surat Tugas / Surat Undangan / Foto)
+                    </label>
+                    <input
+                        type="file"
+                        name="bukti_tugas_luar"
+                        id="modal_bukti_tl"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        class="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs bg-white file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    >
+                    <span class="text-[10px] text-slate-400 mt-1 block">Format: PDF, JPG, JPEG, PNG (Maksimal 5MB)</span>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                    <button
+                        type="button"
+                        onclick="closeModalAjukanTugasLuar()"
+                        class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition cursor-pointer"
+                    >
+                        Batal
+                    </button>
+                    <button
+                        type="submit"
+                        class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition cursor-pointer"
+                    >
+                        Kirim Pengajuan
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
 </div>
@@ -1637,6 +1936,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const boxEl = document.getElementById('radius-indicator-box');
         const distanceEl = document.getElementById('gps-distance');
         const mode = getCurrentWorkMode();
+        const isTLToday = (document.getElementById('is-tugas-luar-today')?.value === '1');
+        const isTugasLuarActive = (mode === 'tugas_luar') || isTLToday;
 
         if (distanceEl) {
             distanceEl.textContent = `${distance.toLocaleString('id-ID')} meter`;
@@ -1652,6 +1953,15 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             if (boxEl) {
                 boxEl.className = 'p-3 rounded-xl border border-blue-200 bg-blue-50/50 text-xs space-y-1.5 shadow-xs transition-colors';
+            }
+        } else if (isTugasLuarActive) {
+            badgeEl.className = 'pt-1.5 border-t border-indigo-100 flex items-center gap-1.5 text-[11px] font-semibold text-indigo-700';
+            badgeEl.innerHTML = `
+                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                <span>Tugas Luar (TL) Aktif: Bebas batasan radius kantor (Jarak: ${distance.toLocaleString('id-ID')}m).</span>
+            `;
+            if (boxEl) {
+                boxEl.className = 'p-3 rounded-xl border border-indigo-200 bg-indigo-50/50 text-xs space-y-1.5 shadow-xs transition-colors';
             }
         } else {
             if (distance <= officeConfig.radius) {
@@ -1676,15 +1986,40 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Toggle formulir rincian tugas luar pada Skenario 1
+    const containerTL = document.getElementById('container-tugas-luar');
+    const inputTujuanTL = document.getElementById('input_tujuan_tl');
+    const inputKeperluanTL = document.getElementById('input_keperluan_tl');
+    const inputWaktuMulaiTL = document.getElementById('input_waktu_mulai_tl');
+
+    function toggleTugasLuarForm() {
+        const mode = getCurrentWorkMode();
+        if (containerTL) {
+            if (mode === 'tugas_luar') {
+                containerTL.classList.remove('hidden');
+                if (inputTujuanTL) inputTujuanTL.setAttribute('required', 'required');
+                if (inputKeperluanTL) inputKeperluanTL.setAttribute('required', 'required');
+                if (inputWaktuMulaiTL) inputWaktuMulaiTL.setAttribute('required', 'required');
+            } else {
+                containerTL.classList.add('hidden');
+                if (inputTujuanTL) inputTujuanTL.removeAttribute('required');
+                if (inputKeperluanTL) inputKeperluanTL.removeAttribute('required');
+                if (inputWaktuMulaiTL) inputWaktuMulaiTL.removeAttribute('required');
+            }
+        }
+    }
+
     // Listener pergantian radio mode kerja
     const radioModes = document.querySelectorAll('input[name="mode_kerja"]');
     radioModes.forEach(function(radio) {
         radio.addEventListener('change', function() {
+            toggleTugasLuarForm();
             if (currentDistanceMeters !== null) {
                 updateRadiusStatusUI(currentDistanceMeters);
             }
         });
     });
+    toggleTugasLuarForm();
 
     // Inisialisasi Peta Leaflet
     const mapContainer = document.getElementById('leaflet-map');
@@ -1821,7 +2156,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     map.fitBounds(bounds.pad(0.25));
                 }
             },
-                        function(error) {
+            function(error) {
                 console.warn('GPS error:', error);
                 let pesan = 'Gagal mendeteksi lokasi GPS.';
                 if (error.code === error.PERMISSION_DENIED) {
@@ -1891,6 +2226,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert(`Presensi Onsite tidak dapat diproses!\n\nPosisi Anda saat ini berjarak ${currentDistanceMeters.toLocaleString('id-ID')} meter dari kantor (Batas maksimal radius: ${officeConfig.radius} meter).\n\nSilakan mendekat ke area kantor atau pilih mode "WFH" jika Anda sedang bekerja remote.`);
                 return;
             }
+
+            if (selectedMode === 'tugas_luar') {
+                const tujuan = inputTujuanTL ? inputTujuanTL.value.trim() : '';
+                const keperluan = inputKeperluanTL ? inputKeperluanTL.value.trim() : '';
+                const waktuMulai = inputWaktuMulaiTL ? inputWaktuMulaiTL.value.trim() : '';
+                if (!tujuan || !keperluan || !waktuMulai) {
+                    e.preventDefault();
+                    alert('Harap lengkapi semua kolom wajib pada Formulir Rincian Tugas Luar (Tujuan, Keperluan, dan Waktu Mulai)!');
+                    return;
+                }
+            }
         });
     }
 
@@ -1913,8 +2259,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            const isTLToday = (document.getElementById('is-tugas-luar-today')?.value === '1');
             const currentMode = getCurrentWorkMode();
-            if (currentMode === 'onsite' && currentDistanceMeters !== null && currentDistanceMeters > officeConfig.radius) {
+            if (!isTLToday && currentMode === 'onsite' && currentDistanceMeters !== null && currentDistanceMeters > officeConfig.radius) {
                 e.preventDefault();
                 alert(`Presensi Pulang Onsite tidak dapat diproses!\n\nPosisi Anda saat ini berjarak ${currentDistanceMeters.toLocaleString('id-ID')} meter dari kantor (Batas maksimal radius: ${officeConfig.radius} meter).\n\nSilakan lakukan presensi kepulangan di area kantor.`);
                 return;
@@ -1922,5 +2269,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Kontrol Modal Pengajuan Tugas Luar (Global Window Scope)
+window.openModalAjukanTugasLuar = function() {
+    const modal = document.getElementById('modal-ajukan-tugas-luar');
+    if (modal) modal.classList.remove('hidden');
+};
+
+window.closeModalAjukanTugasLuar = function() {
+    const modal = document.getElementById('modal-ajukan-tugas-luar');
+    if (modal) modal.classList.add('hidden');
+};
 </script>
 @endsection

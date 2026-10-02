@@ -204,6 +204,22 @@
                         @endif
                     </a>
 
+                    <!-- Verifikasi Tugas Luar (TL) -->
+                    <a
+                        href="{{ route('pembimbing.tugas-luar.index') }}"
+                        class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold {{ request()->routeIs('pembimbing.tugas-luar.*') ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900' }} transition"
+                    >
+                        <span class="flex items-center gap-3">
+                            <svg class="w-4 h-4 {{ request()->routeIs('pembimbing.tugas-luar.*') ? 'text-white' : 'text-indigo-600' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25V3.75A1.125 1.125 0 0013.125 2.625h-8.25A1.125 1.125 0 003.75 3.75v10.5c0 .621.504 1.125 1.125 1.125h1.5" />
+                            </svg>
+                            <span>Verifikasi Tugas Luar</span>
+                        </span>
+                        @if(request()->routeIs('pembimbing.tugas-luar.*'))
+                            <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                        @endif
+                    </a>
+
                     <!-- Penilaian Akhir Magang -->
                     <a
                         href="{{ route('pembimbing.penilaian.index') }}"
