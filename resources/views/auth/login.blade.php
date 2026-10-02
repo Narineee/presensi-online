@@ -1,6 +1,6 @@
 @extends('layouts.auth')
 
-@section('title', 'SIKAP - Masuk ke Sistem')
+@section('title', 'SEIRAMA - Masuk ke Sistem')
 
 @section('content')
 <div class="relative w-full max-w-full lg:max-w-none mx-auto flex-1 flex flex-col justify-between lg:justify-center min-h-[100dvh] lg:min-h-0">
@@ -42,15 +42,15 @@
             <!-- Portal Chip Badge -->
             <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/[0.08] border border-white/15 backdrop-blur-md text-xs font-semibold text-white/90 shadow-sm">
                 <span class="w-2 h-2 rounded-full bg-[#DD00FF] animate-pulse"></span>
-                <span>SIKAP (Sistem Informasi Kehadiran, Aktivitas, dan Penilaian)</span>
+                <span>SEIRAMA (Sistem Informasi Kehadiran dan Aktivitas Magang)</span>
             </div>
 
             <!-- Hero Headline -->
             <div class="space-y-3">
                 <h1 class="text-4xl xl:text-5xl font-black text-white tracking-tight leading-[1.18]">
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#DD00FF] via-fuchsia-400 to-pink-300">S</span>istem <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#DD00FF] via-fuchsia-400 to-pink-300">I</span>nformasi 
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#DD00FF] via-fuchsia-400 to-pink-300">K</span>ehadiran, <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#DD00FF] via-fuchsia-400 to-pink-300">A</span>ktivitas, 
-                    dan <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#DD00FF] via-fuchsia-400 to-pink-300">P</span>enilaian
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#DD00FF] via-fuchsia-400 to-pink-300">S</span>ist<span class="text-transparent bg-clip-text bg-gradient-to-r from-[#DD00FF] via-fuchsia-400 to-pink-300">e</span>m Informasi Kehad<span class="text-transparent bg-clip-text bg-gradient-to-r from-[#DD00FF] via-fuchsia-400 to-pink-300">ir</span>an
+                    dan <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#DD00FF] via-fuchsia-400 to-pink-300">A</span>ktivitas 
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#DD00FF] via-fuchsia-400 to-pink-300">Ma</span>gang.
                 </h1>
                 <p class="text-white/75 text-sm xl:text-base max-w-xl leading-relaxed font-normal">
                     Presensi, Aktivitas & Penilaian Magang dalam Satu Sistem.
@@ -112,12 +112,12 @@
                 <div class="w-full">
                     <!-- SIKAP Branding Title -->
                     <div class="text-center">
-                    <span class="sr-only">Sistem Informasi Manajemen Magang</span>
+                    <span class="sr-only">Sistem Informasi Kehadiran dan Aktivitas Magang</span>
                     <h1 class="text-3xl sm:text-[34px] font-black tracking-wider text-white uppercase leading-none">
-                        SIKAP
+                        SEIRAMA
                     </h1>
                     <p class="text-[11px] sm:text-xs text-white/80 font-normal mt-2 leading-tight">
-                        (Sistem Informasi Kehadiran, Aktivitas, dan Penilaian)
+                        (Sistem Informasi Kehadiran dan Aktivitas Magang)
                     </p>
                 </div>
 
