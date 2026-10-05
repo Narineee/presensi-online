@@ -129,6 +129,11 @@ Route::middleware(['auth', 'role:magang'])->group(function () {
     Route::post('/presensi/keluar', [PresensiController::class, 'storeKeluar'])->name('presensi.keluar');
     Route::post('/presensi/tugas-luar', [PresensiController::class, 'storeTugasLuar'])->name('presensi.tugas-luar');
     Route::post('/presensi/verifikasi-wajah', [PresensiController::class, 'verifikasiWajah'])->name('presensi.verifikasi-wajah');
+    Route::get('/presensi/masuk', [PresensiController::class, 'formMasuk'])->name('presensi.masuk.form');
+    Route::get('/presensi/pulang', [PresensiController::class, 'formPulang'])->name('presensi.pulang.form');
+    Route::get('/kehadiran', function () {
+        return redirect()->route('presensi.index');
+    })->name('presensi.kehadiran');
 
     // CRUD Aktivitas Harian
     Route::get('/aktivitas/cetak', [AktivitasController::class, 'cetak'])->name('aktivitas.cetak');

@@ -121,7 +121,7 @@ class PresensiController extends Controller
         // Ambil data lokasi kantor dan radius presensi
         $officeLocation = $this->getOfficeLocation($user);
 
-        return view('presensi.index', compact('user', 'todayPresensi', 'todayTugasLuar', 'riwayat', 'stats', 'hasAktivitasToday', 'countAktivitasToday', 'officeLocation', 'timeStatus'));
+        return view('presensi.kehadiran', compact('user', 'todayPresensi', 'todayTugasLuar', 'riwayat', 'stats', 'hasAktivitasToday', 'countAktivitasToday', 'officeLocation', 'timeStatus'));
     }
 
     /**
@@ -672,5 +672,38 @@ class PresensiController extends Controller
             'distance' => $face['distance'],
             'message' => 'Wajah terverifikasi dan cocok dengan data pendaftaran.',
         ]);
+    }
+
+    public function formMasuk()
+    {
+        $user = Auth::user();
+        if (! $user->magang?->face_registered_at) {
+            return redirect()->route('wajah.create');
+        }
+        $sudah = Presensi::where('pengguna_id', $user->id)
+            ->whereDate('tanggal', today())->whereNotNull('jam_masuk')->exists();
+        if ($sudah) {
+            return redirect()->route('presensi.index')->with('error', 'Anda sudah melakukan presensi masuk hari ini.');
+        }
+        $officeLocation = $this->getOfficeLocation($user);
+
+        return view('presensi.masuk', compact('officeLocation'));
+    }
+
+    public function formPulang()
+    {
+        $user = Auth::user();
+        $presensi = Presensi::where('pengguna_id', $user->id)->whereDate('tanggal', today())->first();
+        if (! $presensi?->jam_masuk || $presensi->jam_keluar) {
+            return redirect()->route('presensi.index')->with('error', 'Presensi pulang tidak tersedia saat ini.');
+        }
+        $hasAktivitas = Aktivitas::where('pengguna_id', $user->id)->whereDate('tanggal', today())->exists();
+        $isTL = $presensi->mode_kerja === 'tugas_luar'
+            || PengajuanTugasLuar::where('pengguna_id', $user->id)->whereDate('tanggal', today())
+                ->whereIn('status_verifikasi', ['disetujui', 'menunggu'])->exists();
+        $cekRadius = $presensi->mode_kerja === 'onsite' && ! $isTL;   // sama dengan logika storeKeluar
+        $officeLocation = $this->getOfficeLocation($user);
+
+        return view('presensi.pulang', compact('hasAktivitas', 'cekRadius', 'officeLocation'));
     }
 }
