@@ -19,49 +19,7 @@ class AktivitasController extends Controller
      */
     public function index(Request $request)
     {
-        $user = Auth::user();
-
-        $query = Aktivitas::where('pengguna_id', $user->id)
-            ->with('pekerjaan');
-
-        // Filter berdasarkan status (pending, approve, revisi)
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Filter berdasarkan pekerjaan
-        if ($request->filled('pekerjaan_id')) {
-            $query->where('pekerjaan_id', $request->pekerjaan_id);
-        }
-
-        // Filter berdasarkan tanggal
-        if ($request->filled('tanggal')) {
-            $query->where('tanggal', $request->tanggal);
-        }
-
-        // Filter pencarian isi aktivitas
-        if ($request->filled('search')) {
-            $query->where('isi', 'like', '%'.$request->search.'%');
-        }
-
-        $aktivitas = $query->orderBy('tanggal', 'desc')
-            ->orderBy('id', 'desc')
-            ->paginate(10)
-            ->withQueryString();
-
-        // Ringkasan statistik aktivitas milik user
-        $stats = [
-            'total' => Aktivitas::where('pengguna_id', $user->id)->count(),
-            'approve' => Aktivitas::where('pengguna_id', $user->id)->where('status', 'approve')->count(),
-            'pending' => Aktivitas::where('pengguna_id', $user->id)->where('status', 'pending')->count(),
-            'revisi' => Aktivitas::where('pengguna_id', $user->id)->where('status', 'revisi')->count(),
-        ];
-
-        $pekerjaanList = $user->magang
-            ? $user->magang->pekerjaan()->orderBy('judul', 'asc')->get()
-            : collect();
-
-        return view('aktivitas.index', compact('aktivitas', 'stats', 'pekerjaanList'));
+        return redirect()->route('aktivitas.create');
     }
 
     /**
@@ -96,12 +54,17 @@ class AktivitasController extends Controller
             'pekerjaan_id' => ['required', 'in:'.implode(',', $allowedPekerjaanIds)],
             'judul' => 'nullable|string|max:255',
             'tanggal' => 'required|date',
+            'waktu_mulai' => 'required|date_format:H:i',
+            'waktu_selesai' => 'required|date_format:H:i|after:waktu_mulai',
             'isi' => 'required|string|min:5',
         ], [
             'pekerjaan_id.required' => 'Pekerjaan magang wajib dipilih dari daftar tugas aktif.',
             'pekerjaan_id.in' => 'Pekerjaan yang dipilih tidak valid atau bukan tugas aktif yang diberikan pembimbing kepada Anda.',
             'tanggal.required' => 'Tanggal aktivitas wajib diisi.',
             'tanggal.date' => 'Format tanggal tidak valid.',
+            'waktu_mulai.required' => 'Waktu mulai wajib diisi.',
+            'waktu_selesai.required' => 'Waktu selesai wajib diisi.',
+            'waktu_selesai.after' => 'Waktu selesai harus setelah waktu mulai.',
             'isi.required' => 'Uraian aktivitas pekerjaan wajib diisi.',
             'isi.min' => 'Uraian aktivitas minimal 5 karakter.',
         ]);
@@ -115,18 +78,17 @@ class AktivitasController extends Controller
             'pekerjaan_id' => $request->pekerjaan_id,
             'judul' => $judul,
             'tanggal' => $request->tanggal,
+            'waktu_mulai' => $request->waktu_mulai,
+            'waktu_selesai' => $request->waktu_selesai,
             'isi' => $request->isi,
             'progress' => $progress,
             'status' => 'pending',
         ]);
 
-        if ($request->filled('redirect_to') && $request->redirect_to === 'presensi') {
-            return redirect()->route('presensi.index')
-                ->with('success', 'Aktivitas harian berhasil dicatat! Sekarang Anda dapat melakukan presensi pulang.');
+        if ($request->redirect_to === 'presensi') {
+            return redirect()->route('presensi.index')->with('success', 'Aktivitas harian berhasil dicatat! Sekarang Anda dapat melakukan presensi pulang.');
         }
-
-        return redirect()->route('aktivitas.index')
-            ->with('success', 'Aktivitas harian berhasil dicatat dan menunggu validasi pembimbing.');
+        return redirect()->route('presensi.index')->with('success', 'Aktivitas harian berhasil dicatat dan menunggu validasi pembimbing.');
     }
 
     /**
@@ -153,7 +115,7 @@ class AktivitasController extends Controller
 
         // Jika aktivitas sudah disetujui, tolak pengeditan
         if (! $aktivitas->canBeEdited()) {
-            return redirect()->route('aktivitas.index')
+            return redirect()->route('magang.rekap')
                 ->with('error', 'Aktivitas yang telah disetujui oleh pembimbing tidak dapat diubah lagi.');
         }
 
@@ -182,7 +144,7 @@ class AktivitasController extends Controller
             ->findOrFail($id);
 
         if (! $aktivitas->canBeEdited()) {
-            return redirect()->route('aktivitas.index')
+            return redirect()->route('magang.rekap')
                 ->with('error', 'Aktivitas yang telah disetujui oleh pembimbing tidak dapat diubah lagi.');
         }
 
@@ -194,6 +156,8 @@ class AktivitasController extends Controller
             'pekerjaan_id' => ['required', 'in:'.implode(',', $allowedPekerjaanIds)],
             'judul' => 'nullable|string|max:255',
             'tanggal' => 'required|date',
+            'waktu_mulai' => 'nullable|date_format:H:i',
+            'waktu_selesai' => 'nullable|date_format:H:i|after:waktu_mulai',
             'isi' => 'required|string|min:5',
         ], [
             'pekerjaan_id.required' => 'Pekerjaan magang wajib dipilih dari daftar tugas.',
@@ -201,6 +165,7 @@ class AktivitasController extends Controller
             'tanggal.required' => 'Tanggal aktivitas wajib diisi.',
             'isi.required' => 'Uraian aktivitas pekerjaan wajib diisi.',
             'isi.min' => 'Uraian aktivitas minimal 5 karakter.',
+            'waktu_selesai.after' => 'Waktu selesai harus setelah waktu mulai.',
         ]);
 
         // Jika status sebelumnya adalah revisi, kembalikan ke pending agar divalidasi ulang
@@ -214,12 +179,14 @@ class AktivitasController extends Controller
             'pekerjaan_id' => $request->pekerjaan_id,
             'judul' => $judul,
             'tanggal' => $request->tanggal,
+            'waktu_mulai' => $request->waktu_mulai,        
+            'waktu_selesai' => $request->waktu_selesai,    
             'isi' => $request->isi,
             'progress' => $progress,
             'status' => $statusBaru,
         ]);
 
-        return redirect()->route('aktivitas.index')
+        return redirect()->route('magang.rekap')
             ->with('success', 'Aktivitas harian berhasil diperbarui!');
     }
 
@@ -232,13 +199,13 @@ class AktivitasController extends Controller
             ->findOrFail($id);
 
         if (! $aktivitas->canBeEdited()) {
-            return redirect()->route('aktivitas.index')
+            return redirect()->route('magang.rekap')
                 ->with('error', 'Aktivitas yang telah disetujui tidak dapat dihapus.');
         }
 
         $aktivitas->delete();
 
-        return redirect()->route('aktivitas.index')
+        return redirect()->route('magang.rekap')
             ->with('success', 'Catatan aktivitas harian berhasil dihapus.');
     }
 

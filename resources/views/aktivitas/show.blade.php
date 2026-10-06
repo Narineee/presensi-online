@@ -1,122 +1,76 @@
-@extends('layouts.user')
-
-@section('title', 'Detail Aktivitas Harian')
+@extends('layouts.mobile')
+@section('title', 'Detail Aktivitas')
 
 @section('content')
-<div class="max-w-2xl mx-auto space-y-6">
+@php
+    $badge = match ($aktivitas->status) {
+        'approve' => ['Disetujui', 'bg-emerald-50 text-emerald-700 ring-emerald-200', 'bg-emerald-500'],
+        'revisi' => ['Perlu revisi', 'bg-rose-50 text-rose-700 ring-rose-200', 'bg-rose-500'],
+        default => ['Menunggu validasi', 'bg-amber-50 text-amber-700 ring-amber-200', 'bg-amber-500'],
+    };
+    $mulai = substr((string) $aktivitas->waktu_mulai, 0, 5);
+    $selesai = substr((string) $aktivitas->waktu_selesai, 0, 5);
+@endphp
 
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Detail Aktivitas Harian</h1>
-            <p class="text-sm text-slate-500 mt-1">Rincian catatan pekerjaan dan status evaluasi dari Pembimbing.</p>
-        </div>
-        <a href="{{ route('aktivitas.index') }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-            </svg>
-            <span>Kembali</span>
-        </a>
+<header class="-mx-4 -mt-5 mb-4 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:mx-0 lg:mt-0 lg:rounded-2xl lg:border">
+    <a href="{{ route('magang.rekap') }}" class="grid h-11 w-11 place-items-center rounded-full border border-slate-300 text-lg" aria-label="Kembali">←</a>
+    <div>
+        <h1 class="text-base font-extrabold leading-tight">Detail aktivitas</h1>
+        <p class="text-xs text-slate-500">{{ $aktivitas->tanggal->locale('id')->isoFormat('dddd, D MMMM Y') }}</p>
     </div>
+</header>
 
-    <!-- Main Detail Card -->
-    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-8 space-y-6">
-        
-        <!-- Header Info -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-100 gap-4">
+<div class="space-y-4">
+    <section class="rounded-3xl bg-white p-5 ring-1 ring-slate-200">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $badge[1] }}">
+            <span class="h-2 w-2 rounded-full {{ $badge[2] }}"></span>{{ $badge[0] }}
+        </span>
+
+        <dl class="mt-4 space-y-4 text-sm">
+            <div class="grid grid-cols-2 gap-3">
+                <div><dt class="text-xs text-slate-500">Waktu mulai</dt><dd class="font-bold">{{ $mulai ?: '-' }}</dd></div>
+                <div><dt class="text-xs text-slate-500">Waktu selesai</dt><dd class="font-bold">{{ $selesai ?: '-' }}</dd></div>
+            </div>
             <div>
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tanggal Pelaksanaan</span>
-                <h2 class="text-lg font-bold text-slate-900 mt-0.5">
-                    {{ $aktivitas->tanggal->isoFormat('dddd, D MMMM Y') }}
-                </h2>
+                <dt class="text-xs text-slate-500">Pekerjaan yang diberikan</dt>
+                <dd class="font-bold">{{ $aktivitas->pekerjaan?->judul ?? ($aktivitas->judul ?? '-') }}</dd>
             </div>
-
             <div>
-                @if($aktivitas->status === 'approve')
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                        Disetujui (Approved)
-                    </span>
-                @elseif($aktivitas->status === 'revisi')
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                        <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-                        Perlu Revisi
-                    </span>
-                @else
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                        Menunggu Validasi
-                    </span>
-                @endif
+                <dt class="text-xs text-slate-500">Ringkasan aktivitas</dt>
+                <dd class="mt-1 whitespace-pre-line rounded-2xl bg-slate-50 p-4 leading-relaxed ring-1 ring-slate-200">{{ $aktivitas->isi }}</dd>
             </div>
-        </div>
-
-        <!-- Progres Bar -->
-        <div class="space-y-2">
-            <div class="flex items-center justify-between text-xs font-semibold text-slate-700">
-                <span>Capaian Progres Pekerjaan</span>
-                <span class="text-blue-600 font-bold">{{ $aktivitas->progress }}%</span>
+            <div>
+                <div class="mb-1 flex justify-between text-xs"><dt class="text-slate-500">Progres capaian</dt><dd class="font-bold text-brand">{{ $aktivitas->progress }}%</dd></div>
+                <div class="h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-brand" style="width: {{ $aktivitas->progress }}%"></div></div>
             </div>
-            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ $aktivitas->progress }}%"></div>
-            </div>
-        </div>
+        </dl>
+    </section>
 
-        <!-- Uraian Aktivitas -->
-        <div class="space-y-2">
-            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Uraian Aktivitas yang Dikerjakan
-            </label>
-            <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 text-sm text-slate-800 leading-relaxed whitespace-pre-line font-medium">
-                {{ $aktivitas->isi }}
-            </div>
-        </div>
-
-        <!-- Bagian Feedback Pembimbing -->
-        <div class="pt-6 border-t border-slate-100 space-y-3">
-            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Informasi Validasi Pembimbing
-            </label>
-
-            @if($aktivitas->status !== 'pending')
-                <div class="p-5 rounded-2xl {{ $aktivitas->status === 'approve' ? 'bg-emerald-50/70 border-emerald-200' : 'bg-amber-50/70 border-amber-200' }} border space-y-3">
-                    <div class="flex items-center justify-between text-xs">
-                        <span class="font-bold {{ $aktivitas->status === 'approve' ? 'text-emerald-900' : 'text-amber-900' }}">
-                            Divalidasi oleh: {{ $aktivitas->nama_validator }}
-                        </span>
-                        <span class="text-slate-400 font-mono text-[11px]">
-                            {{ $aktivitas->validated_at ? $aktivitas->validated_at->isoFormat('D MMM Y, HH:mm') . ' WIB' : '-' }}
-                        </span>
-                    </div>
-
-                    @if($aktivitas->catatan_validasi)
-                        <div class="text-xs {{ $aktivitas->status === 'approve' ? 'text-emerald-800' : 'text-amber-800' }} leading-relaxed pt-2 border-t {{ $aktivitas->status === 'approve' ? 'border-emerald-200/60' : 'border-amber-200/60' }}">
-                            <strong>Catatan Feedback:</strong>
-                            <p class="mt-1">{{ $aktivitas->catatan_validasi }}</p>
-                        </div>
-                    @endif
-                </div>
-            @else
-                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 text-center text-xs text-slate-400">
-                    Aktivitas ini belum divalidasi oleh Pembimbing. Silakan menunggu tinjauan dari pembimbing Anda.
-                </div>
+    <section class="rounded-3xl bg-white p-5 ring-1 ring-slate-200">
+        <h2 class="text-sm font-extrabold">Validasi pembimbing</h2>
+        @if ($aktivitas->status === 'pending')
+            <p class="mt-2 text-xs text-slate-500">Belum divalidasi. Mohon menunggu tinjauan dari pembimbing Anda.</p>
+        @else
+            <p class="mt-2 text-xs text-slate-500">
+                Oleh <b class="text-brand-ink">{{ $aktivitas->nama_validator }}</b>
+                · {{ $aktivitas->validated_at ? $aktivitas->validated_at->isoFormat('D MMM Y, HH:mm') : '-' }}
+            </p>
+            @if ($aktivitas->catatan_validasi)
+                <p class="mt-3 rounded-2xl p-3.5 text-sm leading-relaxed ring-1 {{ $aktivitas->status === 'approve' ? 'bg-emerald-50 text-emerald-900 ring-emerald-200' : 'bg-amber-50 text-amber-900 ring-amber-200' }}">{{ $aktivitas->catatan_validasi }}</p>
             @endif
+        @endif
+    </section>
+
+    @if ($aktivitas->canBeEdited())
+        <div class="grid grid-cols-2 gap-3">
+            <a href="{{ route('aktivitas.edit', $aktivitas->id) }}" class="rounded-2xl bg-brand py-3.5 text-center text-sm font-extrabold text-white">Edit aktivitas</a>
+            <form method="POST" action="{{ route('aktivitas.destroy', $aktivitas->id) }}" onsubmit="return confirm('Hapus catatan aktivitas ini?')">
+                @csrf @method('DELETE')
+                <button class="w-full rounded-2xl border border-rose-300 py-3.5 text-sm font-extrabold text-rose-700">Hapus</button>
+            </form>
         </div>
-
-        <!-- Tombol Aksi Bawah -->
-        <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
-            <a href="{{ route('aktivitas.index') }}" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition">
-                &larr; Kembali ke Daftar
-            </a>
-
-            @if($aktivitas->canBeEdited())
-                <a href="{{ route('aktivitas.edit', $aktivitas->id) }}" class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-                    <span>Edit Aktivitas Ini</span>
-                </a>
-            @endif
-        </div>
-    </div>
-
+    @else
+        <p class="rounded-2xl bg-slate-100 px-4 py-3 text-center text-xs text-slate-500">Aktivitas yang sudah disetujui tidak dapat diubah atau dihapus.</p>
+    @endif
 </div>
 @endsection

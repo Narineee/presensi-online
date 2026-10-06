@@ -13,6 +13,8 @@ class Aktivitas extends Model
         'pekerjaan_id',
         'judul',
         'tanggal',
+        'waktu_mulai',
+        'waktu_selesai',
         'isi',
         'progress',
         'status',
