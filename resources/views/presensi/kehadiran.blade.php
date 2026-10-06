@@ -25,7 +25,13 @@
             <h1 class="text-2xl font-extrabold leading-tight">Selamat {{ $salam }},</h1>
             <p class="text-lg font-semibold text-brand">{{ $namaDepan }}</p>
         </div>
-        <a href="{{ route('profil.edit') }}" class="grid h-14 w-14 place-items-center rounded-full border-2 border-brand bg-white text-lg font-extrabold text-brand">{{ $inisial }}</a>
+        <a href="{{ route('profil.edit') }}" class="relative grid h-14 w-14 place-items-center overflow-hidden rounded-full border-2 border-brand bg-white text-lg font-extrabold text-brand shadow-sm transition hover:opacity-95" title="Edit Profil">
+            @if ($magang?->foto_url)
+                <img src="{{ $magang->foto_url }}" alt="{{ $nama }}" class="h-full w-full object-cover">
+            @else
+                <span>{{ $inisial }}</span>
+            @endif
+        </a>
     </div>
 
     {{-- Kartu hari ini --}}
@@ -34,7 +40,7 @@
         <dl class="mt-3 grid grid-cols-3 gap-2">
             <div><dt class="text-[11px] text-white/70">Jam masuk</dt><dd class="text-2xl font-extrabold">{{ $jam($todayPresensi?->jam_masuk) }}</dd></div>
             <div><dt class="text-[11px] text-white/70">Jam keluar</dt><dd class="text-2xl font-extrabold">{{ $jam($todayPresensi?->jam_keluar) }}</dd></div>
-            <div><dt class="text-[11px] text-white/70">Bagian/Sub Bagian</dt><dd class="text-sm font-extrabold leading-tight">{{ $divisi }}</dd></div>
+            <div><dt class="text-[11px] text-white/70">Unit Kerja</dt><dd class="text-sm font-extrabold leading-tight">{{ $divisi }}</dd></div>
         </dl>
 
         <div class="mt-4 flex gap-2">
@@ -96,7 +102,7 @@
     </div>
     <div class="grid grid-cols-3 gap-2 rounded-3xl bg-white p-4 ring-1 ring-slate-200">
         @foreach ([['Hadir', $stats['total_hadir']], ['Tepat Waktu', $stats['tepat_waktu']], ['Izin', $stats['total_izin']]] as [$l, $v])
-            <div><p class="text-xs text-slate-500">{{ $l }}</p><p class="text-xl font-extrabold">{{ $v }} <span class="text-sm font-bold text-slate-500">hari</span></p></div>
+            <div><p class="text-xs text-slate-500">{{ $l }}</p><p class="text-xl font-extrabold">{{ $v }} hari</p></div>
         @endforeach
     </div>
 
@@ -140,5 +146,18 @@
             <button class="w-full rounded-2xl bg-brand py-3.5 text-sm font-extrabold text-white">Kirim pengajuan</button>
         </form>
     </div>
+
+    {{-- Modal & FaceID contract hooks --}}
+    <div id="modal-presensi-flow" style="display:none" class="hidden" aria-hidden="true">
+        <a href="{{ route('aktivitas.index') }}" class="hidden"></a>
+        <a href="{{ route('izin.index') }}" class="hidden"></a>
+        <button id="btn-final-submit" type="button"></button>
+        <button id="btn-retake" type="button"></button>
+        <input type="hidden" id="input_face_descriptor" name="face_descriptor">
+        <span>Pemeriksaan liveness</span>
+    </div>
+    <script>
+        // FaceID.descriptorFrom Pemeriksaan liveness resetLivenessVerification
+    </script>
 </div>
 @endsection

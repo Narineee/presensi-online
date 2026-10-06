@@ -55,7 +55,7 @@
         </div>
     @endif
 
-    <!-- Banner Profil Belum Lengkap (Sesuai PRD: kalau masih kosong diwajibkan isi terlebih dahulu) -->
+    <!-- Banner Profil Belum Lengkap -->
     @php
         $isMagangProfileIncomplete = false;
         if ($user->role === 'magang' && $user->magang) {

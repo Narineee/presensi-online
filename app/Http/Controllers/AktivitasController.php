@@ -19,7 +19,62 @@ class AktivitasController extends Controller
      */
     public function index(Request $request)
     {
-        return redirect()->route('aktivitas.create');
+        /** @var Pengguna $user */
+        $user = Auth::user();
+        $magang = $user->magang;
+
+        $query = Aktivitas::where('pengguna_id', $user->id)
+            ->with(['pekerjaan', 'validator.pembimbing']);
+
+        $tanggalAwal = $request->input('tanggal_awal');
+        $tanggalSelesai = $request->input('tanggal_selesai');
+        $status = $request->input('status');
+        $q = $request->input('q');
+
+        if ($tanggalAwal && $tanggalSelesai) {
+            $query->whereBetween('tanggal', [$tanggalAwal, $tanggalSelesai]);
+        } elseif ($tanggalAwal) {
+            $query->whereDate('tanggal', '>=', $tanggalAwal);
+        } elseif ($tanggalSelesai) {
+            $query->whereDate('tanggal', '<=', $tanggalSelesai);
+        }
+
+        if ($status && in_array($status, ['approve', 'pending', 'revisi'])) {
+            $query->where('status', $status);
+        }
+
+        if ($q) {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('judul', 'like', "%{$q}%")
+                    ->orWhere('isi', 'like', "%{$q}%")
+                    ->orWhereHas('pekerjaan', function ($pq) use ($q) {
+                        $pq->where('judul', 'like', "%{$q}%");
+                    });
+            });
+        }
+
+        $allUserAktivitas = Aktivitas::where('pengguna_id', $user->id)->get();
+        $stats = [
+            'total' => $allUserAktivitas->count(),
+            'approve' => $allUserAktivitas->where('status', 'approve')->count(),
+            'pending' => $allUserAktivitas->where('status', 'pending')->count(),
+            'revisi' => $allUserAktivitas->where('status', 'revisi')->count(),
+        ];
+
+        $aktivitasList = $query->orderBy('tanggal', 'desc')
+            ->orderBy('id', 'desc')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('aktivitas.riwayat', compact('user', 'magang', 'aktivitasList', 'stats', 'tanggalAwal', 'tanggalSelesai', 'status', 'q'));
+    }
+
+    /**
+     * Menampilkan riwayat / rekap aktivitas harian magang.
+     */
+    public function riwayat(Request $request)
+    {
+        return $this->index($request);
     }
 
     /**
@@ -54,16 +109,14 @@ class AktivitasController extends Controller
             'pekerjaan_id' => ['required', 'in:'.implode(',', $allowedPekerjaanIds)],
             'judul' => 'nullable|string|max:255',
             'tanggal' => 'required|date',
-            'waktu_mulai' => 'required|date_format:H:i',
-            'waktu_selesai' => 'required|date_format:H:i|after:waktu_mulai',
+            'waktu_mulai' => 'nullable|date_format:H:i',
+            'waktu_selesai' => 'nullable|date_format:H:i|after:waktu_mulai',
             'isi' => 'required|string|min:5',
         ], [
             'pekerjaan_id.required' => 'Pekerjaan magang wajib dipilih dari daftar tugas aktif.',
             'pekerjaan_id.in' => 'Pekerjaan yang dipilih tidak valid atau bukan tugas aktif yang diberikan pembimbing kepada Anda.',
             'tanggal.required' => 'Tanggal aktivitas wajib diisi.',
             'tanggal.date' => 'Format tanggal tidak valid.',
-            'waktu_mulai.required' => 'Waktu mulai wajib diisi.',
-            'waktu_selesai.required' => 'Waktu selesai wajib diisi.',
             'waktu_selesai.after' => 'Waktu selesai harus setelah waktu mulai.',
             'isi.required' => 'Uraian aktivitas pekerjaan wajib diisi.',
             'isi.min' => 'Uraian aktivitas minimal 5 karakter.',
@@ -78,8 +131,8 @@ class AktivitasController extends Controller
             'pekerjaan_id' => $request->pekerjaan_id,
             'judul' => $judul,
             'tanggal' => $request->tanggal,
-            'waktu_mulai' => $request->waktu_mulai,
-            'waktu_selesai' => $request->waktu_selesai,
+            'waktu_mulai' => $request->waktu_mulai ?? '08:00',
+            'waktu_selesai' => $request->waktu_selesai ?? '16:00',
             'isi' => $request->isi,
             'progress' => $progress,
             'status' => 'pending',
@@ -88,7 +141,8 @@ class AktivitasController extends Controller
         if ($request->redirect_to === 'presensi') {
             return redirect()->route('presensi.index')->with('success', 'Aktivitas harian berhasil dicatat! Sekarang Anda dapat melakukan presensi pulang.');
         }
-        return redirect()->route('presensi.index')->with('success', 'Aktivitas harian berhasil dicatat dan menunggu validasi pembimbing.');
+
+        return redirect()->route('aktivitas.index')->with('success', 'Aktivitas harian berhasil dicatat dan menunggu validasi pembimbing.');
     }
 
     /**
@@ -179,14 +233,14 @@ class AktivitasController extends Controller
             'pekerjaan_id' => $request->pekerjaan_id,
             'judul' => $judul,
             'tanggal' => $request->tanggal,
-            'waktu_mulai' => $request->waktu_mulai,        
-            'waktu_selesai' => $request->waktu_selesai,    
+            'waktu_mulai' => $request->waktu_mulai,
+            'waktu_selesai' => $request->waktu_selesai,
             'isi' => $request->isi,
             'progress' => $progress,
             'status' => $statusBaru,
         ]);
 
-        return redirect()->route('magang.rekap')
+        return redirect()->route('aktivitas.index')
             ->with('success', 'Aktivitas harian berhasil diperbarui!');
     }
 
@@ -199,13 +253,13 @@ class AktivitasController extends Controller
             ->findOrFail($id);
 
         if (! $aktivitas->canBeEdited()) {
-            return redirect()->route('magang.rekap')
+            return redirect()->route('aktivitas.index')
                 ->with('error', 'Aktivitas yang telah disetujui tidak dapat dihapus.');
         }
 
         $aktivitas->delete();
 
-        return redirect()->route('magang.rekap')
+        return redirect()->route('aktivitas.index')
             ->with('success', 'Catatan aktivitas harian berhasil dihapus.');
     }
 

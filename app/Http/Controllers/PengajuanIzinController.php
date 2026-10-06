@@ -39,7 +39,15 @@ class PengajuanIzinController extends Controller
             'ditolak' => PengajuanIzin::where('pengguna_id', $user->id)->where('status_approval', 'ditolak')->count(),
         ];
 
-        return view('izin.index', compact('pengajuanIzin', 'stats'));
+        return view('izin.riwayat', compact('pengajuanIzin', 'stats'));
+    }
+
+    /**
+     * Menampilkan riwayat permohonan ketidakhadiran magang.
+     */
+    public function riwayat(Request $request)
+    {
+        return $this->index($request);
     }
 
     /**
@@ -95,7 +103,7 @@ class PengajuanIzinController extends Controller
             'status_approval' => 'pending',
         ]);
 
-        return redirect()->route('izin.create')
+        return redirect()->route('izin.index')
             ->with('success', 'Permohonan izin/sakit berhasil diajukan dan menunggu persetujuan pembimbing.');
     }
 
@@ -119,11 +127,11 @@ class PengajuanIzinController extends Controller
             ->findOrFail($id);
 
         if (! $izin->canBeEdited()) {
-            return redirect()->route('magang.rekap')
+            return redirect()->route('izin.index')
                 ->with('error', 'Permohonan yang telah diverifikasi tidak dapat diubah lagi.');
         }
 
-        return view('magang.rekap', compact('izin'));
+        return view('izin.edit', compact('izin'));
     }
 
     /**
@@ -135,7 +143,7 @@ class PengajuanIzinController extends Controller
             ->findOrFail($id);
 
         if (! $izin->canBeEdited()) {
-            return redirect()->route('magang.rekap')
+            return redirect()->route('izin.index')
                 ->with('error', 'Permohonan yang telah diverifikasi tidak dapat diubah lagi.');
         }
 
@@ -179,7 +187,7 @@ class PengajuanIzinController extends Controller
             'bukti_file' => $buktiPath,
         ]);
 
-        return redirect()->route('magang.rekap')
+        return redirect()->route('izin.index')
             ->with('success', 'Permohonan izin/sakit berhasil diperbarui!');
     }
 
@@ -192,7 +200,7 @@ class PengajuanIzinController extends Controller
             ->findOrFail($id);
 
         if (! $izin->canBeEdited()) {
-            return redirect()->route('magang.rekap')
+            return redirect()->route('izin.index')
                 ->with('error', 'Permohonan yang telah diverifikasi tidak dapat dibatalkan.');
         }
 

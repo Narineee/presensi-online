@@ -25,7 +25,7 @@ class ProfileController extends Controller
             $isProfileIncomplete = empty($magang->instansi_pendidikan) || empty($magang->jurusan) || empty($magang->no_hp) || empty($magang->foto);
         }
 
-        return view('user.profil', compact('user', 'magang', 'isProfileIncomplete'));
+        return view('profil.edit', compact('user', 'magang', 'isProfileIncomplete'));
     }
 
     /**

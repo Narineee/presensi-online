@@ -41,6 +41,22 @@ class Magang extends Model
         };
     }
 
+    /**
+     * URL foto profil peserta magang.
+     */
+    public function getFotoUrlAttribute(): ?string
+    {
+        if (empty($this->foto)) {
+            return null;
+        }
+
+        if (str_starts_with($this->foto, 'http://') || str_starts_with($this->foto, 'https://')) {
+            return $this->foto;
+        }
+
+        return asset('storage/'.$this->foto);
+    }
+
     protected $casts = [
         'tanggal_mulai' => 'date',
         'tanggal_selesai' => 'date',

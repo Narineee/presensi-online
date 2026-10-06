@@ -124,6 +124,7 @@ Route::middleware(['auth', 'role:admin'])
 Route::middleware(['auth', 'role:magang'])->group(function () {
     // Presensi
     Route::get('/presensi/cetak', [PresensiController::class, 'cetak'])->name('presensi.cetak');
+    Route::get('/presensi/riwayat', [PresensiController::class, 'riwayat'])->name('presensi.riwayat');
     Route::get('/presensi', [PresensiController::class, 'index'])->name('presensi.index');
     Route::post('/presensi/masuk', [PresensiController::class, 'storeMasuk'])->name('presensi.masuk');
     Route::post('/presensi/keluar', [PresensiController::class, 'storeKeluar'])->name('presensi.keluar');
@@ -135,11 +136,13 @@ Route::middleware(['auth', 'role:magang'])->group(function () {
         return redirect()->route('presensi.index');
     })->name('presensi.kehadiran');
 
-    // CRUD Aktivitas Harian
+    // CRUD & Riwayat Aktivitas Harian
     Route::get('/aktivitas/cetak', [AktivitasController::class, 'cetak'])->name('aktivitas.cetak');
+    Route::get('/aktivitas/riwayat', [AktivitasController::class, 'riwayat'])->name('aktivitas.riwayat');
     Route::resource('aktivitas', AktivitasController::class);
 
-    // CRUD Pengajuan Izin & Sakit
+    // CRUD & Riwayat Pengajuan Izin & Sakit
+    Route::get('/izin/riwayat', [PengajuanIzinController::class, 'riwayat'])->name('izin.riwayat');
     Route::resource('izin', PengajuanIzinController::class);
 
     // Profil Peserta Magang

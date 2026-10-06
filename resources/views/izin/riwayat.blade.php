@@ -47,7 +47,7 @@
 
     {{-- Filter Card --}}
     <section class="rounded-3xl bg-[#ECEEEF]/80 p-5 ring-1 ring-slate-200/80 shadow-xs">
-        <form method="GET" action="{{ route('izin.index') }}" class="space-y-3">
+        <form method="GET" action="{{ route('izin.riwayat') }}" class="space-y-3">
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-700">Jenis Izin</label>
@@ -74,7 +74,7 @@
                     Terapkan Filter
                 </button>
                 @if(request()->filled('jenis_izin') || request()->filled('status_approval'))
-                    <a href="{{ route('izin.index') }}" class="px-4 py-3 rounded-2xl bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center justify-center">
+                    <a href="{{ route('izin.riwayat') }}" class="px-4 py-3 rounded-2xl bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center justify-center">
                         Reset
                     </a>
                 @endif

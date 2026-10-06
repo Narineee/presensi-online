@@ -47,7 +47,7 @@
 
     {{-- Filter Card (Sesuai PRD rekap-aktivitas (1).png) --}}
     <section class="rounded-3xl bg-[#ECEEEF]/80 p-5 ring-1 ring-slate-200/80 shadow-xs">
-        <form method="GET" action="{{ route('aktivitas.index') }}" class="space-y-3">
+        <form method="GET" action="{{ route('aktivitas.riwayat') }}" class="space-y-3">
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-700">Tanggal Selesai</label>
@@ -75,7 +75,7 @@
                     Cari
                 </button>
                 @if($tanggalAwal || $tanggalSelesai || $status || $q)
-                    <a href="{{ route('aktivitas.index') }}" class="rounded-xl bg-white border border-slate-300 px-3 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition" title="Reset filter">
+                    <a href="{{ route('aktivitas.riwayat') }}" class="rounded-xl bg-white border border-slate-300 px-3 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition" title="Reset filter">
                         ✕
                     </a>
                 @endif

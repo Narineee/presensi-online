@@ -169,7 +169,40 @@ class PresensiController extends Controller
             'progres_periode' => $progresPeriode,
         ];
 
-        return view('user.rekap', compact('user', 'magang', 'stats'));
+        return view('magang.rekap', compact('user', 'magang', 'stats'));
+    }
+
+    /**
+     * Menampilkan riwayat presensi harian milik peserta magang (sesuai PRD detail-presensi (2).png).
+     */
+    public function riwayat(Request $request)
+    {
+        /** @var Pengguna $user */
+        $user = Auth::user();
+        $magang = $user->magang;
+
+        $query = Presensi::where('pengguna_id', $user->id)
+            ->with('pengajuanTugasLuar');
+
+        $tanggalAwal = $request->input('tanggal_awal');
+        $tanggalSelesai = $request->input('tanggal_selesai');
+        $modeKerja = $request->input('mode_kerja');
+
+        if ($tanggalAwal && $tanggalSelesai) {
+            $query->whereBetween('tanggal', [$tanggalAwal, $tanggalSelesai]);
+        } elseif ($tanggalAwal) {
+            $query->whereDate('tanggal', '>=', $tanggalAwal);
+        } elseif ($tanggalSelesai) {
+            $query->whereDate('tanggal', '<=', $tanggalSelesai);
+        }
+
+        if ($modeKerja && in_array($modeKerja, ['onsite', 'wfh', 'tugas_luar'])) {
+            $query->where('mode_kerja', $modeKerja);
+        }
+
+        $presensiList = $query->orderBy('tanggal', 'desc')->paginate(15)->withQueryString();
+
+        return view('presensi.riwayat', compact('user', 'magang', 'presensiList', 'tanggalAwal', 'tanggalSelesai', 'modeKerja'));
     }
 
     /**
