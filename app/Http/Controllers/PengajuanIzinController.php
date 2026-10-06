@@ -47,7 +47,13 @@ class PengajuanIzinController extends Controller
      */
     public function create()
     {
-        return view('izin.create');
+        $terakhir = PengajuanIzin::with('validator.pembimbing')
+            ->where('pengguna_id', Auth::id())
+            ->latest()
+            ->take(3)
+            ->get();
+
+        return view('izin.create', compact('terakhir'));
     }
 
     /**
@@ -89,7 +95,7 @@ class PengajuanIzinController extends Controller
             'status_approval' => 'pending',
         ]);
 
-        return redirect()->route('izin.index')
+        return redirect()->route('izin.create')
             ->with('success', 'Permohonan izin/sakit berhasil diajukan dan menunggu persetujuan pembimbing.');
     }
 
@@ -113,11 +119,11 @@ class PengajuanIzinController extends Controller
             ->findOrFail($id);
 
         if (! $izin->canBeEdited()) {
-            return redirect()->route('izin.index')
+            return redirect()->route('magang.rekap')
                 ->with('error', 'Permohonan yang telah diverifikasi tidak dapat diubah lagi.');
         }
 
-        return view('izin.edit', compact('izin'));
+        return view('magang.rekap', compact('izin'));
     }
 
     /**
@@ -129,7 +135,7 @@ class PengajuanIzinController extends Controller
             ->findOrFail($id);
 
         if (! $izin->canBeEdited()) {
-            return redirect()->route('izin.index')
+            return redirect()->route('magang.rekap')
                 ->with('error', 'Permohonan yang telah diverifikasi tidak dapat diubah lagi.');
         }
 
@@ -173,7 +179,7 @@ class PengajuanIzinController extends Controller
             'bukti_file' => $buktiPath,
         ]);
 
-        return redirect()->route('izin.index')
+        return redirect()->route('magang.rekap')
             ->with('success', 'Permohonan izin/sakit berhasil diperbarui!');
     }
 
@@ -186,7 +192,7 @@ class PengajuanIzinController extends Controller
             ->findOrFail($id);
 
         if (! $izin->canBeEdited()) {
-            return redirect()->route('izin.index')
+            return redirect()->route('magang.rekap')
                 ->with('error', 'Permohonan yang telah diverifikasi tidak dapat dibatalkan.');
         }
 

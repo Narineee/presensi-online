@@ -1,166 +1,67 @@
-@extends('layouts.user')
-
-@section('title', 'Edit Permohonan Izin / Sakit')
+@extends('layouts.mobile')
+@section('title', 'Edit Pengajuan')
 
 @section('content')
-<div class="max-w-2xl mx-auto space-y-6">
+@php
+    $in = 'mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm font-normal focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25';
+@endphp
 
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Edit Permohonan Izin / Sakit</h1>
-            <p class="text-sm text-slate-500 mt-1">Perbarui data tanggal, alasan, atau berkas lampiran bukti.</p>
+<header class="-mx-4 -mt-5 mb-4 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:mx-0 lg:mt-0 lg:rounded-2xl lg:border">
+    <a href="{{ route('izin.show', $izin->id) }}" class="grid h-11 w-11 place-items-center rounded-full border border-slate-300 text-lg" aria-label="Kembali">←</a>
+    <div>
+        <h1 class="text-base font-extrabold leading-tight">Edit pengajuan</h1>
+        <p class="text-xs text-slate-500">Hanya bisa diubah selama masih menunggu persetujuan</p>
+    </div>
+</header>
+
+<form method="POST" action="{{ route('izin.update', $izin->id) }}" enctype="multipart/form-data" class="space-y-4"
+      x-data="{ jenis: @js(old('jenis_izin', $izin->jenis_izin)), mulai: @js(old('tanggal_mulai', $izin->tanggal_mulai->format('Y-m-d'))), busy: false }"
+      @submit="busy = true">
+    @csrf
+    @method('PUT')
+
+    <div>
+        <p class="mb-2 text-base font-extrabold">Jenis permohonan</p>
+        <div class="grid grid-cols-3 gap-2" role="radiogroup">
+            @foreach (['sakit' => 'Sakit', 'izin' => 'Izin', 'cuti' => 'Cuti'] as $k => $label)
+                <label class="cursor-pointer">
+                    <input type="radio" name="jenis_izin" value="{{ $k }}" x-model="jenis" class="peer sr-only" required>
+                    <span class="block rounded-2xl border py-3 text-center text-sm font-extrabold transition peer-focus-visible:ring-2 peer-focus-visible:ring-brand peer-focus-visible:ring-offset-2"
+                          :class="jenis === '{{ $k }}' ? 'border-brand bg-brand text-white shadow-sm' : 'border-slate-300 bg-white text-slate-600'">{{ $label }}</span>
+                </label>
+            @endforeach
         </div>
-        <a href="{{ route('izin.index') }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-            </svg>
-            <span>Kembali</span>
-        </a>
     </div>
 
-    <!-- Form Card -->
-    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-8">
-        <form action="{{ route('izin.update', $izin->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
-            @csrf
-            @method('PUT')
+    <section class="space-y-4 rounded-3xl bg-white p-5 ring-1 ring-slate-200">
+        <div class="grid grid-cols-2 gap-3">
+            <label class="block text-sm font-bold">Mulai
+                <input type="date" name="tanggal_mulai" x-model="mulai" required class="{{ $in }}">
+            </label>
+            <label class="block text-sm font-bold">Selesai
+                <input type="date" name="tanggal_selesai" :min="mulai" value="{{ old('tanggal_selesai', $izin->tanggal_selesai->format('Y-m-d')) }}" required class="{{ $in }}">
+            </label>
+        </div>
 
-            <!-- Pilihan Jenis Izin -->
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                    Jenis Permohonan <span class="text-rose-500">*</span>
-                </label>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <label class="flex items-center p-3.5 rounded-2xl border-2 border-slate-200 hover:border-rose-400 cursor-pointer transition has-[:checked]:border-rose-600 has-[:checked]:bg-rose-50/50">
-                        <input type="radio" name="jenis_izin" value="sakit" class="sr-only" {{ old('jenis_izin', $izin->jenis_izin) === 'sakit' ? 'checked' : '' }}>
-                        <div class="flex items-center gap-2.5">
-                            <span class="text-xl">🩺</span>
-                            <div>
-                                <div class="text-xs font-bold text-slate-900">Sakit</div>
-                                <div class="text-[10px] text-slate-400">Dengan surat dokter</div>
-                            </div>
-                        </div>
-                    </label>
+        <label class="block text-sm font-bold">Alasan/keterangan tidak hadir
+            <textarea name="alasan" rows="5" minlength="5" required class="{{ $in }}">{{ old('alasan', $izin->alasan) }}</textarea>
+        </label>
 
-                    <label class="flex items-center p-3.5 rounded-2xl border-2 border-slate-200 hover:border-blue-400 cursor-pointer transition has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/50">
-                        <input type="radio" name="jenis_izin" value="izin" class="sr-only" {{ old('jenis_izin', $izin->jenis_izin) === 'izin' ? 'checked' : '' }}>
-                        <div class="flex items-center gap-2.5">
-                            <span class="text-xl">📋</span>
-                            <div>
-                                <div class="text-xs font-bold text-slate-900">Izin Keperluan</div>
-                                <div class="text-[10px] text-slate-400">Ada halangan penting</div>
-                            </div>
-                        </div>
-                    </label>
+        <label class="block text-sm font-bold">Lampiran/Dokumen Pendukung
+            @if ($izin->bukti_file_url)
+                <span class="mt-1 block text-xs font-normal text-slate-500">Berkas saat ini: <a href="{{ $izin->bukti_file_url }}" target="_blank" class="font-bold text-brand underline">lihat</a>. Kosongkan jika tidak ingin mengganti.</span>
+            @endif
+            <input type="file" name="bukti_file" accept=".jpg,.jpeg,.png,.pdf" @required(! $izin->bukti_file)
+                   class="{{ $in }} file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-brand-ink">
+            <span class="mt-1.5 block text-[11px] font-normal text-slate-500">Format yang didukung: JPG, PNG, atau PDF. Maksimal 2MB.</span>
+        </label>
+    </section>
 
-                    <label class="flex items-center p-3.5 rounded-2xl border-2 border-slate-200 hover:border-purple-400 cursor-pointer transition has-[:checked]:border-purple-600 has-[:checked]:bg-purple-50/50">
-                        <input type="radio" name="jenis_izin" value="cuti" class="sr-only" {{ old('jenis_izin', $izin->jenis_izin) === 'cuti' ? 'checked' : '' }}>
-                        <div class="flex items-center gap-2.5">
-                            <span class="text-xl">🌴</span>
-                            <div>
-                                <div class="text-xs font-bold text-slate-900">Cuti</div>
-                                <div class="text-[10px] text-slate-400">Hak libur resmi</div>
-                            </div>
-                        </div>
-                    </label>
-                </div>
-                @error('jenis_izin')
-                    <p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <!-- Rentang Tanggal -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label for="tanggal_mulai" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Tanggal Mulai <span class="text-rose-500">*</span>
-                    </label>
-                    <input
-                        type="date"
-                        name="tanggal_mulai"
-                        id="tanggal_mulai"
-                        value="{{ old('tanggal_mulai', $izin->tanggal_mulai->format('Y-m-d')) }}"
-                        required
-                        class="w-full px-4 py-2.5 rounded-xl border {{ $errors->has('tanggal_mulai') ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300' }} text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
-                    >
-                    @error('tanggal_mulai')
-                        <p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div>
-                    <label for="tanggal_selesai" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Tanggal Selesai <span class="text-rose-500">*</span>
-                    </label>
-                    <input
-                        type="date"
-                        name="tanggal_selesai"
-                        id="tanggal_selesai"
-                        value="{{ old('tanggal_selesai', $izin->tanggal_selesai->format('Y-m-d')) }}"
-                        required
-                        class="w-full px-4 py-2.5 rounded-xl border {{ $errors->has('tanggal_selesai') ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300' }} text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
-                    >
-                    @error('tanggal_selesai')
-                        <p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
-
-            <!-- Alasan Pengajuan -->
-            <div>
-                <label for="alasan" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Alasan / Keterangan Izin <span class="text-rose-500">*</span>
-                </label>
-                <textarea
-                    name="alasan"
-                    id="alasan"
-                    rows="4"
-                    required
-                    class="w-full px-4 py-3 rounded-xl border {{ $errors->has('alasan') ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300' }} text-sm font-normal text-slate-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
-                >{{ old('alasan', $izin->alasan) }}</textarea>
-                @error('alasan')
-                    <p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <!-- Upload File Bukti -->
-            <div>
-                <label for="bukti_file" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Lampiran Bukti (Surat Dokter / Dokumen Pendukung) @if(! $izin->bukti_file) <span class="text-rose-500">*</span> @else <span class="text-slate-400 font-normal">(Kosongkan jika tidak ingin mengubah)</span> @endif
-                </label>
-                @if($izin->bukti_file_url)
-                    <div class="mb-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
-                        <span class="text-slate-600 font-medium">Berkas saat ini terlampir:</span>
-                        <a href="{{ $izin->bukti_file_url }}" target="_blank" class="text-blue-600 hover:underline font-semibold flex items-center gap-1">
-                            <span>Lihat Berkas Lama</span> &rarr;
-                        </a>
-                    </div>
-                @endif
-                <input
-                    type="file"
-                    name="bukti_file"
-                    id="bukti_file"
-                    accept=".jpg,.jpeg,.png,.pdf"
-                    {{ ! $izin->bukti_file ? 'required' : '' }}
-                    class="w-full px-3.5 py-2 rounded-xl border {{ $errors->has('bukti_file') ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300' }} text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
-                >
-                <p class="text-[11px] text-slate-400 mt-1">@if(! $izin->bukti_file) <span class="text-rose-500 font-semibold">* Wajib dilampirkan.</span> @endif Format yang didukung: JPG, PNG, atau PDF. Maksimal 2MB.</p>
-                @error('bukti_file')
-                    <p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <!-- Tombol Aksi -->
-            <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-                <a href="{{ route('izin.index') }}" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition">
-                    Batal
-                </a>
-                <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition cursor-pointer">
-                    Simpan Perubahan
-                </button>
-            </div>
-        </form>
+    <div class="grid grid-cols-2 gap-3">
+        <a href="{{ route('izin.show', $izin->id) }}" class="rounded-2xl border border-slate-300 bg-white py-4 text-center text-sm font-extrabold">Batal</a>
+        <button type="submit" :disabled="busy" class="rounded-2xl bg-brand py-4 text-sm font-extrabold text-white shadow-sm disabled:bg-slate-300 disabled:text-slate-500">
+            <span x-text="busy ? 'Menyimpan…' : 'Simpan perubahan'"></span>
+        </button>
     </div>
-
-</div>
+</form>
 @endsection
