@@ -9,31 +9,32 @@
     $inisial = collect(explode(' ', trim($namaLengkap)))->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->join('');
 @endphp
 
-<div class="space-y-4">
-    {{-- Header Sesuai Wireframe edit-profil.png --}}
-    <div class="flex items-center justify-between border-b border-slate-200/80 pb-3">
-        <div class="flex items-center gap-3">
-            <a href="{{ route('presensi.index') }}" class="grid h-10 w-10 place-items-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-xs hover:bg-slate-50 transition" title="Kembali ke Presensi">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-                </svg>
-            </a>
-            <div>
-                <h1 class="text-lg font-extrabold text-slate-900 leading-tight">Edit Profil</h1>
-                <p class="text-xs text-slate-500">Perbarui informasi pribadi</p>
-            </div>
+{{-- Header Sesuai Wireframe edit-profil.png --}}
+<header class="sticky-top-nav -mx-4 mb-4 flex items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 pb-3 backdrop-blur-md lg:mx-0 lg:rounded-2xl lg:border">
+    <div class="flex items-center gap-3">
+        <a href="{{ route('presensi.index') }}" class="grid h-10 w-10 place-items-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-xs hover:bg-slate-50 transition" title="Kembali ke Presensi">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+            </svg>
+        </a>
+        <div>
+            <h1 class="text-lg font-extrabold text-slate-900 leading-tight">Edit Profil</h1>
+            <p class="text-xs text-slate-500">Perbarui informasi pribadi</p>
         </div>
-
-        {{-- Tombol Logout Cepat di Header --}}
-        <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <button type="submit" title="Keluar dari Akun (Logout)" class="grid h-10 w-10 place-items-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 shadow-xs transition cursor-pointer">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-                </svg>
-            </button>
-        </form>
     </div>
+
+    {{-- Tombol Logout Cepat di Header --}}
+    <form method="POST" action="{{ route('logout') }}">
+        @csrf
+        <button type="submit" title="Keluar dari Akun (Logout)" class="grid h-10 w-10 place-items-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 shadow-xs transition cursor-pointer">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+            </svg>
+        </button>
+    </form>
+</header>
+
+<div class="space-y-4">
 
     {{-- Alert Jika Profil Belum Lengkap --}}
     @if($isProfileIncomplete)

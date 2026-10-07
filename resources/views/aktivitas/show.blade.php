@@ -15,7 +15,7 @@
     $feedbackNote = $aktivitas->catatan_validasi ?? ($aktivitas->catatan_revisi ?? null);
 @endphp
 
-<header class="-mx-4 -mt-5 mb-5 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:mx-0 lg:mt-0 lg:rounded-2xl lg:border">
+<header class="sticky-top-nav -mx-4 mb-5 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-4 pb-3 backdrop-blur-md lg:mx-0 lg:rounded-2xl lg:border">
     <a href="{{ route('aktivitas.index') }}" class="grid h-11 w-11 place-items-center rounded-full border border-slate-300 text-lg hover:bg-slate-50 transition" aria-label="Kembali ke Rekap Aktivitas">
         <svg class="w-5 h-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />

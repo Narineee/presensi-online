@@ -9,9 +9,9 @@
 @endphp
 
 {{-- Header --}}
-<header class="-mx-4 -mt-5 mb-4 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:mx-0 lg:mt-0 lg:rounded-2xl lg:border">
+<header class="sticky-top-nav -mx-4 mb-4 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-4 pb-3 backdrop-blur-md lg:mx-0 lg:rounded-2xl lg:border">
     <a href="{{ route('presensi.index') }}"
-       class="grid h-11 w-11 place-items-center rounded-full border border-slate-300 text-lg" aria-label="Kembali">←</a>
+       class="grid h-11 w-11 place-items-center rounded-full border border-slate-300 text-lg hover:bg-slate-50 transition" aria-label="Kembali">←</a>
     <div>
         <h1 class="text-base font-extrabold leading-tight">Aktivitas harian</h1>
         <p class="text-xs text-slate-500">{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</p>

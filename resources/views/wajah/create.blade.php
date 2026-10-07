@@ -14,7 +14,7 @@
     <input type="hidden" name="face_foto" :value="shots[0] || ''">
     <input type="hidden" name="face_descriptors" :value="json">
 
-    <header class="-mx-4 -mt-5 mb-4 flex items-start gap-3 border-b border-slate-200 bg-white px-4 py-4">
+    <header class="sticky-top-nav -mx-4 mb-4 flex items-start gap-3 border-b border-slate-200 bg-white/95 px-4 pb-3.5 backdrop-blur-md lg:mx-0 lg:rounded-2xl lg:border">
         <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-slate-300 text-brand">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 3.75H6A2.25 2.25 0 003.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0120.25 6v1.5m0 9V18A2.25 2.25 0 0118 20.25h-1.5m-9 0H6A2.25 2.25 0 013.75 18v-1.5M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         </span>

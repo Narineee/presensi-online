@@ -11,8 +11,8 @@
     $isImage = $izin->bukti_file && in_array(strtolower(pathinfo($izin->bukti_file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png']);
 @endphp
 
-<header class="-mx-4 -mt-5 mb-4 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:mx-0 lg:mt-0 lg:rounded-2xl lg:border">
-    <a href="{{ route('magang.rekap') }}" class="grid h-11 w-11 place-items-center rounded-full border border-slate-300 text-lg" aria-label="Kembali">←</a>
+<header class="sticky-top-nav -mx-4 mb-4 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-4 pb-3 backdrop-blur-md lg:mx-0 lg:rounded-2xl lg:border">
+    <a href="{{ route('magang.rekap') }}" class="grid h-11 w-11 place-items-center rounded-full border border-slate-300 text-lg hover:bg-slate-50 transition" aria-label="Kembali">←</a>
     <div>
         <h1 class="text-base font-extrabold leading-tight">Detail pengajuan</h1>
         <p class="text-xs text-slate-500">{{ ucfirst($izin->jenis_izin) }} · {{ $izin->jumlah_hari }} hari</p>

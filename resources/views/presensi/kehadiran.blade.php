@@ -19,20 +19,22 @@
 @endphp
 
 <div x-data="{ tl: false }">
-    {{-- Sapaan --}}
-    <div class="mb-5 flex items-start justify-between">
-        <div>
-            <h1 class="text-2xl font-extrabold leading-tight">Selamat {{ $salam }},</h1>
-            <p class="text-lg font-semibold text-brand">{{ $namaDepan }}</p>
+    {{-- Sapaan (Sticky Top Navigation Bar) --}}
+    <header class="sticky-top-nav -mx-4 mb-4 border-b border-slate-200/80 bg-[#F3F7F5]/95 px-4 pb-3 backdrop-blur-md lg:mx-0 lg:rounded-2xl lg:border lg:bg-[#F3F7F5]">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-extrabold leading-tight">Selamat {{ $salam }},</h1>
+                <p class="text-base font-semibold text-brand">{{ $namaDepan }}</p>
+            </div>
+            <a href="{{ route('profil.edit') }}" class="relative grid h-12 w-12 place-items-center overflow-hidden rounded-full border-2 border-brand bg-white text-base font-extrabold text-brand shadow-sm transition hover:opacity-95" title="Edit Profil">
+                @if ($magang?->foto_url)
+                    <img src="{{ $magang->foto_url }}" alt="{{ $nama }}" class="h-full w-full object-cover">
+                @else
+                    <span>{{ $inisial }}</span>
+                @endif
+            </a>
         </div>
-        <a href="{{ route('profil.edit') }}" class="relative grid h-14 w-14 place-items-center overflow-hidden rounded-full border-2 border-brand bg-white text-lg font-extrabold text-brand shadow-sm transition hover:opacity-95" title="Edit Profil">
-            @if ($magang?->foto_url)
-                <img src="{{ $magang->foto_url }}" alt="{{ $nama }}" class="h-full w-full object-cover">
-            @else
-                <span>{{ $inisial }}</span>
-            @endif
-        </a>
-    </div>
+    </header>
 
     {{-- Kartu hari ini --}}
     <section class="rounded-3xl bg-brand p-5 text-white shadow-lg shadow-brand/20">

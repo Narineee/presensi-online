@@ -6,7 +6,7 @@
     $in = 'mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-normal focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25 transition';
 @endphp
 
-<header class="-mx-4 -mt-5 mb-5 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:mx-0 lg:mt-0 lg:rounded-2xl lg:border">
+<header class="sticky-top-nav -mx-4 mb-5 flex items-center justify-between border-b border-slate-200 bg-white/95 px-4 pb-3 backdrop-blur-md lg:mx-0 lg:rounded-2xl lg:border">
     <div class="flex items-center gap-3">
         <a href="{{ route('magang.rekap') }}" class="grid h-11 w-11 place-items-center rounded-full border border-slate-300 text-lg hover:bg-slate-50 transition" aria-label="Kembali ke Rekap">
             <svg class="w-5 h-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

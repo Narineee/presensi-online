@@ -17,21 +17,29 @@
             colors: { brand: { DEFAULT: '#14664B', dark: '#0E4D39', soft: '#E3F0EA', ink: '#12261F' } }
         } } }
     </script>
-    <style>[x-cloak]{display:none!important}</style>
+    <style>
+        [x-cloak]{display:none!important}
+        .sticky-top-nav {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            padding-top: max(0.875rem, env(safe-area-inset-top));
+        }
+    </style>
     @stack('head')
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 </head>
 <body class="bg-slate-200 font-sans text-brand-ink antialiased lg:bg-[#F3F7F5]">
 <div class="relative mx-auto min-h-dvh max-w-md bg-[#F3F7F5] shadow-xl lg:max-w-none lg:shadow-none @if (! View::hasSection('hideNav')) lg:pl-64 @endif">
-    <main class="mx-auto w-full max-w-md px-4 pt-5 pb-28 lg:max-w-2xl lg:pt-8 lg:pb-12">
+    <main class="mx-auto w-full max-w-md px-4 pt-0 pb-28 lg:max-w-2xl lg:pt-8 lg:pb-12">
         @if (session('success'))
-            <div class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>
+            <div class="mt-3 mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>
         @endif
         @if (session('error'))
-            <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ session('error') }}</div>
+            <div class="mt-3 mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ session('error') }}</div>
         @endif
         @if ($errors->any())
-            <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <div class="mt-3 mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                 @foreach ($errors->all() as $e)<p>{{ $e }}</p>@endforeach
             </div>
         @endif
