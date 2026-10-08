@@ -28,24 +28,26 @@
 @endpush
 
 @section('content')
-<header class="no-print sticky-top-nav -mx-4 mb-5 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-4 pb-3 backdrop-blur-md lg:mx-0 lg:rounded-2xl lg:border">
-    <a href="{{ route('magang.rekap') }}" class="grid h-11 w-11 place-items-center rounded-full border border-slate-300 text-lg hover:bg-slate-50 transition" aria-label="Kembali ke Rekap">
+<header class="no-print sticky-top-nav -mx-4 mb-4 flex items-center gap-3 border-b border-slate-200/80 bg-white/85 px-4 pb-3 backdrop-blur-xl lg:mx-0 lg:rounded-2xl lg:border">
+    <a href="{{ route('magang.rekap') }}" class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-slate-300 bg-white text-lg hover:bg-slate-50 transition shadow-xs" aria-label="Kembali ke Rekap">
         <svg class="w-5 h-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
         </svg>
     </a>
-    <div>
-        <h1 class="text-base font-extrabold leading-tight text-slate-900">Rekapitulasi & Cetak Dokumen</h1>
-        <p class="text-xs text-slate-500">Lembar Nilai Magang</p>
+    <div class="min-w-0 flex-1">
+        <h1 class="text-base font-extrabold leading-tight text-slate-900 truncate">Rekapitulasi & Cetak Dokumen</h1>
+        <p class="text-xs text-slate-500 font-medium truncate">Lembar Nilai Magang</p>
     </div>
 </header>
 
-<div class="space-y-5">
+@include('layouts.partials.mobile-alerts')
+
+<div class="space-y-4">
 
     @if(!$penilaian)
-        {{-- Belum Dinilai Card (Matching PRD penilaian (1).png container) --}}
-        <section class="rounded-3xl bg-[#ECEEEF]/80 p-8 ring-1 ring-slate-200/80 shadow-xs text-center min-h-[360px] flex flex-col items-center justify-center space-y-3">
-            <div class="w-16 h-16 rounded-2xl bg-white text-amber-500 mx-auto flex items-center justify-center shadow-xs border border-slate-200/80">
+        {{-- Belum Dinilai Card --}}
+        <section class="rounded-3xl glass-card p-8 shadow-sm text-center min-h-[340px] flex flex-col items-center justify-center space-y-3">
+            <div class="w-16 h-16 rounded-3xl bg-amber-50 text-amber-500 mx-auto flex items-center justify-center shadow-2xs border border-amber-200">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -66,37 +68,37 @@
         {{-- Screen View (Mobile Card Layout) --}}
         <div class="screen-view space-y-4">
             {{-- Summary Card --}}
-            <section class="rounded-3xl bg-[#ECEEEF]/90 p-5 ring-1 ring-slate-300/80 shadow-xs space-y-4">
-                <div class="rounded-2xl bg-white p-5 border border-slate-200/90 shadow-xs text-center space-y-2">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">NILAI AKHIR MAGANG</span>
-                    <p class="text-4xl font-extrabold text-brand">{{ $penilaian->total_nilai }} <span class="text-sm font-semibold text-slate-400">/ 100</span></p>
+            <section class="rounded-3xl glass-card p-5 shadow-sm space-y-4">
+                <div class="rounded-2xl glass-subcard p-5 border border-white text-center space-y-2">
+                    <span class="text-[11px] font-black uppercase tracking-wider text-slate-500">NILAI AKHIR MAGANG</span>
+                    <p class="text-4xl font-black text-brand">{{ $penilaian->total_nilai }} <span class="text-sm font-semibold text-slate-400">/ 100</span></p>
                     <div class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800">
                         Predikat: {{ $penilaian->predikat }} ({{ $penilaian->keterangan_predikat }})
                     </div>
                 </div>
 
                 {{-- Identitas Singkat --}}
-                <div class="rounded-2xl bg-white p-4 border border-slate-200/90 shadow-xs space-y-2 text-xs">
-                    <div class="flex justify-between py-1 border-b border-slate-100">
-                        <span class="text-slate-500">Nama Lengkap</span>
-                        <span class="font-bold text-slate-900">{{ $penilaian->magang->nama_lengkap }}</span>
+                <div class="rounded-2xl glass-subcard p-4 border border-white space-y-2.5 text-xs">
+                    <div class="flex items-center justify-between py-1 border-b border-slate-200/60">
+                        <span class="text-slate-500 shrink-0">Nama Lengkap</span>
+                        <span class="font-bold text-slate-900 text-right min-w-0 break-words ml-2">{{ $penilaian->magang->nama_lengkap }}</span>
                     </div>
-                    <div class="flex justify-between py-1 border-b border-slate-100">
-                        <span class="text-slate-500">NIM / NIS</span>
-                        <span class="font-bold text-slate-900">{{ $penilaian->magang->no_induk }}</span>
+                    <div class="flex items-center justify-between py-1 border-b border-slate-200/60">
+                        <span class="text-slate-500 shrink-0">NIM / NIS</span>
+                        <span class="font-bold text-slate-900 text-right min-w-0 break-words ml-2">{{ $penilaian->magang->no_induk }}</span>
                     </div>
-                    <div class="flex justify-between py-1 border-b border-slate-100">
-                        <span class="text-slate-500">Lembaga</span>
-                        <span class="font-bold text-slate-900">{{ $penilaian->magang->instansi_pendidikan }}</span>
+                    <div class="flex items-center justify-between py-1 border-b border-slate-200/60">
+                        <span class="text-slate-500 shrink-0">Lembaga</span>
+                        <span class="font-bold text-slate-900 text-right min-w-0 break-words ml-2">{{ $penilaian->magang->instansi_pendidikan }}</span>
                     </div>
-                    <div class="flex justify-between py-1">
-                        <span class="text-slate-500">Pembimbing</span>
-                        <span class="font-bold text-slate-900">{{ $penilaian->pembimbing->nama_lengkap ?? '-' }}</span>
+                    <div class="flex items-center justify-between py-1">
+                        <span class="text-slate-500 shrink-0">Pembimbing</span>
+                        <span class="font-bold text-slate-900 text-right min-w-0 break-words ml-2">{{ $penilaian->pembimbing->nama_lengkap ?? '-' }}</span>
                     </div>
                 </div>
 
                 {{-- Rincian Kriteria --}}
-                <div class="rounded-2xl bg-white p-4 border border-slate-200/90 shadow-xs space-y-2.5">
+                <div class="rounded-2xl glass-subcard p-4 border border-white space-y-2.5">
                     <p class="text-xs font-extrabold text-slate-900">Rincian Kriteria Penilaian</p>
                     <div class="space-y-2">
                         @foreach($penilaian->detail as $detail)
@@ -104,13 +106,13 @@
                                 $bobot = $detail->kriteria->bobot ?? 0;
                                 $terbobot = round(($detail->nilai * $bobot) / 100, 2);
                             @endphp
-                            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 text-xs">
-                                <div>
-                                    <p class="font-bold text-slate-900">{{ $detail->kriteria->nama ?? 'Kriteria #' . $detail->kriteria_id }}</p>
+                            <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/70 border border-white text-xs">
+                                <div class="min-w-0 flex-1 pr-2">
+                                    <p class="font-bold text-slate-900 truncate">{{ $detail->kriteria->nama ?? 'Kriteria #' . $detail->kriteria_id }}</p>
                                     <p class="text-[11px] text-slate-500">Bobot {{ $bobot }}%</p>
                                 </div>
-                                <div class="text-right">
-                                    <span class="text-sm font-extrabold text-brand">{{ $detail->nilai }}</span>
+                                <div class="text-right shrink-0">
+                                    <span class="text-sm font-black text-brand">{{ $detail->nilai }}</span>
                                     <span class="text-[10px] text-slate-400 block">({{ $terbobot }})</span>
                                 </div>
                             </div>
@@ -119,9 +121,9 @@
                 </div>
 
                 @if($penilaian->catatan)
-                    <div class="rounded-2xl bg-white p-4 border border-slate-200/90 shadow-xs space-y-1.5 text-xs">
+                    <div class="rounded-2xl glass-subcard p-4 border border-white space-y-1.5 text-xs">
                         <p class="font-extrabold text-slate-900">Catatan Evaluasi Pembimbing</p>
-                        <p class="text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100 whitespace-pre-line">{{ $penilaian->catatan }}</p>
+                        <p class="text-slate-600 leading-relaxed bg-white/70 p-3 rounded-xl border border-white whitespace-pre-line">{{ $penilaian->catatan }}</p>
                     </div>
                 @endif
             </section>
@@ -202,10 +204,10 @@
             </table>
         </div>
 
-        {{-- Cetak Penilaian Action Button (Sesuai PRD penilaian (1).png) --}}
-        <div class="no-print pt-2">
+        {{-- Cetak Penilaian Action Button --}}
+        <div class="no-print pt-1">
             <button type="button" onclick="window.print()"
-                    class="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-600 hover:bg-slate-700 py-4 text-sm font-extrabold text-white shadow-sm transition active:scale-[.99] cursor-pointer">
+                    class="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white hover:bg-slate-50 py-3.5 text-sm font-extrabold text-slate-800 shadow-xs transition active:scale-[.99] cursor-pointer">
                 <span>🖨️ Cetak Penilaian</span>
             </button>
         </div>

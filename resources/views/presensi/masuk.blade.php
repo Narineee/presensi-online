@@ -29,32 +29,32 @@
     @include('presensi.header', ['title' => 'Presensi masuk', 'backUrl' => route('presensi.index')])
 
     {{-- LANGKAH 1 --}}
-    <div x-show="step === 1" class="space-y-3">
+    <div x-show="step === 1" class="space-y-3.5">
         <div class="grid grid-cols-3 gap-2" role="tablist">
             @foreach (['onsite' => 'ONSITE', 'wfh' => 'WFH', 'tugas_luar' => 'Tugas Luar'] as $k => $label)
                 <button type="button" role="tab" @click="mode = '{{ $k }}'"
                         :aria-selected="mode === '{{ $k }}'"
-                        :class="mode === '{{ $k }}' ? 'border-brand bg-brand text-white shadow-sm' : 'border-slate-300 bg-white text-slate-500'"
-                        class="rounded-2xl border py-3 text-sm font-extrabold transition">{{ $label }}</button>
+                        :class="mode === '{{ $k }}' ? 'border-brand bg-brand text-white shadow-sm' : 'border-slate-200/90 bg-white/80 backdrop-blur-sm text-slate-600 hover:bg-white'"
+                        class="rounded-2xl border py-3 text-xs sm:text-sm font-extrabold transition cursor-pointer truncate px-1">{{ $label }}</button>
             @endforeach
         </div>
 
         @include('presensi.lokasi', ['office' => $officeLocation])
 
         {{-- Form Tugas Luar: fieldset disabled agar tidak ikut terkirim di mode lain --}}
-        <fieldset x-show="mode === 'tugas_luar'" x-cloak :disabled="mode !== 'tugas_luar'" class="rounded-3xl bg-white p-4 ring-1 ring-slate-200">
+        <fieldset x-show="mode === 'tugas_luar'" x-cloak :disabled="mode !== 'tugas_luar'" class="rounded-3xl glass-card p-4.5 shadow-sm">
             <legend class="sr-only">Rincian Tugas Luar</legend>
-            <h2 class="mb-3 text-sm font-extrabold">Rincian Tugas Luar (TL)</h2>
+            <h2 class="mb-3 text-sm font-extrabold text-slate-900">Rincian Tugas Luar (TL)</h2>
             @include('presensi.form-tl')
-            <p class="mt-3 text-xs text-slate-500">Pengajuan akan diverifikasi oleh pembimbing.</p>
+            <p class="mt-3 text-xs text-slate-500 font-medium">Pengajuan akan diverifikasi oleh pembimbing.</p>
         </fieldset>
 
         <div class="pt-1">
             <button type="button" @click="next()" :disabled="!locReady"
-                    class="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-sm font-extrabold text-white shadow-sm transition active:scale-[.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500">
+                    class="btn-brand-primary flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-extrabold text-white shadow-sm transition active:scale-[.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 cursor-pointer">
                 Lanjut verifikasi wajah
             </button>
-            <p class="mt-2 text-center text-xs text-slate-500">Dengan melanjutkan, Anda menyetujui pencatatan lokasi untuk presensi ini.</p>
+            <p class="mt-2 text-center text-xs text-slate-500 leading-tight">Dengan melanjutkan, Anda menyetujui pencatatan lokasi untuk presensi ini.</p>
         </div>
     </div>
 
