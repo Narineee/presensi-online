@@ -41,7 +41,7 @@
     .ttd-nama { font-weight:bold; text-decoration:underline; }
 
     @media print {
-        @page { size:A4; margin:18mm 16mm 18mm 16mm; }
+        @page { size: A4 portrait; margin: 12mm 10mm 12mm 10mm; }
         body { background:#fff !important; }
         .print-sheet { border:0 !important; box-shadow:0 !important; padding:0 !important; border-radius:0 !important; }
     }

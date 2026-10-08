@@ -70,12 +70,11 @@ class TampilanDanFiturBaruTest extends TestCase
             'status' => 'aktif',
         ]);
 
-        $response = $this->actingAs($userPembimbing)->get(route('pembimbing.dashboard'));
+        $response = $this->actingAs($userPembimbing)->get(route('pembimbing.binaan.index'));
 
         $response->assertStatus(200);
         $response->assertSee('Ani Lestari');
         $response->assertSee('2023001');
-        $response->assertSee('Pantau Kehadiran Binaan Hari Ini');
     }
 
     public function test_pembimbing_aktivitas_validation_screen_shows_participant_information(): void

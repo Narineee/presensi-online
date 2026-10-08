@@ -9,7 +9,7 @@
         @include('admin.cetak.partials.kop-surat')
 
         <div class="judul-laporan">
-            <h3>Rekapitulasi Presensi Kehadiran Magang</h3>
+            <h3>REKAPITULASI PRESENSI KEHADIRAN MAGANG</h3>
             <p>Periode: {{ $periodeText }}</p>
         </div>
 

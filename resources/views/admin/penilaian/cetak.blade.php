@@ -9,7 +9,7 @@
         @include('admin.cetak.partials.kop-surat')
 
         <div class="judul-laporan">
-            <h3>Rekapitulasi Penilaian Akhir Magang</h3>
+            <h3>REKAPITULASI PENILAIAN AKHIR MAGANG</h3>
             <p>Laporan Evaluasi Hasil Belajar &amp; Praktik Kerja Lapangan (PKL)</p>
         </div>
 

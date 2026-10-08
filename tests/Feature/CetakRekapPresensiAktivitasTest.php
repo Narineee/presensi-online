@@ -77,6 +77,7 @@ class CetakRekapPresensiAktivitasTest extends TestCase
             'tanggal_mulai' => '2026-01-01',
             'tanggal_selesai' => '2026-12-31',
             'status' => 'aktif',
+            'face_registered_at' => now(),
         ]);
 
         return $user;
@@ -167,7 +168,8 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         $response->assertSee('LEMBAR REKAPITULASI PRESENSI KEHADIRAN');
         $response->assertSee('Ahmad Magang');
         $response->assertSee('MG-2026-001');
-        $response->assertSee('Peserta Magang');
+        $response->assertSee('Teknik Informatika');
+        $response->assertSee('Universitas Indonesia');
         $response->assertSee('Teknologi Informasi');
         $response->assertSee('08:05 WITA');
         $response->assertSee('Dr. Pembimbing, M.Kom');

@@ -134,13 +134,21 @@
             <h2 class="text-base font-extrabold text-slate-900">Ringkasan {{ now()->locale('id')->isoFormat('MMMM') }}</h2>
             <a href="{{ route('magang.rekap') }}" class="text-xs sm:text-sm font-bold text-brand hover:underline">Lihat rekap</a>
         </div>
-        <div class="grid grid-cols-3 gap-2 rounded-3xl glass-card p-4 shadow-xs">
-            @foreach ([['Hadir', $stats['total_hadir']], ['Tepat Waktu', $stats['tepat_waktu']], ['Izin', $stats['total_izin']]] as [$l, $v])
-                <div class="min-w-0 text-center sm:text-left">
-                    <p class="text-xs text-slate-500 font-medium truncate">{{ $l }}</p>
-                    <p class="text-lg sm:text-xl font-black text-slate-900 mt-0.5 truncate">{{ $v }} hari</p>
-                </div>
-            @endforeach
+        <div class="rounded-3xl glass-card p-4 shadow-xs">
+            <div class="grid grid-cols-3 gap-2">
+                @foreach ([['Hadir', $stats['total_hadir']], ['Tepat Waktu', $stats['tepat_waktu']], ['Izin', $stats['total_izin']]] as [$l, $v])
+                    <div class="min-w-0 text-center sm:text-left">
+                        <p class="text-xs text-slate-500 font-medium truncate">{{ $l }}</p>
+                        <p class="text-lg sm:text-xl font-black text-slate-900 mt-0.5 truncate">{{ $v }} hari</p>
+                    </div>
+                @endforeach
+            </div>
+            <div class="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between">
+                <a href="{{ route('presensi.riwayat') }}" class="text-xs font-bold text-slate-600 hover:text-brand transition">Lihat Riwayat &rarr;</a>
+                <a href="{{ route('presensi.cetak', ['bulan' => request('bulan', date('Y-m'))]) }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-2xs transition">
+                    <span>🖨️ Cetak Rekap</span>
+                </a>
+            </div>
         </div>
     </div>
 
