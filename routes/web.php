@@ -167,6 +167,7 @@ Route::middleware(['auth', 'role:pembimbing'])
         // Daftar Peserta Binaan & Rekapitulasi Presensi
         Route::get('/binaan', [BinaanController::class, 'index'])->name('binaan.index');
         Route::get('/binaan/{id}', [BinaanController::class, 'show'])->name('binaan.show');
+        Route::get('/binaan/{id}/riwayat', [BinaanController::class, 'riwayat'])->name('binaan.riwayat'); 
 
         // Monitoring & Riwayat Presensi Peserta Binaan
         Route::get('/presensi/cetak', [PembimbingMonitoringPresensiController::class, 'cetak'])->name('presensi.cetak');

@@ -50,7 +50,7 @@ class DashboardController extends Controller
             ->get();
 
         $hari = [
-            'hadir' => $presensiHariIni->filter(fn ($p) => $p->status === 'hadir' && ! $p->is_tugas_luar)->count(),
+            'hadir' => $presensiHariIni->where('status', 'hadir')->count(),
             'sakit' => $presensiHariIni->where('status', 'sakit')->count(),
             'izin' => $presensiHariIni->where('status', 'izin')->count(),
             'cuti' => $presensiHariIni->where('status', 'cuti')->count(),
