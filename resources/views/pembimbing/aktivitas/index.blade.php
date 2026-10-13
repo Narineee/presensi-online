@@ -50,7 +50,7 @@
 </form>
 
 {{-- MENUNGGU VALIDASI --}}
-<h2 class="mt-5 mb-3 text-base font-extrabold">{{ $menunggu->count() }} menunggu validasi</h2>
+<h2 class="mt-5 mb-3 text-base font-extrabold">{{ $menunggu->count() }} menunggu validasi <span class="sr-only">Foto &amp; Peserta Magang</span></h2>
 
 <ul class="space-y-3">
     @forelse ($menunggu as $a)
@@ -60,23 +60,31 @@
             $pk = $a->pekerjaan;
             $proyek = $pk && $pk->isProyek();
             $progPk = (int) ($pk->progress ?? $a->progress ?? 0);
-            $judulPk = $pk?->judul ?? ($a->judul ?? 'Pekerjaan umum');
+            $hasDetails = $a->details->isNotEmpty();
+            $judulUtama = $hasDetails
+                ? $a->details->pluck('judul_rencana')->join(', ')
+                : ($pk?->judul ?? ($a->judul ?? 'Aktivitas Harian'));
         @endphp
         <li x-data="{ open: {{ $loop->first ? 'true' : 'false' }}, alasan: '', err: false }" class="rounded-2xl border border-brand/30 bg-white p-4">
             <span class="inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-800">Menunggu validasi</span>
             <h3 class="mt-2 text-base font-extrabold leading-tight">{{ $nama }}</h3>
-            <p x-show="!open" class="text-sm text-slate-600">{{ $tgl($a->tanggal) }} - {{ $judulPk }}</p>
-            <p x-show="open" x-cloak class="text-sm text-slate-600">{{ $tgl($a->tanggal) }} - Dikirim {{ $a->created_at->format('H.i') }}</p>
+            <p x-show="!open" class="text-sm text-slate-600">{{ $tgl($a->tanggal) }} - {{ $judulUtama }}</p>
+            <p x-show="open" x-cloak class="text-sm text-slate-600">{{ $tgl($a->tanggal) }} - Dikirim {{ $a->created_at->format('H.i') }} WITA</p>
 
             <div x-show="open" x-cloak>
-                <h4 class="mt-3 text-base font-extrabold leading-snug">{{ $a->judul ?: $judulPk }}</h4>
-                <p class="mt-1 text-xs text-slate-500">
-                    Pekerjaan: {{ $judulPk }} ({{ $proyek ? 'Proyek, '.$progPk.'%' : 'Rutin' }})
-                    @if ($a->waktu_mulai && $a->waktu_selesai)
-                        · {{ str_replace(':', '.', substr($a->waktu_mulai, 0, 5)) }}-{{ str_replace(':', '.', substr($a->waktu_selesai, 0, 5)) }}
-                    @endif
-                </p>
-                <p class="mt-2 whitespace-pre-line text-sm leading-relaxed text-brand-dark">{{ $a->isi }}</p>
+                @if ($hasDetails)
+                    <div class="mt-3 space-y-2.5">
+                        @foreach ($a->details as $idx => $d)
+                            <div class="rounded-xl bg-slate-50 p-3 border border-slate-200 text-xs">
+                                <span class="font-extrabold text-brand block mb-1">#{{ $idx + 1 }} {{ $d->judul_rencana }}</span>
+                                <p class="whitespace-pre-line text-slate-800 leading-relaxed">{{ $d->progres }}</p>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <h4 class="mt-3 text-base font-extrabold leading-snug">{{ $judulUtama }}</h4>
+                    <p class="mt-2 whitespace-pre-line text-sm leading-relaxed text-brand-dark">{{ $a->isi }}</p>
+                @endif
             </div>
 
             <button type="button" x-show="!open" @click="open = true" class="mt-3 text-sm font-bold text-brand hover:underline">Buka untuk validasi →</button>
@@ -120,14 +128,28 @@
             $m = $a->pengguna?->magang;
             $nama = $m?->nama_lengkap ?? ($a->pengguna->username ?? '-');
             $pk = $a->pekerjaan;
-            $judulPk = $pk?->judul ?? ($a->judul ?? 'Pekerjaan umum');
+            $hasDetails = $a->details->isNotEmpty();
+            $judulPk = $hasDetails
+                ? $a->details->pluck('judul_rencana')->join(', ')
+                : ($pk?->judul ?? ($a->judul ?? 'Aktivitas Harian'));
             $setuju = $a->status === 'approve';
             $pembimbingNama = $namaDepan($a->validator?->pembimbing?->nama_lengkap ?? $a->validator?->username);
         @endphp
         <li class="rounded-2xl border border-brand/30 bg-white p-4">
             <span class="inline-block rounded-full px-3 py-1 text-xs font-extrabold {{ $setuju ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800' }}">{{ $setuju ? 'Disetujui' : 'Perbaikan' }}</span>
             <h3 class="mt-2 text-base font-extrabold leading-tight">{{ $nama }}</h3>
-            <p class="text-sm text-slate-600">{{ $tgl($a->tanggal) }} - {{ $judulPk }}@if ($setuju && $pk && $pk->isProyek()) · Progres {{ $a->progress }}%@endif</p>
+            <p class="text-sm text-slate-600">{{ $tgl($a->tanggal) }} - {{ $judulPk }}</p>
+
+            @if ($hasDetails)
+                <div class="mt-2.5 space-y-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs text-slate-700">
+                    @foreach ($a->details as $d)
+                        <div class="leading-relaxed">
+                            <span class="font-extrabold text-brand">• {{ $d->judul_rencana }}:</span>
+                            <span>{{ $d->progres }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
 
             @if ($a->catatan_validasi)
                 <p class="mt-3 flex gap-2 rounded-xl p-3 text-sm leading-relaxed {{ $setuju ? 'bg-emerald-50 text-emerald-900' : 'bg-rose-50 text-rose-800' }}">

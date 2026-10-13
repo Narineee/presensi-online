@@ -42,11 +42,14 @@
         @include('presensi.lokasi', ['office' => $officeLocation])
 
         {{-- Form Tugas Luar: fieldset disabled agar tidak ikut terkirim di mode lain --}}
-        <fieldset x-show="mode === 'tugas_luar'" x-cloak :disabled="mode !== 'tugas_luar'" class="rounded-3xl glass-card p-4.5 shadow-sm">
+        <fieldset x-show="mode === 'tugas_luar'" x-cloak :disabled="mode !== 'tugas_luar'" class="rounded-3xl glass-card p-4 sm:p-5 shadow-sm space-y-4">
             <legend class="sr-only">Rincian Tugas Luar</legend>
-            <h2 class="mb-3 text-sm font-extrabold text-slate-900">Rincian Tugas Luar (TL)</h2>
-            @include('presensi.form-tl')
-            <p class="mt-3 text-xs text-slate-500 font-medium">Pengajuan akan diverifikasi oleh pembimbing.</p>
+            <div class="border-b border-slate-200/80 pb-3">
+                <h2 class="text-sm sm:text-base font-extrabold text-slate-900">Rincian Tugas Luar (TL)</h2>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">Lengkapi data penugasan luar sebelum melanjutkan.</p>
+            </div>
+            @include('presensi.form-tl', ['formId' => 'tl_masuk'])
+            <p class="text-xs text-slate-500 font-medium">Pengajuan akan diverifikasi oleh pembimbing.</p>
         </fieldset>
 
         <div class="pt-1">

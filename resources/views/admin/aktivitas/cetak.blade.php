@@ -46,10 +46,23 @@
                             @endif
                         </td>
                         <td>
-                            <strong>{{ $item->pekerjaan?->judul ?? 'Pekerjaan Umum' }}</strong>
-                            <div class="sub">({{ ($item->pekerjaan && $item->pekerjaan->isRutin()) ? 'Rutin' : 'Proyek' }})</div>
+                            @if ($item->details && $item->details->isNotEmpty())
+                                <strong>{{ $item->details->pluck('judul_rencana')->join(', ') }}</strong>
+                                <div class="sub">(Rencana Kerja)</div>
+                            @else
+                                <strong>{{ $item->pekerjaan?->judul ?? ($item->judul ?? 'Pekerjaan Umum') }}</strong>
+                                <div class="sub">({{ ($item->pekerjaan && $item->pekerjaan->isRutin()) ? 'Rutin' : 'Proyek' }})</div>
+                            @endif
                         </td>
-                        <td>{{ $item->isi }}</td>
+                        <td>
+                            @if ($item->details && $item->details->isNotEmpty())
+                                @foreach($item->details as $d)
+                                    <div style="margin-bottom: 2px;">• <strong>{{ $d->judul_rencana }}:</strong> {{ $d->progres }}</div>
+                                @endforeach
+                            @else
+                                {{ $item->isi }}
+                            @endif
+                        </td>
                         <td class="c">
                             @if($item->pekerjaan && $item->pekerjaan->isRutin())
                                 -

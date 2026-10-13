@@ -112,10 +112,10 @@
         @php
             $nav = [
                 ['Presensi',  route('presensi.index'),  'presensi',  'M7.5 3.75H6A2.25 2.25 0 003.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0120.25 6v1.5m0 9V18A2.25 2.25 0 0118 20.25h-1.5m-9 0H6A2.25 2.25 0 013.75 18v-1.5M15 12a3 3 0 11-6 0 3 3 0 016 0z'],
+                ['Rencana',   route('rencana.index'),   'rencana',   'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z'],
                 ['Aktivitas', route('aktivitas.create'), 'aktivitas', 'M9 12.75L11.25 15 15 9.75M10.5 3.75h3a1.5 1.5 0 011.5 1.5v.75h1.5a2.25 2.25 0 012.25 2.25v11.25a2.25 2.25 0 01-2.25 2.25H7.5a2.25 2.25 0 01-2.25-2.25V8.25A2.25 2.25 0 017.5 6H9v-.75a1.5 1.5 0 011.5-1.5z'],
                 ['Pengajuan', route('izin.create'),      'izin',      'M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0l-9.75 6-9.75-6'],
-                ['Riwayat',   route('magang.rekap'),     'rekap',     'M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z'],
-                ['Profil',    route('profil.edit'),      'profil',    'M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z'],
+                ['Rekap',     route('magang.rekap'),     'rekap',     'M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z'],
             ];
 
             $isRekapActive = request()->routeIs('magang.rekap', 'presensi.riwayat', 'aktivitas.riwayat', 'aktivitas.index', 'aktivitas.show', 'izin.riwayat', 'izin.index', 'magang.penilaian.*')
@@ -131,10 +131,10 @@
                 @foreach ($nav as [$label, $url, $key, $icon])
                     @php
                         $on = ($key === 'rekap' && $isRekapActive)
+                            || ($key === 'rencana' && request()->routeIs('rencana.*'))
                             || ($key === 'aktivitas' && (request()->routeIs('aktivitas.create', 'aktivitas.edit') || request()->is('aktivitas/create', 'aktivitas/*/edit')))
                             || ($key === 'izin' && (request()->routeIs('izin.create', 'izin.edit') || request()->is('izin/create', 'izin/*/edit')))
-                            || ($key === 'presensi' && (request()->routeIs('presensi.*') && ! request()->routeIs('presensi.riwayat')))
-                            || ($key === 'profil' && request()->routeIs('profil.*'));
+                            || ($key === 'presensi' && (request()->routeIs('presensi.*') && ! request()->routeIs('presensi.riwayat')));
                     @endphp
                     <li>
                         <a href="{{ $url }}" class="flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-bold transition {{ $on ? 'bg-brand text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50' }}">
@@ -145,9 +145,22 @@
                 @endforeach
             </ul>
             <div class="border-t border-slate-200/80 p-4 bg-white/50 backdrop-blur-sm">
-                <p class="truncate text-sm font-bold text-slate-900">{{ auth()->user()->magang->nama_lengkap ?? auth()->user()->username }}</p>
-                <form method="POST" action="{{ route('logout') }}" class="mt-2">
+                <a href="{{ route('profil.edit') }}" class="flex items-center gap-2.5 group" title="Pengaturan Profil">
+                    <span class="relative grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full border border-brand bg-white text-xs font-bold text-brand">
+                        @if (auth()->user()->magang?->foto_url)
+                            <img src="{{ auth()->user()->magang->foto_url }}" alt="Avatar" class="h-full w-full object-cover">
+                        @else
+                            <span>{{ mb_strtoupper(mb_substr(auth()->user()->magang->nama_lengkap ?? auth()->user()->username, 0, 1)) }}</span>
+                        @endif
+                    </span>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-xs font-bold text-slate-900 group-hover:text-brand transition">{{ auth()->user()->magang->nama_lengkap ?? auth()->user()->username }}</p>
+                        <p class="text-[10px] text-slate-500 font-medium">Edit Profil & Pengaturan</p>
+                    </div>
+                </a>
+                <form method="POST" action="{{ route('logout') }}" class="mt-2.5 pt-2 border-t border-slate-100 flex justify-between items-center">
                     @csrf
+                    <a href="{{ route('profil.edit') }}" class="text-xs font-bold text-slate-600 hover:text-brand">Profil</a>
                     <button class="text-xs font-bold text-red-600 hover:underline cursor-pointer">Keluar</button>
                 </form>
             </div>
@@ -159,10 +172,10 @@
                 @foreach ($nav as [$label, $url, $key, $icon])
                     @php
                         $on = ($key === 'rekap' && $isRekapActive)
+                            || ($key === 'rencana' && request()->routeIs('rencana.*'))
                             || ($key === 'aktivitas' && (request()->routeIs('aktivitas.create', 'aktivitas.edit') || request()->is('aktivitas/create', 'aktivitas/*/edit')))
                             || ($key === 'izin' && (request()->routeIs('izin.create', 'izin.edit') || request()->is('izin/create', 'izin/*/edit')))
-                            || ($key === 'presensi' && (request()->routeIs('presensi.*') && ! request()->routeIs('presensi.riwayat')))
-                            || ($key === 'profil' && request()->routeIs('profil.*'));
+                            || ($key === 'presensi' && (request()->routeIs('presensi.*') && ! request()->routeIs('presensi.riwayat')));
                     @endphp
                     <li class="min-w-0">
                         <a href="{{ $url }}" class="group flex flex-col items-center gap-1 py-1 px-0.5 transition {{ $on ? 'text-brand' : 'text-slate-500 hover:text-slate-700' }}">

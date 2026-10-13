@@ -125,7 +125,11 @@
                                     {{ \Carbon\Carbon::parse($item->tanggal)->locale('id')->isoFormat('dddd, D MMMM Y') }}
                                 </p>
                                 <h3 class="text-sm font-extrabold text-slate-900 mt-0.5 truncate">
-                                    {{ $item->judul ?? $item->pekerjaan->judul ?? 'Aktivitas Harian' }}
+                                    @if ($item->details->isNotEmpty())
+                                        {{ $item->details->pluck('judul_rencana')->join(', ') }}
+                                    @else
+                                        {{ $item->judul ?? $item->pekerjaan->judul ?? 'Aktivitas Harian' }}
+                                    @endif
                                 </h3>
                             </div>
                             <span class="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold border {{ $st[1] }}">
@@ -133,19 +137,20 @@
                             </span>
                         </div>
 
-                        <div class="flex items-center gap-2 text-xs text-slate-600">
-                            <span class="inline-flex items-center gap-1 font-semibold text-slate-800">
-                                🕒 {{ $waktuText }}
-                            </span>
-                            @if($item->pekerjaan && $item->pekerjaan->isProyek())
-                                <span class="text-slate-300">•</span>
-                                <span class="font-extrabold text-brand">Progres: {{ $item->progress }}%</span>
-                            @endif
-                        </div>
-
-                        <p class="text-xs text-slate-700 line-clamp-2 leading-relaxed bg-white/80 p-2.5 rounded-xl border border-white break-words">
-                            {{ $item->isi }}
-                        </p>
+                        @if ($item->details->isNotEmpty())
+                            <div class="space-y-1.5 bg-white/80 p-2.5 rounded-xl border border-white text-xs text-slate-700">
+                                @foreach($item->details as $d)
+                                    <div class="leading-relaxed break-words">
+                                        <span class="font-extrabold text-brand">• {{ $d->judul_rencana }}:</span>
+                                        <span>{{ \Illuminate\Support\Str::limit($d->progres, 120) }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <p class="text-xs text-slate-700 line-clamp-2 leading-relaxed bg-white/80 p-2.5 rounded-xl border border-white break-words">
+                                {{ $item->isi }}
+                            </p>
+                        @endif
 
                         <div class="flex items-center justify-between pt-1 border-t border-slate-200/60">
                             <span class="text-[11px] text-slate-500 truncate mr-2">

@@ -87,12 +87,27 @@
         @endif
     </section>
 
-    @if ($pekerjaanAktif)
-        <a href="{{ route('pembimbing.pekerjaan.show', $pekerjaanAktif->id) }}" class="block rounded-3xl bg-white p-4 ring-1 ring-slate-200 hover:ring-brand/40">
-            <p class="text-sm font-extrabold">{{ $pekerjaanAktif->judul }}@if (! is_null($pekerjaanAktif->progress)) - {{ $pekerjaanAktif->progress }}%@endif</p>
-            <p class="mt-1 text-xs text-slate-600">
-                @if ($pekerjaanAktif->target_selesai) Tanggal {{ $fmt($pekerjaanAktif->target_selesai, 'D MMM Y') }} - @endif Sedang dikerjakan
-            </p>
+    @if (isset($rencanaAktif) && $rencanaAktif->isNotEmpty())
+        <div class="rounded-3xl bg-white p-4 ring-1 ring-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+                <p class="text-xs font-extrabold uppercase text-slate-500 tracking-wider">Rencana Kerja Aktif</p>
+                <a href="{{ route('pembimbing.rencana.index', ['magang_id' => $magang->id]) }}" class="text-xs font-bold text-brand hover:underline">Semua Rencana</a>
+            </div>
+            <ul class="space-y-2">
+                @foreach ($rencanaAktif->take(3) as $rk)
+                    <li>
+                        <a href="{{ route('pembimbing.rencana.show', $rk->id) }}" class="block rounded-2xl bg-slate-50 p-3 hover:bg-slate-100 transition border border-slate-100">
+                            <p class="text-xs font-extrabold text-slate-900">{{ $rk->judul }}</p>
+                            <p class="mt-0.5 text-[11px] text-slate-500">Dibuat {{ $fmt($rk->created_at, 'D MMM Y') }}</p>
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+    @elseif ($pekerjaanAktif)
+        <a href="{{ route('pembimbing.rencana.index', ['magang_id' => $magang->id]) }}" class="block rounded-3xl bg-white p-4 ring-1 ring-slate-200 hover:ring-brand/40">
+            <p class="text-sm font-extrabold">{{ $pekerjaanAktif->judul }}</p>
+            <p class="mt-1 text-xs text-slate-600">Pekerjaan aktif</p>
         </a>
     @endif
 </div>

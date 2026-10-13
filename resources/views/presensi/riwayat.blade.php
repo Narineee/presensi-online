@@ -124,6 +124,13 @@
                             </div>
                         </div>
 
+                        @if($item->keterangan)
+                            <div class="rounded-xl bg-slate-50 border border-slate-200/80 px-3 py-2 text-xs text-slate-700 flex items-start gap-2">
+                                <span class="text-slate-400 font-bold shrink-0">Catatan:</span>
+                                <span class="font-semibold text-slate-900 break-words">{{ $item->keterangan }}</span>
+                            </div>
+                        @endif
+
                         @if($item->mode_kerja === 'tugas_luar' && $item->pengajuanTugasLuar)
                             <div class="rounded-xl bg-purple-50/80 p-2 text-xs text-purple-900 border border-purple-100">
                                 📍 Tugas Luar: <b>{{ $item->pengajuanTugasLuar->tujuan }}</b>

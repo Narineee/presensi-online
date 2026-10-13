@@ -31,7 +31,7 @@ class AktivitasValidasiController extends Controller
         $supervisedIds = $this->getSupervisedUserIds();
 
         $query = Aktivitas::whereIn('pengguna_id', $supervisedIds)
-            ->with(['pengguna.magang.divisi', 'pekerjaan', 'validator.pembimbing']);
+            ->with(['pengguna.magang.divisi', 'details.rencanaKerja', 'pekerjaan', 'validator.pembimbing']);
 
         // Filter pencarian nama / no induk
         if ($request->filled('q')) {

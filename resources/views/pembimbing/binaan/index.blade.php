@@ -93,7 +93,7 @@
                 @include('pembimbing.binaan.avatar', ['magang' => $m])
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-base font-extrabold leading-tight">{{ $m->nama_lengkap }}</p>
-                    <p class="truncate text-xs text-slate-500">{{ $m->instansi_pendidikan ?? '-' }}</p>
+                    <p class="truncate text-xs text-slate-500">{{ $m->no_induk ? $m->no_induk . ' · ' : '' }}{{ $m->instansi_pendidikan ?? '-' }}</p>
                 </div>
                 <span class="rounded-full px-3 py-1 text-xs font-extrabold {{ $aktif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' }}">{{ $aktif ? 'Aktif' : 'Selesai' }}</span>
             </div>

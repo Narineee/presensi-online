@@ -45,12 +45,15 @@
     </section>
 @else
     <form method="POST" action="{{ route('presensi.keluar') }}"
-          x-data="presensiFlow({
+          x-data="Object.assign(presensiFlow({
               mode: @js($cekRadius ? 'onsite' : 'free'),
               office: @js($officeLocation),
               models: @js(asset('models')),
               verifyUrl: @js(route('presensi.verifikasi-wajah')),
               csrf: @js(csrf_token()),
+          }), {
+              isPulangAwal: @js($isPulangAwal),
+              alasanPulang: @js(old('alasan_pulang', '')),
           })"
           @submit="submitting = true">
         @csrf
@@ -58,15 +61,64 @@
         <input type="hidden" name="foto_keluar" :value="photo">
         <input type="hidden" name="face_descriptor" :value="descriptor">
 
-        @include('presensi.header', ['title' => 'Presensi Pulang', 'backUrl' => route('presensi.index')])
+        @include('presensi.header', ['title' => $isPulangAwal ? 'Pulang (Sakit / Izin)' : 'Presensi Pulang', 'backUrl' => route('presensi.index')])
 
         <div x-show="step === 1" class="space-y-3.5">
+            @if ($isPulangAwal)
+                <div class="rounded-3xl glass-card p-4 sm:p-5 shadow-sm space-y-3">
+                    <div class="border-b border-slate-200/80 pb-2.5">
+                        <div class="flex items-center justify-between gap-2">
+                            <h2 class="text-sm sm:text-base font-extrabold text-slate-900">Pulang Sebelum 16.00</h2>
+                            <span class="rounded-full bg-amber-100 text-amber-900 text-[10px] font-black px-2.5 py-0.5 border border-amber-300">Wajib Pilih</span>
+                        </div>
+                        <p class="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
+                            Anda melakukan presensi sebelum jam pulang normal (16.00 WITA). Silakan tentukan alasan kepulangan:
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5" role="radiogroup">
+                        @foreach ([
+                            'Sakit' => ['Sakit', 'Kondisi kesehatan kurang baik', '🩺'],
+                            'Izin' => ['Izin', 'Keperluan mendesak / dinas', '📄'],
+                        ] as $val => [$lbl, $desc, $icon])
+                            <label class="cursor-pointer">
+                                <input type="radio" name="alasan_pulang" value="{{ $val }}" x-model="alasanPulang" class="peer sr-only" required>
+                                <div class="h-full rounded-2xl border p-3 sm:p-3.5 text-left transition peer-focus-visible:ring-2 peer-focus-visible:ring-brand"
+                                     :class="alasanPulang === '{{ $val }}' 
+                                         ? 'border-brand bg-brand text-white shadow-sm' 
+                                         : 'border-slate-200/90 bg-white/80 text-slate-700 hover:bg-white'">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xl">{{ $icon }}</span>
+                                        <span class="text-[10px] font-black uppercase tracking-wider" x-text="alasanPulang === '{{ $val }}' ? '✓ Dipilih' : ''"></span>
+                                    </div>
+                                    <p class="mt-2 text-xs sm:text-sm font-extrabold" :class="alasanPulang === '{{ $val }}' ? 'text-white' : 'text-slate-900'">{{ $lbl }}</p>
+                                    <p class="text-[11px] leading-tight mt-0.5" :class="alasanPulang === '{{ $val }}' ? 'text-white/80' : 'text-slate-500'">{{ $desc }}</p>
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+
+                    <div>
+                        <label for="keterangan_keluar" class="block text-xs font-bold text-slate-700 mb-1">
+                            Catatan Tambahan <span class="font-normal text-slate-400 text-[11px]">(Opsional)</span>
+                        </label>
+                        <textarea id="keterangan_keluar" name="keterangan_keluar" rows="2"
+                                  placeholder="Contoh: Mengalami demam / urus berkas kampus"
+                                  class="block w-full min-w-0 max-w-full box-border rounded-2xl border border-slate-300 bg-white/90 px-3.5 py-2 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 shadow-2xs transition resize-none">{{ old('keterangan_keluar') }}</textarea>
+                    </div>
+                </div>
+            @endif
+
             @include('presensi.lokasi', ['office' => $officeLocation])
+
             <div class="pt-1">
-                <button type="button" @click="next()" :disabled="!locReady"
+                <button type="button" @click="next()" :disabled="!locReady || (isPulangAwal && !alasanPulang)"
                         class="btn-brand-primary flex w-full items-center justify-center rounded-2xl py-4 text-sm font-extrabold text-white shadow-sm transition active:scale-[.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 cursor-pointer">
                     Lanjut verifikasi wajah
                 </button>
+                <p x-show="isPulangAwal && !alasanPulang" class="mt-1.5 text-center text-xs font-bold text-amber-600">
+                    Pilih alasan Sakit atau Izin terlebih dahulu untuk melanjutkan.
+                </p>
                 <p class="mt-2 text-center text-xs text-slate-500 leading-tight">Dengan melanjutkan, Anda menyetujui pencatatan lokasi untuk presensi ini.</p>
             </div>
         </div>

@@ -8,22 +8,20 @@
         'revisi' => ['Perlu Revisi', 'bg-rose-50 text-rose-700 border-rose-200'],
         default => ['Menunggu', 'bg-amber-50 text-amber-700 border-amber-200'],
     };
-    $waktuText = ($aktivitas->waktu_mulai && $aktivitas->waktu_selesai)
-        ? substr((string) $aktivitas->waktu_mulai, 0, 5) . ' - ' . substr((string) $aktivitas->waktu_selesai, 0, 5) . ' WITA'
-        : null;
     $validatorName = $aktivitas->nama_validator ?? ($aktivitas->validator->pembimbing->nama_lengkap ?? ($aktivitas->validator->name ?? null));
     $feedbackNote = $aktivitas->catatan_validasi ?? ($aktivitas->catatan_revisi ?? null);
+    $hasDetails = $aktivitas->details->isNotEmpty();
 @endphp
 
 <header class="sticky-top-nav -mx-4 mb-4 flex items-center gap-3 border-b border-slate-200/80 bg-white/85 px-4 pb-3 backdrop-blur-xl lg:mx-0 lg:rounded-2xl lg:border">
-    <a href="{{ route('aktivitas.index') }}" class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-slate-300 bg-white text-lg hover:bg-slate-50 transition shadow-xs" aria-label="Kembali ke Rekap Aktivitas">
+    <a href="{{ route('aktivitas.riwayat') }}" class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-slate-300 bg-white text-lg hover:bg-slate-50 transition shadow-xs" aria-label="Kembali ke Riwayat Aktivitas">
         <svg class="w-5 h-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
         </svg>
     </a>
     <div class="min-w-0 flex-1">
-        <h1 class="text-base font-extrabold leading-tight text-slate-900 truncate">Rekapitulasi & Cetak Dokumen</h1>
-        <p class="text-xs text-slate-500 font-medium truncate">Detail aktivitas harian</p>
+        <h1 class="text-base font-extrabold leading-tight text-slate-900 truncate">Detail aktivitas harian</h1>
+        <p class="text-xs text-slate-500 font-medium truncate">{{ $aktivitas->tanggal->locale('id')->isoFormat('dddd, D MMMM Y') }}</p>
     </div>
 </header>
 
@@ -40,9 +38,6 @@
                     <p class="text-base font-extrabold text-slate-900 mt-0.5 truncate">
                         {{ $aktivitas->tanggal->locale('id')->isoFormat('dddd, D MMMM Y') }}
                     </p>
-                    @if($waktuText)
-                        <p class="text-xs text-slate-600 mt-0.5 font-medium truncate">🕒 {{ $waktuText }}</p>
-                    @endif
                 </div>
                 <span class="rounded-full px-3 py-1 text-xs font-bold border {{ $badge[1] }} shrink-0">
                     {{ $badge[0] }}
@@ -51,36 +46,56 @@
             <div class="mt-3 border-t border-slate-200/80"></div>
         </div>
 
-        {{-- Capaian Progres Pekerjaan --}}
-        <div>
-            <div class="flex items-center justify-between text-xs font-bold mb-1.5">
-                <span class="text-slate-700">Capaian Progres Pekerjaan</span>
-                <span class="text-brand font-black">{{ $aktivitas->progress }}%</span>
-            </div>
-            <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80 p-0.5">
-                <div class="h-full rounded-full bg-brand transition-all duration-300" style="width: {{ $aktivitas->progress }}%"></div>
-            </div>
-        </div>
+        {{-- Rencana Kerja & Progres yang Dilaporkan --}}
+        @if ($hasDetails)
+            <div class="space-y-3">
+                <p class="text-[11px] font-extrabold uppercase tracking-wider text-slate-700">
+                    RENCANA KERJA &amp; PROGRES ({{ $aktivitas->details->count() }})
+                </p>
 
-        {{-- Pekerjaan yang Diberikan --}}
-        <div>
-            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
-                PEKERJAAN YANG DIBERIKAN
-            </label>
-            <div class="w-full rounded-2xl glass-subcard px-4 py-3 text-sm font-bold text-slate-900 border border-white break-words">
-                {{ $aktivitas->pekerjaan?->judul ?? ($aktivitas->judul ?? 'Aktivitas Harian') }}
+                @foreach ($aktivitas->details as $idx => $detail)
+                    <div class="rounded-2xl glass-subcard p-4 border border-white space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-extrabold text-brand">
+                                #{{ $idx + 1 }} {{ $detail->judul_rencana }}
+                            </span>
+                        </div>
+                        <div class="whitespace-pre-line rounded-xl bg-white/90 p-3 text-xs font-medium leading-relaxed text-slate-800 border border-slate-100 break-words">
+{{ $detail->progres }}
+                        </div>
+                    </div>
+                @endforeach
             </div>
-        </div>
+        @else
+            {{-- Fallback data lawas --}}
+            <div>
+                <div class="flex items-center justify-between text-xs font-bold mb-1.5">
+                    <span class="text-slate-700">Capaian Progres Pekerjaan</span>
+                    <span class="text-brand font-black">{{ $aktivitas->progress }}%</span>
+                </div>
+                <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80 p-0.5">
+                    <div class="h-full rounded-full bg-brand transition-all duration-300" style="width: {{ $aktivitas->progress }}%"></div>
+                </div>
+            </div>
 
-        {{-- Uraian Aktivitas yang Diberikan --}}
-        <div>
-            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
-                URAIAN AKTIVITAS YANG DIBERIKAN
-            </label>
-            <div class="w-full min-h-[120px] whitespace-pre-line rounded-2xl glass-subcard p-4 text-xs font-medium leading-relaxed text-slate-800 border border-white break-words">
+            <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
+                    PEKERJAAN YANG DIBERIKAN
+                </label>
+                <div class="w-full rounded-2xl glass-subcard px-4 py-3 text-sm font-bold text-slate-900 border border-white break-words">
+                    {{ $aktivitas->pekerjaan?->judul ?? ($aktivitas->judul ?? 'Aktivitas Harian') }}
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
+                    URAIAN AKTIVITAS YANG DIBERIKAN
+                </label>
+                <div class="w-full min-h-[90px] whitespace-pre-line rounded-2xl glass-subcard p-4 text-xs font-medium leading-relaxed text-slate-800 border border-white break-words">
 {{ $aktivitas->isi }}
+                </div>
             </div>
-        </div>
+        @endif
 
         {{-- Informasi Validasi Pembimbing --}}
         <div>
@@ -103,9 +118,9 @@
                 <div class="border-t border-slate-200/60"></div>
 
                 <div class="text-xs">
-                    <span class="text-slate-500 font-medium block">Catatan Feedback:</span>
+                    <span class="text-slate-500 font-medium block">Catatan Feedback Pembimbing:</span>
                     <p class="font-medium text-slate-800 mt-1 leading-relaxed whitespace-pre-line bg-white/80 rounded-xl p-3 border border-white break-words">
-                        {{ $feedbackNote ?: ($aktivitas->status === 'pending' ? 'Menunggu peninjauan dan masukan dari pembimbing lapangan.' : 'Tidak ada catatan tambahan.') }}
+                        {{ $feedbackNote ?: ($aktivitas->status === 'pending' ? 'Menunggu peninjauan dari pembimbing lapangan.' : 'Tidak ada catatan tambahan.') }}
                     </p>
                 </div>
             </div>

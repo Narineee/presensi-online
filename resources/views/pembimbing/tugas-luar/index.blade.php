@@ -9,31 +9,31 @@
     $fmtJam = fn ($w) => $w ? str_replace(':', '.', substr($w, 0, 5)) : null;
 
     $formatWaktu = function ($item) use ($fmtJam) {
-        $tgl = \Carbon\Carbon::parse($item->tanggal)->locale('id')->isoFormat('D MMM Y');
+        $rentangTgl = $item->rentang_tanggal_teks;
         $mulai = $fmtJam($item->waktu_mulai);
         $selesai = $fmtJam($item->waktu_selesai);
 
         if ($mulai && $selesai) {
-            return "{$tgl} · {$mulai}–{$selesai} · 1 hari";
+            return "{$rentangTgl} · {$mulai}–{$selesai}";
         } elseif ($mulai) {
-            return "{$tgl} · Mulai {$mulai}";
+            return "{$rentangTgl} · Mulai {$mulai}";
         }
 
-        return "{$tgl} · 1 hari";
+        return $rentangTgl;
     };
 
     $formatWaktuKeputusan = function ($item) use ($fmtJam) {
-        $tgl = \Carbon\Carbon::parse($item->tanggal)->locale('id')->isoFormat('D MMM Y');
+        $rentangTgl = $item->rentang_tanggal_teks;
         $mulai = $fmtJam($item->waktu_mulai);
         $selesai = $fmtJam($item->waktu_selesai);
 
         if ($mulai && $selesai) {
-            return "{$tgl} - {$mulai} s.d {$selesai}";
+            return "{$rentangTgl} ({$mulai} - {$selesai})";
         } elseif ($mulai) {
-            return "{$tgl} - {$mulai}";
+            return "{$rentangTgl} ({$mulai})";
         }
 
-        return $tgl;
+        return $rentangTgl;
     };
 @endphp
 

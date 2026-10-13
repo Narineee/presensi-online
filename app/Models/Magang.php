@@ -90,10 +90,18 @@ class Magang extends Model
         return $this->hasOne(Penilaian::class, 'magang_id');
     }
 
-    // Relasi ke pekerjaan yang diberikan pembimbing
+    // Relasi ke pekerjaan yang diberikan pembimbing (legacy)
     public function pekerjaan()
     {
         return $this->hasMany(Pekerjaan::class, 'magang_id');
+    }
+
+    /**
+     * Relasi ke rencana kerja mandiri peserta magang.
+     */
+    public function rencanaKerja(): HasMany
+    {
+        return $this->hasMany(RencanaKerja::class, 'magang_id');
     }
 
     public function pengajuanTugasLuar(): HasMany

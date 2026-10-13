@@ -68,11 +68,17 @@
                         $pembimbingNama = $item->validator?->pembimbing?->nama_lengkap 
                             ?? $user->magang?->pembimbing?->nama_lengkap 
                             ?? ($pembimbing->nama_lengkap ?? '-');
-                        $pekerjaanJudul = $item->pekerjaan?->nama_pekerjaan 
-                            ?? ($item->pekerjaan?->judul ?? ($item->judul ?? 'Pekerjaan Umum'));
-                        $uraianTugas = $item->pekerjaan?->deskripsi 
-                            ?? ($item->judul ?? '-');
-                        $kegiatan = $item->isi;
+                        if ($item->details && $item->details->isNotEmpty()) {
+                            $pekerjaanJudul = $item->details->pluck('judul_rencana')->join(', ');
+                            $uraianTugas = $item->details->map(fn($d) => $d->judul_rencana)->join(' | ');
+                            $kegiatan = $item->details->map(fn($d) => '• ['.$d->judul_rencana.']: '.$d->progres)->join("\n");
+                        } else {
+                            $pekerjaanJudul = $item->pekerjaan?->nama_pekerjaan 
+                                ?? ($item->pekerjaan?->judul ?? ($item->judul ?? 'Pekerjaan Umum'));
+                            $uraianTugas = $item->pekerjaan?->deskripsi 
+                                ?? ($item->judul ?? '-');
+                            $kegiatan = $item->isi;
+                        }
                         $statusText = match($item->status) {
                             'approve', 'disetujui' => 'Disetujui',
                             'pending', 'menunggu' => 'Menunggu',

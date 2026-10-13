@@ -170,11 +170,13 @@
                             <!-- Tanggal & Jam -->
                             <td class="px-6 py-4">
                                 <div class="font-bold text-slate-800">
-                                    {{ \Carbon\Carbon::parse($item->tanggal)->isoFormat('dddd, D MMM Y') }}
+                                    {{ $item->rentang_tanggal_teks ?? \Carbon\Carbon::parse($item->tanggal)->isoFormat('dddd, D MMM Y') }}
                                 </div>
-                                <div class="text-[11px] text-indigo-700 font-mono font-medium mt-0.5">
-                                    {{ substr($item->waktu_mulai, 0, 5) }} - {{ $item->waktu_selesai ? substr($item->waktu_selesai, 0, 5) : 'Selesai' }} WITA
-                                </div>
+                                @if ($item->waktu_mulai)
+                                    <div class="text-[11px] text-indigo-700 font-mono font-medium mt-0.5">
+                                        {{ substr($item->waktu_mulai, 0, 5) }} - {{ $item->waktu_selesai ? substr($item->waktu_selesai, 0, 5) : 'Selesai' }} WITA
+                                    </div>
+                                @endif
                             </td>
 
                             <!-- Tujuan -->

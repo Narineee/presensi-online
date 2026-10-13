@@ -7,9 +7,9 @@ use App\Models\Aktivitas;
 use App\Models\Divisi;
 use App\Models\HariLibur;
 use App\Models\Magang;
-use App\Models\Pekerjaan;
 use App\Models\PengajuanIzin;
 use App\Models\Presensi;
+use App\Models\RencanaKerja;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -239,10 +239,10 @@ class BinaanController extends Controller
             ->orderBy('tanggal', 'desc')
             ->get();
 
-        $pekerjaanAktif = Pekerjaan::where('magang_id', $magang->id)
+        $rencanaAktif = RencanaKerja::where('magang_id', $magang->id)
             ->where('status', 'aktif')
-            ->orderBy('target_selesai')
-            ->first();
+            ->orderBy('id', 'desc')
+            ->get();
 
         return view('pembimbing.binaan.show', compact(
             'pembimbing',
@@ -250,7 +250,8 @@ class BinaanController extends Controller
             'rekap',
             'presensiHariIni',
             'aktivitasPending',
-            'pekerjaanAktif'
+            'pekerjaanAktif',
+            'rencanaAktif'
         ));
     }
 

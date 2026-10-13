@@ -39,6 +39,14 @@ class Aktivitas extends Model
         return $this->belongsTo(Pekerjaan::class, 'pekerjaan_id');
     }
 
+    /**
+     * Relasi ke seluruh rincian progres rencana kerja dalam aktivitas ini.
+     */
+    public function details()
+    {
+        return $this->hasMany(AktivitasDetail::class, 'aktivitas_id');
+    }
+
     public function validator()
     {
         return $this->belongsTo(

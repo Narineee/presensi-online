@@ -16,6 +16,8 @@ class PengajuanTugasLuar extends Model
         'pengguna_id',
         'magang_id',
         'tanggal',
+        'tanggal_mulai',
+        'tanggal_selesai',
         'tujuan',
         'keperluan',
         'waktu_mulai',
@@ -29,6 +31,8 @@ class PengajuanTugasLuar extends Model
 
     protected $casts = [
         'tanggal' => 'date',
+        'tanggal_mulai' => 'date',
+        'tanggal_selesai' => 'date',
         'verified_at' => 'datetime',
     ];
 
@@ -101,5 +105,21 @@ class PengajuanTugasLuar extends Model
     public function isDitolak(): bool
     {
         return $this->status_verifikasi === 'ditolak';
+    }
+
+    public function getRentangTanggalTeksAttribute(): string
+    {
+        $mulai = $this->tanggal_mulai ?? $this->tanggal;
+        $selesai = $this->tanggal_selesai ?? $this->tanggal;
+
+        if (! $mulai) {
+            return '-';
+        }
+
+        if (! $selesai || $mulai->equalTo($selesai)) {
+            return $mulai->locale('id')->isoFormat('D MMMM Y');
+        }
+
+        return $mulai->locale('id')->isoFormat('D MMMM Y').' s/d '.$selesai->locale('id')->isoFormat('D MMMM Y');
     }
 }

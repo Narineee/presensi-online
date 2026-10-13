@@ -157,4 +157,32 @@ class HariLibur extends Model
 
         return $defaultHolidays[$dateStr] ?? null;
     }
+
+    /**
+     * Memeriksa apakah tanggal merupakan hari kerja (bukan weekend dan bukan tanggal merah).
+     */
+    public static function isHariKerja(CarbonInterface|string $date): bool
+    {
+        $d = $date instanceof CarbonInterface ? $date : Carbon::parse($date);
+
+        return ! $d->isWeekend() && ! static::isTanggalMerah($d);
+    }
+
+    /**
+     * Menghitung tanggal batas mundur sejumlah hari kerja ke belakang (melewati weekend dan tanggal merah).
+     */
+    public static function getBatasMundurHariKerja(int $jumlahHari = 3, CarbonInterface|string|null $dariTanggal = null): Carbon
+    {
+        $current = $dariTanggal ? ($dariTanggal instanceof CarbonInterface ? $dariTanggal->copy() : Carbon::parse($dariTanggal)) : Carbon::today();
+        $hariKerjaDitemukan = 0;
+
+        while ($hariKerjaDitemukan < $jumlahHari) {
+            $current->subDay();
+            if (static::isHariKerja($current)) {
+                $hariKerjaDitemukan++;
+            }
+        }
+
+        return $current;
+    }
 }

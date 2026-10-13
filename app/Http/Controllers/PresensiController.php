@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Aktivitas;
 use App\Models\Divisi;
+use App\Models\HariLibur;
 use App\Models\Pembimbing;
 use App\Models\PengajuanIzin;
 use App\Models\PengajuanTugasLuar;
@@ -121,7 +122,9 @@ class PresensiController extends Controller
         // Ambil data lokasi kantor dan radius presensi
         $officeLocation = $this->getOfficeLocation($user);
 
-        return view('presensi.kehadiran', compact('user', 'todayPresensi', 'todayTugasLuar', 'riwayat', 'stats', 'hasAktivitasToday', 'countAktivitasToday', 'officeLocation', 'timeStatus'));
+        $minTanggalSelesai = HariLibur::getBatasMundurHariKerja(3)->toDateString();
+
+        return view('presensi.kehadiran', compact('user', 'todayPresensi', 'todayTugasLuar', 'riwayat', 'stats', 'hasAktivitasToday', 'countAktivitasToday', 'officeLocation', 'timeStatus', 'minTanggalSelesai'));
     }
 
     /**
@@ -251,15 +254,20 @@ class PresensiController extends Controller
         ];
 
         if ($request->mode_kerja === 'tugas_luar') {
+            $isLegacyTimeSent = $request->filled('waktu_mulai');
             $rules['tujuan'] = 'required|string|max:255';
             $rules['keperluan'] = 'required|string';
-            $rules['waktu_mulai'] = 'required|string';
+            $rules['tanggal_selesai'] = $isLegacyTimeSent ? 'nullable|date' : 'required|date';
+            $rules['tanggal_mulai'] = $isLegacyTimeSent ? 'nullable|date|before_or_equal:tanggal_selesai' : 'required|date|before_or_equal:tanggal_selesai';
+            $rules['waktu_mulai'] = 'nullable|string';
             $rules['waktu_selesai'] = 'nullable|string';
             $rules['bukti_tugas_luar'] = 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120';
 
             $messages['tujuan.required'] = 'Tujuan/lokasi tugas luar wajib diisi.';
             $messages['keperluan.required'] = 'Keperluan/kegiatan tugas luar wajib diisi.';
-            $messages['waktu_mulai.required'] = 'Waktu mulai tugas luar wajib diisi.';
+            $messages['tanggal_selesai.required'] = 'Tanggal selesai penugasan wajib diisi.';
+            $messages['tanggal_mulai.required'] = 'Tanggal mulai penugasan wajib diisi.';
+            $messages['tanggal_mulai.before_or_equal'] = 'Tanggal mulai tidak boleh melewati tanggal selesai.';
             $messages['bukti_tugas_luar.mimes'] = 'Bukti tugas luar harus berformat PDF, JPG, JPEG, atau PNG.';
             $messages['bukti_tugas_luar.max'] = 'Ukuran file bukti tugas luar maksimal 5MB.';
         }
@@ -267,6 +275,20 @@ class PresensiController extends Controller
         $request->validate($rules, $messages);
 
         $inputAman = $request->except(['foto_masuk', 'face_descriptor', 'bukti_tugas_luar']);
+
+        if ($request->mode_kerja === 'tugas_luar') {
+            $tanggalSelesai = $request->input('tanggal_selesai', $today);
+            $tanggalMulai = $request->input('tanggal_mulai', $tanggalSelesai);
+            $minTanggalSelesai = HariLibur::getBatasMundurHariKerja(3)->toDateString();
+
+            if ($tanggalSelesai < $minTanggalSelesai) {
+                return redirect()->back()->withInput($inputAman)->with('error', 'Tanggal selesai tugas luar maksimal 3 hari kerja ke belakang.');
+            }
+
+            if ($tanggalMulai > $tanggalSelesai) {
+                return redirect()->back()->withInput($inputAman)->with('error', 'Tanggal mulai penugasan tidak boleh melewati tanggal selesai.');
+            }
+        }
 
         // Onsite: cek radius kantor (Jika Tugas Luar atau WFH, radius tidak dicek)
         $officeLocation = $this->getOfficeLocation($user);
@@ -342,11 +364,16 @@ class PresensiController extends Controller
 
         // Jika mode kerja Tugas Luar (Skenario 1), buat record pengajuan tugas luar
         if ($request->mode_kerja === 'tugas_luar') {
+            $tanggalSelesai = $request->input('tanggal_selesai', $today);
+            $tanggalMulai = $request->input('tanggal_mulai', $tanggalSelesai);
+
             PengajuanTugasLuar::create([
                 'presensi_id' => $presensi->id,
                 'pengguna_id' => $user->id,
                 'magang_id' => $user->magang?->id,
                 'tanggal' => $today,
+                'tanggal_mulai' => $tanggalMulai,
+                'tanggal_selesai' => $tanggalSelesai,
                 'tujuan' => $request->tujuan,
                 'keperluan' => $request->keperluan,
                 'waktu_mulai' => $request->waktu_mulai,
@@ -393,19 +420,37 @@ class PresensiController extends Controller
             return redirect()->back()->with('error', 'Anda sudah memiliki pengajuan Tugas Luar untuk hari ini.');
         }
 
+        $isLegacyTimeSent = $request->filled('waktu_mulai');
+
         $request->validate([
             'tujuan' => 'required|string|max:255',
             'keperluan' => 'required|string',
-            'waktu_mulai' => 'required|string',
+            'tanggal_selesai' => $isLegacyTimeSent ? 'nullable|date' : 'required|date',
+            'tanggal_mulai' => $isLegacyTimeSent ? 'nullable|date|before_or_equal:tanggal_selesai' : 'required|date|before_or_equal:tanggal_selesai',
+            'waktu_mulai' => 'nullable|string',
             'waktu_selesai' => 'nullable|string',
             'bukti_tugas_luar' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ], [
             'tujuan.required' => 'Tujuan/lokasi tugas luar wajib diisi.',
             'keperluan.required' => 'Keperluan/kegiatan tugas luar wajib diisi.',
-            'waktu_mulai.required' => 'Waktu mulai tugas luar wajib diisi.',
+            'tanggal_selesai.required' => 'Tanggal selesai penugasan wajib diisi.',
+            'tanggal_mulai.required' => 'Tanggal mulai penugasan wajib diisi.',
+            'tanggal_mulai.before_or_equal' => 'Tanggal mulai tidak boleh melewati tanggal selesai.',
             'bukti_tugas_luar.mimes' => 'Bukti tugas luar harus berformat PDF, JPG, JPEG, atau PNG.',
             'bukti_tugas_luar.max' => 'Ukuran file bukti tugas luar maksimal 5MB.',
         ]);
+
+        $tanggalSelesai = $request->input('tanggal_selesai', $today);
+        $tanggalMulai = $request->input('tanggal_mulai', $tanggalSelesai);
+        $minTanggalSelesai = HariLibur::getBatasMundurHariKerja(3)->toDateString();
+
+        if ($tanggalSelesai < $minTanggalSelesai) {
+            return redirect()->back()->withInput()->with('error', 'Tanggal selesai tugas luar maksimal 3 hari kerja ke belakang.');
+        }
+
+        if ($tanggalMulai > $tanggalSelesai) {
+            return redirect()->back()->withInput()->with('error', 'Tanggal mulai penugasan tidak boleh melewati tanggal selesai.');
+        }
 
         $buktiPath = null;
         if ($request->hasFile('bukti_tugas_luar')) {
@@ -417,6 +462,8 @@ class PresensiController extends Controller
             'pengguna_id' => $user->id,
             'magang_id' => $user->magang?->id,
             'tanggal' => $today,
+            'tanggal_mulai' => $tanggalMulai,
+            'tanggal_selesai' => $tanggalSelesai,
             'tujuan' => $request->tujuan,
             'keperluan' => $request->keperluan,
             'waktu_mulai' => $request->waktu_mulai,
@@ -448,13 +495,17 @@ class PresensiController extends Controller
             return redirect()->back()->with('error', 'Anda sudah melakukan presensi pulang hari ini.');
         }
 
-        // Batas jam pulang: 16.00 sampai 18.00 WITA
+        // Batas jam pulang: 16.00 sampai 18.00 WITA (kecuali pulang awal dengan alasan Sakit atau Izin)
         $jamSekarang = Carbon::now();
         $bukaPulang = $jamSekarang->copy()->setTime(16, 0, 0);
         $tutupPulang = $jamSekarang->copy()->setTime(18, 0, 0);
+        $isPulangAwal = $jamSekarang->lessThan($bukaPulang);
 
-        if ($jamSekarang->lessThan($bukaPulang)) {
-            return redirect()->back()->with('error', 'Presensi pulang belum dibuka. Presensi pulang dapat dilakukan pukul 16.00 sampai 18.00 WITA.');
+        if ($isPulangAwal) {
+            $alasan = $request->input('alasan_pulang');
+            if (! in_array($alasan, ['Sakit', 'Izin'])) {
+                return redirect()->back()->with('error', 'Presensi pulang belum dibuka. Presensi pulang normal dapat dilakukan pukul 16.00 sampai 18.00 WITA. Silakan pilih alasan Sakit atau Izin jika ingin melakukan presensi pulang sebelum pukul 16.00 WITA.');
+            }
         }
 
         if ($jamSekarang->greaterThan($tutupPulang)) {
@@ -467,18 +518,26 @@ class PresensiController extends Controller
             ->exists();
 
         if (! $hasAktivitas) {
-            return redirect()->back()->with('error', 'Anda belum mengisi aktivitas harian hari ini. Silakan isi aktivitas harian terlebih dahulu.');
+            return redirect()->back()->with('error', 'Anda belum mengisi aktivitas harian hari ini. Silakan isi aktivitas harian terlebih dahulu sebelum melakukan presensi pulang.');
         }
 
-        $request->validate([
+        $rules = [
             'lokasi_keluar' => 'required|string',
             'foto_keluar' => 'required|string',
             'face_descriptor' => 'required|string',
             'keterangan_keluar' => 'nullable|string|max:255',
-        ], [
+        ];
+
+        if ($isPulangAwal) {
+            $rules['alasan_pulang'] = 'required|in:Sakit,Izin';
+        }
+
+        $request->validate($rules, [
             'lokasi_keluar.required' => 'Titik lokasi GPS kepulangan wajib terdeteksi.',
             'foto_keluar.required' => 'Foto selfie pulang wajib diambil.',
             'face_descriptor.required' => 'Verifikasi wajah belum selesai. Silakan ulangi.',
+            'alasan_pulang.required' => 'Alasan pulang sebelum pukul 16.00 (Sakit atau Izin) wajib dipilih.',
+            'alasan_pulang.in' => 'Alasan kepulangan harus berupa Sakit atau Izin.',
         ]);
 
         $inputAman = $request->except(['foto_keluar', 'face_descriptor']);
@@ -524,7 +583,15 @@ class PresensiController extends Controller
         }
 
         $finalKeterangan = $presensi->keterangan;
-        if ($request->filled('keterangan_keluar')) {
+        if ($isPulangAwal) {
+            $catatanPulang = $request->alasan_pulang;
+            if ($request->filled('keterangan_keluar')) {
+                $catatanPulang .= ' ('.$request->keterangan_keluar.')';
+            }
+            $finalKeterangan = $finalKeterangan
+                ? $finalKeterangan.' | Pulang: '.$catatanPulang
+                : $catatanPulang;
+        } elseif ($request->filled('keterangan_keluar')) {
             $finalKeterangan = $finalKeterangan
                 ? $finalKeterangan.' | Pulang: '.$request->keterangan_keluar
                 : 'Pulang: '.$request->keterangan_keluar;
@@ -540,8 +607,10 @@ class PresensiController extends Controller
             'keterangan' => $finalKeterangan,
         ]);
 
+        $ketMsg = $isPulangAwal ? ' (Alasan: '.$request->alasan_pulang.')' : '';
+
         return redirect()->route('presensi.index')
-            ->with('success', 'Presensi pulang berhasil dicatat pukul '.$jamKeluar.' WITA.');
+            ->with('success', 'Presensi pulang berhasil dicatat pukul '.$jamKeluar.' WITA'.$ketMsg.'.');
     }
 
     /**
@@ -719,8 +788,9 @@ class PresensiController extends Controller
             return redirect()->route('presensi.index')->with('error', 'Anda sudah melakukan presensi masuk hari ini.');
         }
         $officeLocation = $this->getOfficeLocation($user);
+        $minTanggalSelesai = HariLibur::getBatasMundurHariKerja(3)->toDateString();
 
-        return view('presensi.masuk', compact('officeLocation'));
+        return view('presensi.masuk', compact('officeLocation', 'minTanggalSelesai'));
     }
 
     public function formPulang()
@@ -730,6 +800,16 @@ class PresensiController extends Controller
         if (! $presensi?->jam_masuk || $presensi->jam_keluar) {
             return redirect()->route('presensi.index')->with('error', 'Presensi pulang tidak tersedia saat ini.');
         }
+
+        $now = Carbon::now();
+        $bukaPulang = $now->copy()->setTime(16, 0, 0);
+        $tutupPulang = $now->copy()->setTime(18, 0, 0);
+
+        if ($now->greaterThan($tutupPulang)) {
+            return redirect()->route('presensi.index')->with('error', 'Batas waktu presensi pulang telah berakhir (pukul 18.00 WITA).');
+        }
+
+        $isPulangAwal = $now->lessThan($bukaPulang);
         $hasAktivitas = Aktivitas::where('pengguna_id', $user->id)->whereDate('tanggal', today())->exists();
         $isTL = $presensi->mode_kerja === 'tugas_luar'
             || PengajuanTugasLuar::where('pengguna_id', $user->id)->whereDate('tanggal', today())
@@ -737,6 +817,6 @@ class PresensiController extends Controller
         $cekRadius = $presensi->mode_kerja === 'onsite' && ! $isTL;   // sama dengan logika storeKeluar
         $officeLocation = $this->getOfficeLocation($user);
 
-        return view('presensi.pulang', compact('hasAktivitas', 'cekRadius', 'officeLocation'));
+        return view('presensi.pulang', compact('hasAktivitas', 'cekRadius', 'officeLocation', 'isPulangAwal'));
     }
 }

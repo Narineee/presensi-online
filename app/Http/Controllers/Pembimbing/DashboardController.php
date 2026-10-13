@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Pembimbing;
 use App\Http\Controllers\Controller;
 use App\Models\Aktivitas;
 use App\Models\Magang;
-use App\Models\Pekerjaan;
 use App\Models\PengajuanIzin;
 use App\Models\PengajuanTugasLuar;
 use App\Models\Presensi;
+use App\Models\RencanaKerja;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -105,25 +105,16 @@ class DashboardController extends Controller
             ],
         ];
 
-        // ---- Pekerjaan mendekati tenggat (<= 7 hari, termasuk yang sudah lewat) ----
-        $pekerjaanDekat = Pekerjaan::where('pembimbing_id', $pembimbing->id)
+        // ---- Rencana Kerja binaan terbaru ----
+        $supervisedIds = $aktif->pluck('id');
+        $rencanaTerbaru = RencanaKerja::whereIn('magang_id', $supervisedIds)
             ->where('status', 'aktif')
-            ->whereNotNull('target_selesai')
-            ->whereDate('target_selesai', '<=', $today->copy()->addDays(7))
             ->with('magang')
-            ->orderBy('target_selesai')
-            ->get()
-            ->map(function ($p) use ($today) {
-                $tenggat = Carbon::parse($p->target_selesai);
+            ->orderBy('id', 'desc')
+            ->take(5)
+            ->get();
 
-                return [
-                    'judul' => $p->judul,
-                    'nama' => $this->namaDepan($p->magang?->nama_lengkap),
-                    'tenggat' => $tenggat,
-                    'progress' => $p->progress,
-                    'terlambat' => $tenggat->lt($today),
-                ];
-            });
+        $pekerjaanDekat = collect();
 
         // ---- Sapaan ----
         $gelar = match ($pembimbing->getAttribute('jenis_kelamin')) {
@@ -140,6 +131,7 @@ class DashboardController extends Controller
             'hari' => $hari,
             'perluTindak' => $perluTindak,
             'pekerjaanDekat' => $pekerjaanDekat,
+            'rencanaTerbaru' => $rencanaTerbaru,
         ]);
     }
 

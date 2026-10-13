@@ -72,24 +72,21 @@
     @endforeach
 </ul>
 
-{{-- Pekerjaan binaan --}}
+{{-- Rencana Kerja binaan --}}
 <div class="mt-6 mb-2 flex items-center justify-between">
-    <h2 class="text-base font-extrabold">Pekerjaan Binaan</h2>
-    <a href="{{ route('pembimbing.pekerjaan.index') }}" class="text-sm font-bold text-brand">Lihat Semua</a>
+    <h2 class="text-base font-extrabold">Rencana Kerja Binaan</h2>
+    <a href="{{ route('pembimbing.rencana.index') }}" class="text-sm font-bold text-brand">Lihat Semua</a>
 </div>
 <div class="rounded-3xl bg-white p-4 ring-1 ring-slate-200">
-    @if ($pekerjaanDekat->isEmpty())
-        <p class="text-sm text-slate-500">Tidak ada pekerjaan yang mendekati tenggat.</p>
+    @if ($rencanaTerbaru->isEmpty())
+        <p class="text-sm text-slate-500">Belum ada rencana kerja aktif dari peserta binaan.</p>
     @else
-        <p class="text-sm font-extrabold">{{ $pekerjaanDekat->count() }} Pekerjaan Mendekati Tenggat</p>
-        <ul class="mt-2 space-y-2">
-            @foreach ($pekerjaanDekat->take(2) as $p)
-                <li class="text-xs text-slate-600">
-                    <span class="block font-semibold text-brand-ink">{{ $p['judul'] }} - {{ $p['nama'] }}</span>
-                    <span class="{{ $p['terlambat'] ? 'font-bold text-rose-700' : '' }}">
-                        {{ $p['terlambat'] ? 'Lewat tenggat' : 'Tenggat' }} {{ $p['tenggat']->locale('id')->isoFormat('D MMM') }}
-                        @if (! is_null($p['progress'])) - Progres {{ $p['progress'] }}% @endif
-                    </span>
+        <p class="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">{{ $rencanaTerbaru->count() }} Rencana Kerja Aktif Terbaru</p>
+        <ul class="space-y-2.5">
+            @foreach ($rencanaTerbaru->take(3) as $rk)
+                <li class="text-xs text-slate-600 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
+                    <span class="block font-bold text-brand-ink text-sm">{{ $rk->judul }}</span>
+                    <span class="text-slate-500">{{ $rk->magang?->nama_lengkap }} · Dibuat {{ $rk->created_at->locale('id')->isoFormat('D MMM Y') }}</span>
                 </li>
             @endforeach
         </ul>

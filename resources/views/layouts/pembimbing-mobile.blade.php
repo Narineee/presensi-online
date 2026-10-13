@@ -98,7 +98,7 @@
                 </li>
             @endforeach
             @php
-                $onLainnya = request()->routeIs('pembimbing.pekerjaan.*', 'pembimbing.aktivitas.*', 'pembimbing.izin.*', 'pembimbing.tugas-luar.*', 'pembimbing.penilaian.*');
+                $onLainnya = request()->routeIs('pembimbing.rencana.*', 'pembimbing.pekerjaan.*', 'pembimbing.aktivitas.*', 'pembimbing.izin.*', 'pembimbing.tugas-luar.*', 'pembimbing.penilaian.*');
             @endphp
             <li>
                 <button type="button" @click="more = true" :aria-expanded="more" class="flex w-full flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-semibold {{ $onLainnya ? 'bg-slate-200 text-slate-800' : 'text-slate-500' }}">

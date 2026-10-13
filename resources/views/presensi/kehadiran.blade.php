@@ -84,16 +84,27 @@
                             Ajukan TL
                         </button>
                     @endunless
-                    @if ($bisaPulang)
+                    @if ($timeStatus['is_before_pulang'])
+                        @if ($hasAktivitasToday)
+                            <a href="{{ route('presensi.pulang.form') }}" class="flex-1 rounded-2xl bg-amber-400 hover:bg-amber-300 px-3 py-2.5 text-center text-sm font-black text-[#0F1850] shadow-md transition active:scale-[0.99]">
+                                Pulang (Sakit / Izin)
+                                <span class="block text-[10px] font-bold text-[#0F1850]/80 mt-0.5 truncate">Sebelum pukul 16.00</span>
+                            </a>
+                        @else
+                            <div class="flex-1 rounded-2xl bg-white/20 px-3 py-2.5 text-center text-sm font-extrabold text-white/90 backdrop-blur-sm">
+                                Pulang (Sakit / Izin)
+                                <span class="block text-[10px] font-medium text-white/80 mt-0.5 truncate">Isi aktivitas dulu</span>
+                            </div>
+                        @endif
+                    @elseif ($bisaPulang)
                         <a href="{{ route('presensi.pulang.form') }}" class="flex-1 rounded-2xl bg-amber-400 hover:bg-amber-300 px-4 py-3 text-center text-sm font-black text-[#0F1850] shadow-md transition active:scale-[0.99]">
                             Presensi Pulang
                         </a>
                     @else
-                        <a href="{{ $hasAktivitasToday ? '#' : route('presensi.pulang.form') }}"
-                           class="flex-1 rounded-2xl bg-white/20 px-4 py-3 text-center text-sm font-extrabold text-white/90 backdrop-blur-sm">
+                        <div class="flex-1 rounded-2xl bg-white/20 px-4 py-3 text-center text-sm font-extrabold text-white/90 backdrop-blur-sm">
                             Presensi Pulang
-                            <span class="block text-[10px] font-medium text-white/80 mt-0.5 truncate">{{ ! $hasAktivitasToday ? 'Isi aktivitas dulu' : ($timeStatus['is_before_pulang'] ? 'Dibuka pukul 16.00' : 'Sudah ditutup') }}</span>
-                        </a>
+                            <span class="block text-[10px] font-medium text-white/80 mt-0.5 truncate">{{ ! $hasAktivitasToday ? 'Isi aktivitas dulu' : 'Sudah ditutup' }}</span>
+                        </div>
                     @endif
                 @else
                     <p class="flex-1 rounded-2xl bg-white/15 px-4 py-3 text-center text-xs sm:text-sm font-semibold backdrop-blur-sm">Presensi hari ini sudah lengkap. Terima kasih!</p>
@@ -159,7 +170,7 @@
             $alur = [
                 ['Presensi masuk', $sudahMasuk ? $jam($todayPresensi->jam_masuk).' - '.($todayPresensi->mode_kerja === 'tugas_luar' ? 'Tugas Luar' : strtoupper($todayPresensi->mode_kerja)) : 'Belum melakukan presensi', $sudahMasuk, false],
                 ['Aktivitas harian', $hasAktivitasToday ? $countAktivitasToday.' aktivitas tercatat' : 'Belum diisi', $hasAktivitasToday, ! $sudahMasuk],
-                ['Presensi pulang', $sudahPulang ? $jam($todayPresensi->jam_keluar) : ($hasAktivitasToday ? 'Tersedia mulai pukul 16.00' : 'Tersedia setelah aktivitas diisi'), $sudahPulang, ! $hasAktivitasToday && ! $sudahPulang],
+                ['Presensi pulang', $sudahPulang ? $jam($todayPresensi->jam_keluar).($todayPresensi->keterangan ? ' ('.$todayPresensi->keterangan.')' : '') : ($hasAktivitasToday ? ($timeStatus['is_before_pulang'] ? 'Bisa pulang normal 16.00 atau Sakit/Izin' : 'Waktu presensi pulang dibuka') : 'Tersedia setelah aktivitas diisi'), $sudahPulang, ! $hasAktivitasToday && ! $sudahPulang],
             ];
         @endphp
         <ol class="rounded-3xl glass-card p-5 shadow-xs">
@@ -186,16 +197,23 @@
     {{-- Modal Ajukan TL (Frosted Glass Sheet) --}}
     <div x-show="tl" x-cloak class="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-xs" @keydown.escape.window="tl = false">
         <form method="POST" action="{{ route('presensi.tugas-luar') }}" enctype="multipart/form-data" @click.outside="tl = false"
-              class="max-h-[90dvh] w-full max-w-md space-y-3 overflow-y-auto rounded-t-3xl glass-card p-5 border-t border-x border-white shadow-2xl">
+              class="max-h-[90dvh] w-full max-w-md space-y-4 overflow-y-auto overflow-x-hidden rounded-t-3xl glass-card p-4 sm:p-5 border-t border-x border-white shadow-2xl">
             @csrf
             <div class="flex items-center justify-between border-b border-slate-200/80 pb-3">
-                <h3 class="text-base font-extrabold text-slate-900">Ajukan Tugas Luar</h3>
-                <button type="button" @click="tl = false" class="text-2xl leading-none text-slate-400 hover:text-slate-600 transition" aria-label="Tutup">×</button>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900">Ajukan Tugas Luar</h3>
+                    <p class="text-xs text-slate-500 font-medium">Lengkapi rincian penugasan dinas luar Anda</p>
+                </div>
+                <button type="button" @click="tl = false" class="grid h-8 w-8 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition" aria-label="Tutup">
+                    <span class="text-xl leading-none">&times;</span>
+                </button>
             </div>
-            @include('presensi.form-tl')
-            <button class="btn-brand-primary w-full rounded-2xl py-3.5 text-sm font-extrabold cursor-pointer">
-                Kirim pengajuan
-            </button>
+            @include('presensi.form-tl', ['formId' => 'tl_modal'])
+            <div class="pt-1">
+                <button type="submit" class="btn-brand-primary w-full rounded-2xl py-3.5 text-sm font-extrabold cursor-pointer transition active:scale-[0.99]">
+                    Kirim pengajuan
+                </button>
+            </div>
         </form>
     </div>
 

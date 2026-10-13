@@ -20,13 +20,14 @@ use App\Http\Controllers\Pembimbing\AktivitasValidasiController;
 use App\Http\Controllers\Pembimbing\BinaanController;
 use App\Http\Controllers\Pembimbing\DashboardController as PembimbingDashboardController;
 use App\Http\Controllers\Pembimbing\MonitoringPresensiController as PembimbingMonitoringPresensiController;
-use App\Http\Controllers\Pembimbing\PekerjaanController as PembimbingPekerjaanController;
 use App\Http\Controllers\Pembimbing\PengajuanIzinValidasiController;
 use App\Http\Controllers\Pembimbing\PenilaianMagangController;
+use App\Http\Controllers\Pembimbing\RencanaKerjaController as PembimbingRencanaKerjaController;
 use App\Http\Controllers\Pembimbing\TugasLuarValidasiController;
 use App\Http\Controllers\PengajuanIzinController;
 use App\Http\Controllers\PresensiController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RencanaKerjaController;
 use App\Http\Controllers\WajahController;
 use Illuminate\Support\Facades\Route;
 
@@ -136,6 +137,9 @@ Route::middleware(['auth', 'role:magang'])->group(function () {
         return redirect()->route('presensi.index');
     })->name('presensi.kehadiran');
 
+    // CRUD Rencana Kerja Mandiri
+    Route::resource('rencana', RencanaKerjaController::class);
+
     // CRUD & Riwayat Aktivitas Harian
     Route::get('/aktivitas/cetak', [AktivitasController::class, 'cetak'])->name('aktivitas.cetak');
     Route::get('/aktivitas/riwayat', [AktivitasController::class, 'riwayat'])->name('aktivitas.riwayat');
@@ -173,8 +177,15 @@ Route::middleware(['auth', 'role:pembimbing'])
         Route::get('/presensi/cetak', [PembimbingMonitoringPresensiController::class, 'cetak'])->name('presensi.cetak');
         Route::get('/presensi', [PembimbingMonitoringPresensiController::class, 'index'])->name('presensi.index');
 
-        // Manajemen Pekerjaan & Proyek Binaan
-        Route::resource('pekerjaan', PembimbingPekerjaanController::class);
+        // Monitoring Rencana Kerja Peserta Binaan
+        Route::get('/rencana', [PembimbingRencanaKerjaController::class, 'index'])->name('rencana.index');
+        Route::get('/rencana/{id}', [PembimbingRencanaKerjaController::class, 'show'])->name('rencana.show');
+        Route::get('/pekerjaan', function () {
+            return redirect()->route('pembimbing.rencana.index');
+        })->name('pekerjaan.index');
+        Route::get('/pekerjaan/{id}', function ($id) {
+            return redirect()->route('pembimbing.rencana.show', $id);
+        })->name('pekerjaan.show');
 
         // Validasi Aktivitas Binaan
         Route::get('/aktivitas', [AktivitasValidasiController::class, 'index'])->name('aktivitas.index');

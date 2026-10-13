@@ -3,23 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\Aktivitas;
+use App\Models\AktivitasDetail;
 use App\Models\Divisi;
-use App\Models\Pekerjaan;
 use App\Models\Pembimbing;
 use App\Models\Pengaturan;
 use App\Models\Pengguna;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AktivitasController extends Controller
 {
     /**
-     * Daftar aktivitas dipindah ke halaman Rekap/Riwayat; /aktivitas diarahkan ke form.
+     * Menampilkan daftar / rekap aktivitas harian magang.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return redirect()->route('aktivitas.create');
+        return $this->riwayat($request);
     }
 
     /**
@@ -32,7 +33,7 @@ class AktivitasController extends Controller
         $magang = $user->magang;
 
         $query = Aktivitas::where('pengguna_id', $user->id)
-            ->with(['pekerjaan', 'validator.pembimbing']);
+            ->with(['details.rencanaKerja', 'pekerjaan', 'validator.pembimbing']);
 
         $tanggalAwal = $request->input('tanggal_awal');
         $tanggalSelesai = $request->input('tanggal_selesai');
@@ -55,6 +56,13 @@ class AktivitasController extends Controller
             $query->where(function ($sub) use ($q) {
                 $sub->where('judul', 'like', "%{$q}%")
                     ->orWhere('isi', 'like', "%{$q}%")
+                    ->orWhereHas('details', function ($dq) use ($q) {
+                        $dq->where('progres', 'like', "%{$q}%")
+                            ->orWhere('rencana_kerja_snapshot', 'like', "%{$q}%")
+                            ->orWhereHas('rencanaKerja', function ($rq) use ($q) {
+                                $rq->where('judul', 'like', "%{$q}%");
+                            });
+                    })
                     ->orWhereHas('pekerjaan', function ($pq) use ($q) {
                         $pq->where('judul', 'like', "%{$q}%");
                     });
@@ -85,59 +93,75 @@ class AktivitasController extends Controller
         $user = Auth::user();
         $magang = $user->magang;
 
-        $pekerjaanList = $magang
-            ? $magang->pekerjaan()->where('status', 'aktif')->orderBy('jenis', 'asc')->orderBy('judul', 'asc')->get()
+        $rencanaKerjaList = $magang
+            ? $magang->rencanaKerja()->where('status', 'aktif')->orderBy('judul', 'asc')->get()
             : collect();
 
-        return view('aktivitas.create', compact('pekerjaanList'));
+        return view('aktivitas.create', compact('rencanaKerjaList'));
     }
 
     /**
-     * Simpan aktivitas harian baru.
+     * Simpan aktivitas harian baru beserta rincian rencana kerja & progres masing-masing.
      */
     public function store(Request $request)
     {
         $user = Auth::user();
         $magang = $user->magang;
+        abort_if(! $magang, 403, 'Akses khusus peserta magang.');
 
-        $allowedPekerjaanIds = $magang
-            ? $magang->pekerjaan()->where('status', 'aktif')->pluck('id')->toArray()
-            : [];
+        $allowedRencana = $magang->rencanaKerja()->where('status', 'aktif')->get();
+        $allowedRencanaIds = $allowedRencana->pluck('id')->toArray();
 
         $request->validate([
-            'pekerjaan_id' => ['required', 'in:'.implode(',', $allowedPekerjaanIds)],
-            'judul' => 'nullable|string|max:255',
             'tanggal' => 'required|date',
-            'waktu_mulai' => 'required|date_format:H:i',
-            'waktu_selesai' => 'required|date_format:H:i|after:waktu_mulai',
-            'isi' => 'required|string|min:5',
+            'items' => 'required|array|min:1',
+            'items.*.rencana_kerja_id' => ['required', 'in:'.implode(',', $allowedRencanaIds)],
+            'items.*.progres' => 'required|string|min:5',
         ], [
-            'pekerjaan_id.required' => 'Pekerjaan magang wajib dipilih dari daftar tugas aktif.',
-            'pekerjaan_id.in' => 'Pekerjaan yang dipilih tidak valid atau bukan tugas aktif yang diberikan pembimbing kepada Anda.',
             'tanggal.required' => 'Tanggal aktivitas wajib diisi.',
             'tanggal.date' => 'Format tanggal tidak valid.',
-            'waktu_mulai.required' => 'Waktu mulai wajib diisi.',
-            'waktu_selesai.required' => 'Waktu selesai wajib diisi.',
-            'waktu_selesai.after' => 'Waktu selesai harus setelah waktu mulai.',
-            'isi.required' => 'Uraian aktivitas pekerjaan wajib diisi.',
-            'isi.min' => 'Uraian aktivitas minimal 5 karakter.',
+            'items.required' => 'Minimal pilih 1 rencana kerja untuk dilaporkan.',
+            'items.min' => 'Minimal pilih 1 rencana kerja untuk dilaporkan.',
+            'items.*.rencana_kerja_id.required' => 'Rencana kerja wajib dipilih.',
+            'items.*.rencana_kerja_id.in' => 'Rencana kerja yang dipilih tidak valid atau bukan milik Anda.',
+            'items.*.progres.required' => 'Uraian progres pekerjaan wajib diisi.',
+            'items.*.progres.min' => 'Uraian progres minimal 5 karakter.',
         ]);
 
-        $pekerjaan = Pekerjaan::find($request->pekerjaan_id);
-        $progress = ($pekerjaan && $pekerjaan->isProyek()) ? ($pekerjaan->progress ?? 0) : 0;
-        $judul = $request->filled('judul') ? $request->judul : ($pekerjaan ? $pekerjaan->judul : null);
+        // Cek duplikasi pemilihan rencana kerja yang sama dalam satu pengisian aktivitas
+        $selectedRencanaIds = collect($request->items)->pluck('rencana_kerja_id')->toArray();
+        if (count($selectedRencanaIds) !== count(array_unique($selectedRencanaIds))) {
+            return redirect()->back()->withInput()->with('error', 'Rencana kerja yang sama tidak boleh dipilih lebih dari satu kali dalam satu tanggal pengisian aktivitas.');
+        }
 
-        Aktivitas::create([
-            'pengguna_id' => $user->id,
-            'pekerjaan_id' => $request->pekerjaan_id,
-            'judul' => $judul,
-            'tanggal' => $request->tanggal,
-            'waktu_mulai' => $request->waktu_mulai,
-            'waktu_selesai' => $request->waktu_selesai,
-            'isi' => $request->isi,
-            'progress' => $progress,
-            'status' => 'pending',
-        ]);
+        // Susun ringkasan isi untuk kompatibilitas data & pencarian
+        $isiRingkasan = collect($request->items)->map(function ($item) use ($allowedRencana) {
+            $rk = $allowedRencana->firstWhere('id', $item['rencana_kerja_id']);
+            $judul = $rk ? $rk->judul : 'Rencana Kerja';
+
+            return "• [{$judul}]: ".trim($item['progres']);
+        })->implode("\n\n");
+
+        DB::transaction(function () use ($user, $request, $allowedRencana, $isiRingkasan) {
+            $aktivitas = Aktivitas::create([
+                'pengguna_id' => $user->id,
+                'tanggal' => $request->tanggal,
+                'judul' => 'Aktivitas Harian ('.count($request->items).' Rencana Kerja)',
+                'isi' => $isiRingkasan,
+                'progress' => 0,
+                'status' => 'pending',
+            ]);
+
+            foreach ($request->items as $item) {
+                $rk = $allowedRencana->firstWhere('id', $item['rencana_kerja_id']);
+                AktivitasDetail::create([
+                    'aktivitas_id' => $aktivitas->id,
+                    'rencana_kerja_id' => $item['rencana_kerja_id'],
+                    'rencana_kerja_snapshot' => $rk?->judul,
+                    'progres' => trim($item['progres']),
+                ]);
+            }
+        });
 
         if ($request->redirect_to === 'presensi') {
             return redirect()->route('presensi.index')->with('success', 'Aktivitas harian berhasil dicatat! Sekarang Anda dapat melakukan presensi pulang.');
@@ -152,7 +176,7 @@ class AktivitasController extends Controller
     public function show($id)
     {
         $aktivitas = Aktivitas::where('pengguna_id', Auth::id())
-            ->with(['pekerjaan', 'validator.pembimbing'])
+            ->with(['details.rencanaKerja', 'pekerjaan', 'validator.pembimbing'])
             ->findOrFail($id);
 
         return view('aktivitas.show', compact('aktivitas'));
@@ -164,8 +188,10 @@ class AktivitasController extends Controller
     public function edit($id)
     {
         $user = Auth::user();
+        $magang = $user->magang;
+
         $aktivitas = Aktivitas::where('pengguna_id', $user->id)
-            ->with('pekerjaan')
+            ->with('details.rencanaKerja')
             ->findOrFail($id);
 
         if (! $aktivitas->canBeEdited()) {
@@ -173,19 +199,11 @@ class AktivitasController extends Controller
                 ->with('error', 'Aktivitas yang telah disetujui oleh pembimbing tidak dapat diubah lagi.');
         }
 
-        $pekerjaanList = $user->magang
-            ? $user->magang->pekerjaan()
-                ->where(function ($q) use ($aktivitas) {
-                    $q->where('status', 'aktif');
-                    if ($aktivitas->pekerjaan_id) {
-                        $q->orWhere('id', $aktivitas->pekerjaan_id);
-                    }
-                })
-                ->orderBy('judul', 'asc')
-                ->get()
+        $rencanaKerjaList = $magang
+            ? $magang->rencanaKerja()->orderBy('judul', 'asc')->get()
             : collect();
 
-        return view('aktivitas.edit', compact('aktivitas', 'pekerjaanList'));
+        return view('aktivitas.edit', compact('aktivitas', 'rencanaKerjaList'));
     }
 
     /**
@@ -194,52 +212,71 @@ class AktivitasController extends Controller
     public function update(Request $request, $id)
     {
         $user = Auth::user();
-        $aktivitas = Aktivitas::where('pengguna_id', $user->id)->findOrFail($id);
+        $magang = $user->magang;
+        abort_if(! $magang, 403, 'Akses khusus peserta magang.');
+
+        $aktivitas = Aktivitas::where('pengguna_id', $user->id)
+            ->with('details')
+            ->findOrFail($id);
 
         if (! $aktivitas->canBeEdited()) {
             return redirect()->route('magang.rekap')
                 ->with('error', 'Aktivitas yang telah disetujui oleh pembimbing tidak dapat diubah lagi.');
         }
 
-        $allowedPekerjaanIds = $user->magang
-            ? $user->magang->pekerjaan()->pluck('id')->toArray()
-            : [];
+        $allowedRencana = $magang->rencanaKerja()->get();
+        $allowedRencanaIds = $allowedRencana->pluck('id')->toArray();
 
         $request->validate([
-            'pekerjaan_id' => ['required', 'in:'.implode(',', $allowedPekerjaanIds)],
-            'judul' => 'nullable|string|max:255',
             'tanggal' => 'required|date',
-            'waktu_mulai' => 'nullable|date_format:H:i',
-            'waktu_selesai' => 'nullable|date_format:H:i|after:waktu_mulai',
-            'isi' => 'required|string|min:5',
+            'items' => 'required|array|min:1',
+            'items.*.rencana_kerja_id' => ['required', 'in:'.implode(',', $allowedRencanaIds)],
+            'items.*.progres' => 'required|string|min:5',
         ], [
-            'pekerjaan_id.required' => 'Pekerjaan magang wajib dipilih dari daftar tugas.',
-            'pekerjaan_id.in' => 'Pekerjaan yang dipilih tidak valid atau bukan tugas Anda.',
             'tanggal.required' => 'Tanggal aktivitas wajib diisi.',
-            'isi.required' => 'Uraian aktivitas pekerjaan wajib diisi.',
-            'isi.min' => 'Uraian aktivitas minimal 5 karakter.',
-            'waktu_selesai.after' => 'Waktu selesai harus setelah waktu mulai.',
+            'items.required' => 'Minimal pilih 1 rencana kerja untuk dilaporkan.',
+            'items.min' => 'Minimal pilih 1 rencana kerja untuk dilaporkan.',
+            'items.*.rencana_kerja_id.required' => 'Rencana kerja wajib dipilih.',
+            'items.*.rencana_kerja_id.in' => 'Rencana kerja yang dipilih tidak valid atau bukan milik Anda.',
+            'items.*.progres.required' => 'Uraian progres pekerjaan wajib diisi.',
+            'items.*.progres.min' => 'Uraian progres minimal 5 karakter.',
         ]);
 
-        // Status revisi kembali ke pending agar divalidasi ulang
+        $selectedRencanaIds = collect($request->items)->pluck('rencana_kerja_id')->toArray();
+        if (count($selectedRencanaIds) !== count(array_unique($selectedRencanaIds))) {
+            return redirect()->back()->withInput()->with('error', 'Rencana kerja yang sama tidak boleh dipilih lebih dari satu kali dalam satu tanggal pengisian aktivitas.');
+        }
+
+        $isiRingkasan = collect($request->items)->map(function ($item) use ($allowedRencana) {
+            $rk = $allowedRencana->firstWhere('id', $item['rencana_kerja_id']);
+            $judul = $rk ? $rk->judul : 'Rencana Kerja';
+
+            return "• [{$judul}]: ".trim($item['progres']);
+        })->implode("\n\n");
+
         $statusBaru = ($aktivitas->status === 'revisi') ? 'pending' : $aktivitas->status;
 
-        $pekerjaan = Pekerjaan::find($request->pekerjaan_id);
-        $progress = ($pekerjaan && $pekerjaan->isProyek()) ? ($pekerjaan->progress ?? $aktivitas->progress) : 0;
-        $judul = $request->filled('judul') ? $request->judul : ($pekerjaan ? $pekerjaan->judul : $aktivitas->judul);
+        DB::transaction(function () use ($aktivitas, $request, $allowedRencana, $isiRingkasan, $statusBaru) {
+            $aktivitas->update([
+                'tanggal' => $request->tanggal,
+                'judul' => 'Aktivitas Harian ('.count($request->items).' Rencana Kerja)',
+                'isi' => $isiRingkasan,
+                'status' => $statusBaru,
+            ]);
 
-        $data = [
-            'pekerjaan_id' => $request->pekerjaan_id,
-            'judul' => $judul,
-            'tanggal' => $request->tanggal,
-            'waktu_mulai' => $request->waktu_mulai,
-            'waktu_selesai' => $request->waktu_selesai,
-            'isi' => $request->isi,
-            'progress' => $progress,
-            'status' => $statusBaru,
-        ];
+            // Hapus detail lama dan ganti dengan detail baru
+            $aktivitas->details()->delete();
 
-        $aktivitas->update($data);
+            foreach ($request->items as $item) {
+                $rk = $allowedRencana->firstWhere('id', $item['rencana_kerja_id']);
+                AktivitasDetail::create([
+                    'aktivitas_id' => $aktivitas->id,
+                    'rencana_kerja_id' => $item['rencana_kerja_id'],
+                    'rencana_kerja_snapshot' => $rk?->judul,
+                    'progres' => trim($item['progres']),
+                ]);
+            }
+        });
 
         return redirect()->route('magang.rekap')->with('success', 'Aktivitas harian berhasil diperbarui!');
     }
@@ -273,7 +310,7 @@ class AktivitasController extends Controller
         $user->load(['magang.divisi', 'magang.pembimbing']);
 
         $query = Aktivitas::where('pengguna_id', $user->id)
-            ->with(['pekerjaan', 'validator.pembimbing']);
+            ->with(['details.rencanaKerja', 'pekerjaan', 'validator.pembimbing']);
 
         $bulan = $request->input('bulan', Carbon::today()->format('Y-m'));
         $tanggalMulai = $request->input('tanggal_mulai');
