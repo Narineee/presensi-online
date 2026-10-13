@@ -31,11 +31,15 @@ class AktivitasValidasiController extends Controller
         $supervisedIds = $this->getSupervisedUserIds();
 
         $query = Aktivitas::whereIn('pengguna_id', $supervisedIds)
-            ->with(['pengguna.magang.divisi', 'pekerjaan']);
+            ->with(['pengguna.magang.divisi', 'pekerjaan', 'validator.pembimbing']);
 
-        // Filter status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        // Filter pencarian nama / no induk
+        if ($request->filled('q')) {
+            $keyword = '%'.$request->q.'%';
+            $query->whereHas('pengguna.magang', function ($q) use ($keyword) {
+                $q->where('nama_lengkap', 'like', $keyword)
+                    ->orWhere('no_induk', 'like', $keyword);
+            });
         }
 
         // Filter pekerjaan
@@ -51,25 +55,43 @@ class AktivitasValidasiController extends Controller
             });
         }
 
-        // Filter tanggal
+        // Filter tanggal tunggal atau rentang tanggal
         if ($request->filled('tanggal')) {
             $query->where('tanggal', $request->tanggal);
         }
+        if ($request->filled('tanggal_mulai')) {
+            $query->where('tanggal', '>=', $request->tanggal_mulai);
+        }
+        if ($request->filled('tanggal_akhir')) {
+            $query->where('tanggal', '<=', $request->tanggal_akhir);
+        }
 
-        $aktivitas = $query->orderBy('tanggal', 'desc')
+        $status = $request->input('status');
+
+        $menunggu = collect();
+        if (! $status || $status === 'pending') {
+            $menunggu = (clone $query)->where('status', 'pending')
+                ->orderBy('tanggal', 'desc')
+                ->orderBy('id', 'desc')
+                ->get();
+        }
+
+        $keputusanQuery = clone $query;
+        if ($status === 'approve' || $status === 'revisi') {
+            $keputusanQuery->where('status', $status);
+        } elseif ($status === 'pending') {
+            $keputusanQuery->whereRaw('1 = 0');
+        } else {
+            $keputusanQuery->whereIn('status', ['approve', 'revisi']);
+        }
+
+        $keputusan = $keputusanQuery
+            ->orderBy('validated_at', 'desc')
             ->orderBy('id', 'desc')
-            ->paginate(15)
+            ->paginate(10)
             ->withQueryString();
 
-        // Statistik validasi pembimbing
-        $stats = [
-            'pending' => Aktivitas::whereIn('pengguna_id', $supervisedIds)->where('status', 'pending')->count(),
-            'approve' => Aktivitas::whereIn('pengguna_id', $supervisedIds)->where('status', 'approve')->count(),
-            'revisi' => Aktivitas::whereIn('pengguna_id', $supervisedIds)->where('status', 'revisi')->count(),
-            'total' => Aktivitas::whereIn('pengguna_id', $supervisedIds)->count(),
-        ];
-
-        return view('pembimbing.aktivitas.index', compact('aktivitas', 'stats'));
+        return view('pembimbing.aktivitas.index', compact('menunggu', 'keputusan'));
     }
 
     /**

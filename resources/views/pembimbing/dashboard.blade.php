@@ -3,7 +3,7 @@
 
 @section('content')
 @if (! $pembimbing)
-    <div class="rounded-3xl bg-white p-6 text-center ring-1 ring-slate-200">
+    <div class="mt-6 rounded-3xl bg-white p-6 text-center ring-1 ring-slate-200">
         <p class="text-lg font-extrabold">Profil pembimbing belum tersedia</p>
         <p class="mt-1 text-sm text-slate-500">Akun Anda belum terhubung dengan data pembimbing. Hubungi admin sistem.</p>
     </div>
@@ -17,11 +17,20 @@
     ];
 @endphp
 
-{{-- Sapaan --}}
-<header class="-mx-4 -mt-5 mb-4 border-b border-slate-200 bg-white px-4 py-4 lg:mx-0 lg:mt-0 lg:rounded-2xl lg:border">
-    <h1 class="text-2xl font-extrabold leading-tight">Selamat {{ $salam }}, {{ $sapaan }}</h1>
-    <p class="text-sm text-slate-500">{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</p>
+{{-- Sapaan (Sticky Top Navigation Bar) --}}
+<header class="sticky-top-nav -mx-4 mb-4 border-b border-slate-200/80 bg-white/90 px-4 pb-3.5 pt-3.5 backdrop-blur-xl lg:mx-0 lg:rounded-2xl lg:border">
+    <div class="flex items-center justify-between gap-3">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-xl sm:text-2xl font-extrabold leading-tight text-slate-900 truncate">Selamat {{ $salam }}, {{ $sapaan }}</h1>
+            <p class="text-xs sm:text-sm text-slate-500 font-medium truncate mt-0.5">{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</p>
+        </div>
+        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-brand/20 bg-brand-soft text-sm font-extrabold text-brand shadow-xs" title="Pembimbing">
+            {{ strtoupper(substr($pembimbing->nama_lengkap ?? auth()->user()->username, 0, 2)) }}
+        </div>
+    </div>
 </header>
+
+@include('layouts.partials.mobile-alerts')
 
 {{-- Binaan aktif --}}
 <a href="{{ route('pembimbing.binaan.index') }}" class="flex items-center justify-between rounded-3xl bg-brand p-5 text-white shadow-lg shadow-brand/20">

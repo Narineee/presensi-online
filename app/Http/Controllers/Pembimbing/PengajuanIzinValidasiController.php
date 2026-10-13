@@ -32,11 +32,23 @@ class PengajuanIzinValidasiController extends Controller
         $supervisedIds = $this->getSupervisedUserIds();
 
         $query = PengajuanIzin::whereIn('pengguna_id', $supervisedIds)
-            ->with(['pengguna.magang.divisi']);
+            ->with(['pengguna.magang.divisi', 'validator.pembimbing']);
 
-        // Filter status persetujuan
-        if ($request->filled('status_approval')) {
-            $query->where('status_approval', $request->status_approval);
+        // Filter pencarian nama / no induk peserta
+        if ($request->filled('q')) {
+            $keyword = '%'.$request->q.'%';
+            $query->whereHas('pengguna.magang', function ($q) use ($keyword) {
+                $q->where('nama_lengkap', 'like', $keyword)
+                    ->orWhere('no_induk', 'like', $keyword);
+            });
+        }
+
+        // Filter rentang tanggal
+        if ($request->filled('tanggal_mulai')) {
+            $query->where('tanggal_selesai', '>=', $request->tanggal_mulai);
+        }
+        if ($request->filled('tanggal_akhir')) {
+            $query->where('tanggal_mulai', '<=', $request->tanggal_akhir);
         }
 
         // Filter jenis izin
@@ -44,19 +56,32 @@ class PengajuanIzinValidasiController extends Controller
             $query->where('jenis_izin', $request->jenis_izin);
         }
 
-        $pengajuanIzin = $query->orderBy('created_at', 'desc')
-            ->paginate(15)
+        $status = $request->input('status_approval', $request->input('status'));
+
+        $menunggu = collect();
+        if (! $status || $status === 'pending') {
+            $menunggu = (clone $query)->where('status_approval', 'pending')
+                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
+                ->get();
+        }
+
+        $keputusanQuery = clone $query;
+        if ($status === 'disetujui' || $status === 'ditolak') {
+            $keputusanQuery->where('status_approval', $status);
+        } elseif ($status === 'pending') {
+            $keputusanQuery->whereRaw('1 = 0');
+        } else {
+            $keputusanQuery->whereIn('status_approval', ['disetujui', 'ditolak']);
+        }
+
+        $keputusan = $keputusanQuery
+            ->orderBy('validated_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->paginate(10)
             ->withQueryString();
 
-        // Statistik
-        $stats = [
-            'pending' => PengajuanIzin::whereIn('pengguna_id', $supervisedIds)->where('status_approval', 'pending')->count(),
-            'disetujui' => PengajuanIzin::whereIn('pengguna_id', $supervisedIds)->where('status_approval', 'disetujui')->count(),
-            'ditolak' => PengajuanIzin::whereIn('pengguna_id', $supervisedIds)->where('status_approval', 'ditolak')->count(),
-            'total' => PengajuanIzin::whereIn('pengguna_id', $supervisedIds)->count(),
-        ];
-
-        return view('pembimbing.izin.index', compact('pengajuanIzin', 'stats'));
+        return view('pembimbing.izin.index', compact('menunggu', 'keputusan'));
     }
 
     /**
@@ -71,13 +96,20 @@ class PengajuanIzinValidasiController extends Controller
 
         $request->validate([
             'status_approval' => 'required|in:disetujui,ditolak',
+            'catatan_penolakan' => 'nullable|string|max:500',
+        ], [
+            'status_approval.required' => 'Keputusan validasi wajib ditentukan.',
+            'catatan_penolakan.max' => 'Alasan penolakan maksimal 500 karakter.',
         ]);
 
-        $izin->update([
+        $updateData = [
             'status_approval' => $request->status_approval,
             'validated_by' => Auth::id(),
             'validated_at' => Carbon::now(),
-        ]);
+            'catatan_penolakan' => ($request->status_approval === 'ditolak') ? $request->catatan_penolakan : null,
+        ];
+
+        $izin->update($updateData);
 
         // Integrasi Otomatis ke Presensi jika Disetujui:
         // Setiap hari pada rentang tanggal mulai s/d selesai otomatis tercatat di tabel presensi

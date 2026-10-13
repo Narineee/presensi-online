@@ -18,13 +18,19 @@
     ]));
 @endphp
 
-<header class="-mx-4 -mt-5 mb-4 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:mx-0 lg:mt-0 lg:rounded-2xl lg:border">
-    <a href="{{ route('pembimbing.dashboard') }}" class="grid h-11 w-11 place-items-center rounded-full border border-slate-300 text-lg" aria-label="Kembali">←</a>
-    <div>
-        <h1 class="text-lg font-extrabold leading-tight">Daftar Binaan</h1>
-        <p class="text-xs text-slate-500">Rekap presensi sepanjang magang</p>
+<header class="sticky-top-nav -mx-4 mb-4 flex items-center gap-3 border-b border-slate-200/80 bg-white/90 px-4 pb-3 pt-3 backdrop-blur-xl lg:mx-0 lg:rounded-2xl lg:border">
+    <a href="{{ route('pembimbing.dashboard') }}" class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-xs hover:bg-slate-50 transition" aria-label="Kembali">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+    </a>
+    <div class="min-w-0 flex-1">
+        <h1 class="text-lg font-extrabold leading-tight text-slate-900 truncate">Daftar Binaan</h1>
+        <p class="text-xs text-slate-500 font-medium truncate">Rekap presensi sepanjang magang</p>
     </div>
 </header>
+
+@include('layouts.partials.mobile-alerts')
 
 {{-- Filter --}}
 <form method="GET" action="{{ route('pembimbing.binaan.index') }}" class="space-y-2.5">

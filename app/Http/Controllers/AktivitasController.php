@@ -15,9 +15,17 @@ use Illuminate\Support\Facades\Auth;
 class AktivitasController extends Controller
 {
     /**
-     * Menampilkan daftar aktivitas harian milik pengguna yang sedang login (Magang).
+     * Daftar aktivitas dipindah ke halaman Rekap/Riwayat; /aktivitas diarahkan ke form.
      */
-    public function index(Request $request)
+    public function index()
+    {
+        return redirect()->route('aktivitas.create');
+    }
+
+    /**
+     * Menampilkan riwayat / rekap aktivitas harian magang.
+     */
+    public function riwayat(Request $request)
     {
         /** @var Pengguna $user */
         $user = Auth::user();
@@ -70,15 +78,7 @@ class AktivitasController extends Controller
     }
 
     /**
-     * Menampilkan riwayat / rekap aktivitas harian magang.
-     */
-    public function riwayat(Request $request)
-    {
-        return $this->index($request);
-    }
-
-    /**
-     * Menampilkan formulir tambah aktivitas harian baru.
+     * Formulir tambah aktivitas harian.
      */
     public function create()
     {
@@ -93,7 +93,7 @@ class AktivitasController extends Controller
     }
 
     /**
-     * Menyimpan data aktivitas harian baru ke database.
+     * Simpan aktivitas harian baru.
      */
     public function store(Request $request)
     {
@@ -104,19 +104,20 @@ class AktivitasController extends Controller
             ? $magang->pekerjaan()->where('status', 'aktif')->pluck('id')->toArray()
             : [];
 
-        // Validasi input data
         $request->validate([
             'pekerjaan_id' => ['required', 'in:'.implode(',', $allowedPekerjaanIds)],
             'judul' => 'nullable|string|max:255',
             'tanggal' => 'required|date',
-            'waktu_mulai' => 'nullable|date_format:H:i',
-            'waktu_selesai' => 'nullable|date_format:H:i|after:waktu_mulai',
+            'waktu_mulai' => 'required|date_format:H:i',
+            'waktu_selesai' => 'required|date_format:H:i|after:waktu_mulai',
             'isi' => 'required|string|min:5',
         ], [
             'pekerjaan_id.required' => 'Pekerjaan magang wajib dipilih dari daftar tugas aktif.',
             'pekerjaan_id.in' => 'Pekerjaan yang dipilih tidak valid atau bukan tugas aktif yang diberikan pembimbing kepada Anda.',
             'tanggal.required' => 'Tanggal aktivitas wajib diisi.',
             'tanggal.date' => 'Format tanggal tidak valid.',
+            'waktu_mulai.required' => 'Waktu mulai wajib diisi.',
+            'waktu_selesai.required' => 'Waktu selesai wajib diisi.',
             'waktu_selesai.after' => 'Waktu selesai harus setelah waktu mulai.',
             'isi.required' => 'Uraian aktivitas pekerjaan wajib diisi.',
             'isi.min' => 'Uraian aktivitas minimal 5 karakter.',
@@ -131,8 +132,8 @@ class AktivitasController extends Controller
             'pekerjaan_id' => $request->pekerjaan_id,
             'judul' => $judul,
             'tanggal' => $request->tanggal,
-            'waktu_mulai' => $request->waktu_mulai ?? '08:00',
-            'waktu_selesai' => $request->waktu_selesai ?? '16:00',
+            'waktu_mulai' => $request->waktu_mulai,
+            'waktu_selesai' => $request->waktu_selesai,
             'isi' => $request->isi,
             'progress' => $progress,
             'status' => 'pending',
@@ -142,11 +143,11 @@ class AktivitasController extends Controller
             return redirect()->route('presensi.index')->with('success', 'Aktivitas harian berhasil dicatat! Sekarang Anda dapat melakukan presensi pulang.');
         }
 
-        return redirect()->route('aktivitas.index')->with('success', 'Aktivitas harian berhasil dicatat dan menunggu validasi pembimbing.');
+        return redirect()->route('presensi.index')->with('success', 'Aktivitas harian berhasil dicatat dan menunggu validasi pembimbing.');
     }
 
     /**
-     * Menampilkan detail aktivitas dan catatan validasi dari pembimbing.
+     * Detail aktivitas dan catatan validasi pembimbing.
      */
     public function show($id)
     {
@@ -158,7 +159,7 @@ class AktivitasController extends Controller
     }
 
     /**
-     * Menampilkan formulir edit aktivitas harian.
+     * Formulir edit aktivitas.
      */
     public function edit($id)
     {
@@ -167,7 +168,6 @@ class AktivitasController extends Controller
             ->with('pekerjaan')
             ->findOrFail($id);
 
-        // Jika aktivitas sudah disetujui, tolak pengeditan
         if (! $aktivitas->canBeEdited()) {
             return redirect()->route('magang.rekap')
                 ->with('error', 'Aktivitas yang telah disetujui oleh pembimbing tidak dapat diubah lagi.');
@@ -189,13 +189,12 @@ class AktivitasController extends Controller
     }
 
     /**
-     * Memperbarui data aktivitas harian.
+     * Perbarui aktivitas.
      */
     public function update(Request $request, $id)
     {
         $user = Auth::user();
-        $aktivitas = Aktivitas::where('pengguna_id', $user->id)
-            ->findOrFail($id);
+        $aktivitas = Aktivitas::where('pengguna_id', $user->id)->findOrFail($id);
 
         if (! $aktivitas->canBeEdited()) {
             return redirect()->route('magang.rekap')
@@ -222,14 +221,14 @@ class AktivitasController extends Controller
             'waktu_selesai.after' => 'Waktu selesai harus setelah waktu mulai.',
         ]);
 
-        // Jika status sebelumnya adalah revisi, kembalikan ke pending agar divalidasi ulang
+        // Status revisi kembali ke pending agar divalidasi ulang
         $statusBaru = ($aktivitas->status === 'revisi') ? 'pending' : $aktivitas->status;
 
         $pekerjaan = Pekerjaan::find($request->pekerjaan_id);
         $progress = ($pekerjaan && $pekerjaan->isProyek()) ? ($pekerjaan->progress ?? $aktivitas->progress) : 0;
         $judul = $request->filled('judul') ? $request->judul : ($pekerjaan ? $pekerjaan->judul : $aktivitas->judul);
 
-        $aktivitas->update([
+        $data = [
             'pekerjaan_id' => $request->pekerjaan_id,
             'judul' => $judul,
             'tanggal' => $request->tanggal,
@@ -238,33 +237,33 @@ class AktivitasController extends Controller
             'isi' => $request->isi,
             'progress' => $progress,
             'status' => $statusBaru,
-        ]);
+        ];
 
-        return redirect()->route('aktivitas.index')
-            ->with('success', 'Aktivitas harian berhasil diperbarui!');
+        $aktivitas->update($data);
+
+        return redirect()->route('magang.rekap')->with('success', 'Aktivitas harian berhasil diperbarui!');
     }
 
     /**
-     * Menghapus catatan aktivitas harian.
+     * Hapus catatan aktivitas.
      */
     public function destroy($id)
     {
-        $aktivitas = Aktivitas::where('pengguna_id', Auth::id())
-            ->findOrFail($id);
+        $aktivitas = Aktivitas::where('pengguna_id', Auth::id())->findOrFail($id);
 
         if (! $aktivitas->canBeEdited()) {
-            return redirect()->route('aktivitas.index')
+            return redirect()->route('magang.rekap')
                 ->with('error', 'Aktivitas yang telah disetujui tidak dapat dihapus.');
         }
 
         $aktivitas->delete();
 
-        return redirect()->route('aktivitas.index')
+        return redirect()->route('magang.rekap')
             ->with('success', 'Catatan aktivitas harian berhasil dihapus.');
     }
 
     /**
-     * Mencetak laporan rekapitulasi aktivitas harian pribadi (Magang).
+     * Cetak rekapitulasi aktivitas harian pribadi.
      */
     public function cetak(Request $request)
     {
@@ -286,7 +285,7 @@ class AktivitasController extends Controller
         } elseif ($bulan && preg_match('/^\d{4}-\d{2}$/', $bulan)) {
             $query->whereYear('tanggal', substr($bulan, 0, 4))
                 ->whereMonth('tanggal', substr($bulan, 5, 2));
-            $periodeText = Carbon::createFromFormat('Y-m', $bulan)->isoFormat('MMMM Y');
+            $periodeText = Carbon::createFromFormat('Y-m-d', $bulan.'-01')->isoFormat('MMMM Y');
         } else {
             $bulan = Carbon::today()->format('Y-m');
             $query->whereYear('tanggal', Carbon::today()->year)
@@ -298,9 +297,7 @@ class AktivitasController extends Controller
             $query->where('status', $request->status);
         }
 
-        $aktivitas = $query->orderBy('tanggal', 'asc')
-            ->orderBy('id', 'asc')
-            ->get();
+        $aktivitas = $query->orderBy('tanggal', 'asc')->orderBy('id', 'asc')->get();
 
         $stats = [
             'total' => $aktivitas->count(),

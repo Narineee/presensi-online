@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DetailPenilaian;
 use App\Models\KriteriaPenilaian;
 use App\Models\Magang;
+use App\Models\Pengaturan;
 use App\Models\Penilaian;
 use App\Services\PresensiScoreService;
 use Illuminate\Http\Request;
@@ -26,11 +27,11 @@ class PenilaianMagangController extends Controller
         }
 
         $query = Magang::where('pembimbing_id', $pembimbing->id)
-            ->with(['divisi', 'penilaian']);
+            ->with(['divisi', 'penilaian.detail.kriteria', 'pengguna']);
 
-        // Filter pencarian nama / no induk
-        if ($request->filled('search')) {
-            $search = $request->search;
+        // Filter pencarian nama / no induk / instansi
+        $search = $request->input('q', $request->input('search'));
+        if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('nama_lengkap', 'like', "%{$search}%")
                     ->orWhere('no_induk', 'like', "%{$search}%")
@@ -38,30 +39,116 @@ class PenilaianMagangController extends Controller
             });
         }
 
-        // Filter status penilaian (sudah_dinilai / belum_dinilai)
-        if ($request->filled('status_nilai')) {
-            if ($request->status_nilai === 'sudah') {
-                $query->has('penilaian');
-            } elseif ($request->status_nilai === 'belum') {
-                $query->doesntHave('penilaian');
-            }
+        // Filter tanggal mulai & selesai
+        $tanggalMulai = $request->input('tanggal_mulai');
+        $tanggalSelesai = $request->input('tanggal_selesai', $request->input('tanggal_akhir'));
+
+        if ($tanggalMulai && $tanggalSelesai) {
+            $query->where(function ($dq) use ($tanggalMulai, $tanggalSelesai) {
+                $dq->whereBetween('tanggal_mulai', [$tanggalMulai, $tanggalSelesai])
+                    ->orWhereBetween('tanggal_selesai', [$tanggalMulai, $tanggalSelesai])
+                    ->orWhere(function ($overlap) use ($tanggalMulai, $tanggalSelesai) {
+                        $overlap->where('tanggal_mulai', '<=', $tanggalMulai)
+                            ->where('tanggal_selesai', '>=', $tanggalSelesai);
+                    });
+            });
+        } elseif ($tanggalMulai) {
+            $query->whereDate('tanggal_mulai', '>=', $tanggalMulai);
+        } elseif ($tanggalSelesai) {
+            $query->whereDate('tanggal_selesai', '<=', $tanggalSelesai);
         }
 
-        $magangList = $query->orderBy('nama_lengkap', 'asc')
-            ->paginate(10)
-            ->withQueryString();
+        // Filter status penilaian (sudah / belum)
+        $statusNilai = $request->input('status_nilai');
+        if ($statusNilai === 'sudah') {
+            $query->has('penilaian');
+        } elseif ($statusNilai === 'belum') {
+            $query->doesntHave('penilaian');
+        }
+
+        $allMagang = $query->orderBy('nama_lengkap', 'asc')->get();
+
+        // Pisahkan menjadi Perlu Dinilai dan Sudah Dinilai
+        $perluDinilai = $allMagang->filter(fn ($m) => $m->penilaian === null);
+        $sudahDinilaiList = $allMagang->filter(fn ($m) => $m->penilaian !== null);
 
         // Statistik
         $totalBinaan = Magang::where('pembimbing_id', $pembimbing->id)->count();
         $sudahDinilai = Magang::where('pembimbing_id', $pembimbing->id)->has('penilaian')->count();
         $belumDinilai = $totalBinaan - $sudahDinilai;
+        $totalKriteria = KriteriaPenilaian::count();
+
+        $magangList = $allMagang;
 
         return view('pembimbing.penilaian.index', compact(
+            'perluDinilai',
+            'sudahDinilaiList',
             'magangList',
             'totalBinaan',
             'sudahDinilai',
-            'belumDinilai'
+            'belumDinilai',
+            'totalKriteria',
+            'search',
+            'statusNilai',
+            'tanggalMulai',
+            'tanggalSelesai'
         ));
+    }
+
+    /**
+     * Mencetak rekapitulasi penilaian magang binaan.
+     */
+    public function cetak(Request $request)
+    {
+        $pembimbing = Auth::user()->pembimbing;
+        if (! $pembimbing) {
+            return redirect()->route('pembimbing.dashboard')->with('error', 'Profil pembimbing tidak ditemukan.');
+        }
+
+        $query = Magang::where('pembimbing_id', $pembimbing->id)
+            ->with(['divisi', 'penilaian.detail.kriteria', 'pengguna']);
+
+        $search = $request->input('q', $request->input('search'));
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nama_lengkap', 'like', "%{$search}%")
+                    ->orWhere('no_induk', 'like', "%{$search}%")
+                    ->orWhere('instansi_pendidikan', 'like', "%{$search}%");
+            });
+        }
+
+        $tanggalMulai = $request->input('tanggal_mulai');
+        $tanggalSelesai = $request->input('tanggal_selesai', $request->input('tanggal_akhir'));
+
+        if ($tanggalMulai && $tanggalSelesai) {
+            $query->where(function ($dq) use ($tanggalMulai, $tanggalSelesai) {
+                $dq->whereBetween('tanggal_mulai', [$tanggalMulai, $tanggalSelesai])
+                    ->orWhereBetween('tanggal_selesai', [$tanggalMulai, $tanggalSelesai]);
+            });
+        } elseif ($tanggalMulai) {
+            $query->whereDate('tanggal_mulai', '>=', $tanggalMulai);
+        } elseif ($tanggalSelesai) {
+            $query->whereDate('tanggal_selesai', '<=', $tanggalSelesai);
+        }
+
+        $statusNilai = $request->input('status_nilai');
+        if ($statusNilai === 'sudah') {
+            $query->has('penilaian');
+        } elseif ($statusNilai === 'belum') {
+            $query->doesntHave('penilaian');
+        }
+
+        $magangList = $query->orderBy('nama_lengkap', 'asc')->get();
+        $pengaturan = Pengaturan::getPengaturan();
+
+        $stats = [
+            'total' => $magangList->count(),
+            'sudah' => $magangList->filter(fn ($m) => $m->penilaian !== null)->count(),
+            'belum' => $magangList->filter(fn ($m) => $m->penilaian === null)->count(),
+            'rata_rata' => $magangList->filter(fn ($m) => $m->penilaian !== null)->avg(fn ($m) => $m->penilaian->total_nilai) ?? 0,
+        ];
+
+        return view('pembimbing.penilaian.cetak', compact('magangList', 'pengaturan', 'stats', 'pembimbing'));
     }
 
     /**

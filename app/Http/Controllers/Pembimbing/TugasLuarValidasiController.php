@@ -34,17 +34,7 @@ class TugasLuarValidasiController extends Controller
         $query = PengajuanTugasLuar::whereIn('pengguna_id', $supervisedIds)
             ->with(['pengguna.magang.divisi', 'presensi', 'validator.pembimbing']);
 
-        // Filter status verifikasi (menunggu, disetujui, ditolak)
-        if ($request->filled('status_verifikasi')) {
-            $query->where('status_verifikasi', $request->status_verifikasi);
-        }
-
-        // Filter tanggal tugas luar
-        if ($request->filled('tanggal')) {
-            $query->whereDate('tanggal', $request->tanggal);
-        }
-
-        // Filter pencarian nama / keperluan / tujuan
+        // Filter pencarian nama / no induk / keperluan / tujuan
         if ($request->filled('q')) {
             $keyword = '%'.$request->q.'%';
             $query->where(function ($q) use ($keyword) {
@@ -57,19 +47,43 @@ class TugasLuarValidasiController extends Controller
             });
         }
 
-        $pengajuanTugasLuar = $query->orderBy('created_at', 'desc')
-            ->paginate(15)
+        // Filter tanggal tunggal atau rentang tanggal
+        if ($request->filled('tanggal')) {
+            $query->whereDate('tanggal', $request->tanggal);
+        }
+        if ($request->filled('tanggal_mulai')) {
+            $query->whereDate('tanggal', '>=', $request->tanggal_mulai);
+        }
+        if ($request->filled('tanggal_akhir')) {
+            $query->whereDate('tanggal', '<=', $request->tanggal_akhir);
+        }
+
+        $status = $request->input('status_verifikasi', $request->input('status'));
+
+        $menunggu = collect();
+        if (! $status || $status === 'menunggu') {
+            $menunggu = (clone $query)->where('status_verifikasi', 'menunggu')
+                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
+                ->get();
+        }
+
+        $keputusanQuery = clone $query;
+        if ($status === 'disetujui' || $status === 'ditolak') {
+            $keputusanQuery->where('status_verifikasi', $status);
+        } elseif ($status === 'menunggu') {
+            $keputusanQuery->whereRaw('1 = 0');
+        } else {
+            $keputusanQuery->whereIn('status_verifikasi', ['disetujui', 'ditolak']);
+        }
+
+        $keputusan = $keputusanQuery
+            ->orderBy('verified_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->paginate(10)
             ->withQueryString();
 
-        // Statistik ringkasan
-        $stats = [
-            'menunggu' => PengajuanTugasLuar::whereIn('pengguna_id', $supervisedIds)->where('status_verifikasi', 'menunggu')->count(),
-            'disetujui' => PengajuanTugasLuar::whereIn('pengguna_id', $supervisedIds)->where('status_verifikasi', 'disetujui')->count(),
-            'ditolak' => PengajuanTugasLuar::whereIn('pengguna_id', $supervisedIds)->where('status_verifikasi', 'ditolak')->count(),
-            'total' => PengajuanTugasLuar::whereIn('pengguna_id', $supervisedIds)->count(),
-        ];
-
-        return view('pembimbing.tugas_luar.index', compact('pengajuanTugasLuar', 'stats'));
+        return view('pembimbing.tugas-luar.index', compact('menunggu', 'keputusan'));
     }
 
     /**

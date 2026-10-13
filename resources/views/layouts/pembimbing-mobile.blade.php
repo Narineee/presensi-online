@@ -17,7 +17,27 @@
             colors: { brand: { DEFAULT: '#14664B', dark: '#0E4D39', soft: '#E3F0EA', ink: '#12261F' } }
         } } }
     </script>
-    <style>[x-cloak]{display:none!important}</style>
+    <style>
+        [x-cloak]{display:none!important}
+        html, body {
+            overflow-x: clip;
+            min-height: 100%;
+        }
+
+        /* Fixed / Sticky Top Navigation Bar (Stays pinned when scrolling) */
+        .sticky-top-nav {
+            position: -webkit-sticky !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 30 !important;
+            padding-top: max(0.875rem, env(safe-area-inset-top));
+            background: rgba(255, 255, 255, 0.94) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+            box-shadow: 0 4px 16px -2px rgba(20, 102, 75, 0.05);
+        }
+    </style>
     @stack('head')
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 </head>
@@ -32,19 +52,7 @@
 @endphp
 
 <div x-data="{ more: false }" class="relative mx-auto min-h-dvh max-w-md bg-[#F3F7F5] shadow-xl lg:max-w-none lg:pl-64 lg:shadow-none">
-    <main class="mx-auto w-full max-w-md px-4 pt-5 pb-28 lg:max-w-2xl lg:pt-8 lg:pb-12">
-        @if (session('success'))
-            <div class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>
-        @endif
-        @if (session('error'))
-            <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ session('error') }}</div>
-        @endif
-        @if ($errors->any())
-            <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                @foreach ($errors->all() as $e)<p>{{ $e }}</p>@endforeach
-            </div>
-        @endif
-
+    <main class="mx-auto w-full max-w-md px-4 pt-0 pb-28 lg:max-w-2xl lg:pt-8 lg:pb-12">
         @yield('content')
     </main>
 
@@ -89,8 +97,11 @@
                     </a>
                 </li>
             @endforeach
+            @php
+                $onLainnya = request()->routeIs('pembimbing.pekerjaan.*', 'pembimbing.aktivitas.*', 'pembimbing.izin.*', 'pembimbing.tugas-luar.*', 'pembimbing.penilaian.*');
+            @endphp
             <li>
-                <button type="button" @click="more = true" :aria-expanded="more" class="flex w-full flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-semibold text-slate-500">
+                <button type="button" @click="more = true" :aria-expanded="more" class="flex w-full flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-semibold {{ $onLainnya ? 'bg-slate-200 text-slate-800' : 'text-slate-500' }}">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ $iconLainnya }}"/></svg>
                     Lainnya
                 </button>

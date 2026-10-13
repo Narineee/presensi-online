@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Pembimbing;
 
 use App\Http\Controllers\Controller;
+use App\Models\Aktivitas;
 use App\Models\Magang;
 use App\Models\Pekerjaan;
 use Illuminate\Http\RedirectResponse;
@@ -12,50 +13,56 @@ use Illuminate\View\View;
 
 class PekerjaanController extends Controller
 {
-    /**
-     * Mendapatkan entitas pembimbing yang sedang login.
-     */
     private function getPembimbing()
     {
         return Auth::user()->pembimbing;
     }
 
     /**
-     * Menampilkan daftar pekerjaan magang yang dibina oleh pembimbing.
+     * Daftar pekerjaan yang dibuat pembimbing, lengkap dengan uraian aktivitas terbaru.
      */
     public function index(Request $request): View
     {
         $pembimbing = $this->getPembimbing();
         abort_if(! $pembimbing, 403, 'Akses khusus pembimbing lapangan.');
 
-        $query = Pekerjaan::where('pembimbing_id', $pembimbing->id)
-            ->with(['magang.divisi'])
-            ->withCount('aktivitas');
+        $query = Pekerjaan::where('pembimbing_id', $pembimbing->id)->with('magang');
 
-        // Filter berdasarkan peserta magang binaan tertentu
         if ($request->filled('magang_id')) {
             $query->where('magang_id', $request->magang_id);
         }
 
-        // Filter berdasarkan jenis (proyek / rutin)
         if ($request->filled('jenis')) {
             $query->where('jenis', $request->jenis);
         }
 
-        // Filter status (aktif / selesai / nonaktif)
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Pencarian judul / deskripsi
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('judul', 'like', "%{$search}%")
-                    ->orWhere('deskripsi', 'like', "%{$search}%")
-                    ->orWhereHas('magang', function ($m) use ($search) {
-                        $m->where('nama_lengkap', 'like', "%{$search}%");
+        // Cari peserta (nama / nomor induk) atau judul pekerjaan
+        $keyword = $request->input('q', $request->input('search'));
+        if ($keyword) {
+            $query->where(function ($q) use ($keyword) {
+                $q->where('judul', 'like', "%{$keyword}%")
+                    ->orWhereHas('magang', function ($m) use ($keyword) {
+                        $m->where('nama_lengkap', 'like', "%{$keyword}%")
+                            ->orWhere('no_induk', 'like', "%{$keyword}%");
                     });
+            });
+        }
+
+        // Rentang tanggal: pekerjaan yang periodenya beririsan dengan rentang yang dipilih
+        if ($request->filled('tanggal_mulai')) {
+            $mulai = $request->tanggal_mulai;
+            $query->where(function ($q) use ($mulai) {
+                $q->whereNull('target_selesai')->orWhereDate('target_selesai', '>=', $mulai);
+            });
+        }
+        if ($request->filled('tanggal_akhir')) {
+            $akhir = $request->tanggal_akhir;
+            $query->where(function ($q) use ($akhir) {
+                $q->whereNull('tanggal_mulai')->orWhereDate('tanggal_mulai', '<=', $akhir);
             });
         }
 
@@ -64,23 +71,19 @@ class PekerjaanController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        $supervisedMagang = Magang::where('pembimbing_id', $pembimbing->id)
-            ->orderBy('nama_lengkap', 'asc')
-            ->get();
+        // Aktivitas terbaru per pekerjaan (satu query untuk seluruh halaman)
+        $terbaru = Aktivitas::whereIn('pekerjaan_id', $pekerjaanList->pluck('id'))
+            ->orderBy('tanggal', 'desc')
+            ->orderBy('id', 'desc')
+            ->get()
+            ->groupBy('pekerjaan_id')
+            ->map(fn ($g) => $g->first());
 
-        $stats = [
-            'total' => Pekerjaan::where('pembimbing_id', $pembimbing->id)->count(),
-            'proyek' => Pekerjaan::where('pembimbing_id', $pembimbing->id)->where('jenis', 'proyek')->count(),
-            'rutin' => Pekerjaan::where('pembimbing_id', $pembimbing->id)->where('jenis', 'rutin')->count(),
-            'aktif' => Pekerjaan::where('pembimbing_id', $pembimbing->id)->where('status', 'aktif')->count(),
-            'selesai' => Pekerjaan::where('pembimbing_id', $pembimbing->id)->where('status', 'selesai')->count(),
-        ];
-
-        return view('pembimbing.pekerjaan.index', compact('pekerjaanList', 'supervisedMagang', 'stats'));
+        return view('pembimbing.pekerjaan.index', compact('pekerjaanList', 'terbaru'));
     }
 
     /**
-     * Menampilkan form pembuatan pekerjaan baru untuk peserta magang binaan.
+     * Form tambah pekerjaan.
      */
     public function create(Request $request): View
     {
@@ -88,6 +91,7 @@ class PekerjaanController extends Controller
         abort_if(! $pembimbing, 403, 'Akses khusus pembimbing lapangan.');
 
         $supervisedMagang = Magang::where('pembimbing_id', $pembimbing->id)
+            ->with('divisi')
             ->orderBy('nama_lengkap', 'asc')
             ->get();
 
@@ -97,20 +101,19 @@ class PekerjaanController extends Controller
     }
 
     /**
-     * Menyimpan pekerjaan baru ke database.
+     * Simpan pekerjaan baru.
      */
     public function store(Request $request): RedirectResponse
     {
         $pembimbing = $this->getPembimbing();
         abort_if(! $pembimbing, 403, 'Akses khusus pembimbing lapangan.');
 
-        // Pastikan magang_id benar-benar anak binaan pembimbing yang sedang login
         $allowedMagangIds = Magang::where('pembimbing_id', $pembimbing->id)->pluck('id')->toArray();
 
         $request->validate([
             'magang_id' => ['required', 'in:'.implode(',', $allowedMagangIds)],
             'judul' => 'required|string|max:255',
-            'deskripsi' => 'nullable|string',
+            'deskripsi' => 'required|string',
             'jenis' => 'required|in:proyek,rutin',
             'tanggal_mulai' => 'nullable|date',
             'target_selesai' => 'nullable|date|after_or_equal:tanggal_mulai',
@@ -119,8 +122,9 @@ class PekerjaanController extends Controller
             'magang_id.required' => 'Pilih peserta magang penerima pekerjaan ini.',
             'magang_id.in' => 'Peserta magang yang dipilih bukan merupakan anak binaan Anda.',
             'judul.required' => 'Judul pekerjaan wajib diisi.',
+            'deskripsi.required' => 'Deskripsi / petunjuk tugas wajib diisi.',
             'jenis.required' => 'Jenis pekerjaan (Proyek / Rutin) wajib ditentukan.',
-            'target_selesai.after_or_equal' => 'Target selesai tidak boleh mendahului tanggal mulai.',
+            'target_selesai.after_or_equal' => 'Tanggal selesai tidak boleh mendahului tanggal mulai.',
         ]);
 
         $isProyek = ($request->jenis === 'proyek');
@@ -144,7 +148,7 @@ class PekerjaanController extends Controller
     }
 
     /**
-     * Menampilkan detail pekerjaan beserta daftar aktivitas harian di dalamnya.
+     * Detail pekerjaan beserta riwayat aktivitas terkait.
      */
     public function show($id): View
     {
@@ -164,7 +168,7 @@ class PekerjaanController extends Controller
     }
 
     /**
-     * Menampilkan form edit pekerjaan.
+     * Form edit pekerjaan.
      */
     public function edit($id): View
     {
@@ -172,10 +176,11 @@ class PekerjaanController extends Controller
         abort_if(! $pembimbing, 403, 'Akses khusus pembimbing lapangan.');
 
         $pekerjaan = Pekerjaan::where('pembimbing_id', $pembimbing->id)
-            ->with('magang')
+            ->withCount('aktivitas')
             ->findOrFail($id);
 
         $supervisedMagang = Magang::where('pembimbing_id', $pembimbing->id)
+            ->with('divisi')
             ->orderBy('nama_lengkap', 'asc')
             ->get();
 
@@ -183,22 +188,21 @@ class PekerjaanController extends Controller
     }
 
     /**
-     * Memperbarui data pekerjaan.
+     * Perbarui pekerjaan.
      */
     public function update(Request $request, $id): RedirectResponse
     {
         $pembimbing = $this->getPembimbing();
         abort_if(! $pembimbing, 403, 'Akses khusus pembimbing lapangan.');
 
-        $pekerjaan = Pekerjaan::where('pembimbing_id', $pembimbing->id)
-            ->findOrFail($id);
+        $pekerjaan = Pekerjaan::where('pembimbing_id', $pembimbing->id)->findOrFail($id);
 
         $allowedMagangIds = Magang::where('pembimbing_id', $pembimbing->id)->pluck('id')->toArray();
 
         $request->validate([
             'magang_id' => ['required', 'in:'.implode(',', $allowedMagangIds)],
             'judul' => 'required|string|max:255',
-            'deskripsi' => 'nullable|string',
+            'deskripsi' => 'required|string',
             'jenis' => 'required|in:proyek,rutin',
             'status' => 'required|in:aktif,selesai,nonaktif',
             'tanggal_mulai' => 'nullable|date',
@@ -208,11 +212,12 @@ class PekerjaanController extends Controller
             'magang_id.required' => 'Pilih peserta magang penerima pekerjaan ini.',
             'magang_id.in' => 'Peserta magang yang dipilih bukan merupakan anak binaan Anda.',
             'judul.required' => 'Judul pekerjaan wajib diisi.',
-            'target_selesai.after_or_equal' => 'Target selesai tidak boleh mendahului tanggal mulai.',
+            'deskripsi.required' => 'Deskripsi / petunjuk tugas wajib diisi.',
+            'target_selesai.after_or_equal' => 'Tanggal selesai tidak boleh mendahului tanggal mulai.',
         ]);
 
         $isProyek = ($request->jenis === 'proyek');
-        $progress = $isProyek ? (int) ($request->progress ?? 0) : null;
+        $progress = $isProyek ? (int) ($request->progress ?? $pekerjaan->progress ?? 0) : null;
         $status = $request->status;
 
         if ($isProyek && $progress >= 100 && $status === 'aktif') {
@@ -235,7 +240,7 @@ class PekerjaanController extends Controller
     }
 
     /**
-     * Menghapus pekerjaan jika belum memiliki relasi aktivitas harian.
+     * Hapus pekerjaan bila belum memiliki aktivitas harian.
      */
     public function destroy($id): RedirectResponse
     {

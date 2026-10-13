@@ -18,6 +18,7 @@ class PengajuanIzin extends Model
         'status_approval',
         'validated_by',
         'validated_at',
+        'catatan_penolakan',
     ];
 
     protected $casts = [
