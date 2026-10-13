@@ -12,6 +12,7 @@ use App\Models\Pengaturan;
 use App\Models\Pengguna;
 use App\Models\Presensi;
 use App\Services\FaceVerificationService;
+use App\Services\PresensiScoreService;
 use App\Support\StoresBase64Image;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -135,41 +136,72 @@ class PresensiController extends Controller
         $user = Auth::user();
         $magang = $user->magang;
 
-        // Hitung total hari kerja & kehadiran
-        $totalHadir = Presensi::where('pengguna_id', $user->id)
-            ->where('status', 'hadir')
-            ->count();
-
-        // Periode magang
         $targetHari = 80;
+        $totalHadir = 0;
+        $jamAktual = 0;
+        $targetJam = 640;
+        $hariKerjaBerlalu = 0;
         $progresPeriode = 0;
-        if ($magang && $magang->tanggal_mulai && $magang->tanggal_selesai) {
-            $mulai = Carbon::parse($magang->tanggal_mulai);
-            $selesai = Carbon::parse($magang->tanggal_selesai);
-            $totalDurasiHari = max(1, $mulai->diffInDays($selesai));
-            $hariBerjalan = $mulai->diffInDays(Carbon::now());
-            if (Carbon::now()->lt($mulai)) {
-                $progresPeriode = 0;
-            } elseif (Carbon::now()->gt($selesai)) {
-                $progresPeriode = 100;
-            } else {
-                $progresPeriode = min(100, (int) round(($hariBerjalan / $totalDurasiHari) * 100));
-            }
-            $targetHari = max(1, (int) round($totalDurasiHari * (5 / 7)));
-        }
+        $persenKehadiran = 0;
+        $persenJam = 0;
 
-        $persenKehadiran = min(100, (int) round(($totalHadir / max(1, $targetHari)) * 100));
-        $jamMagang = $totalHadir * 8;
+        if ($magang && $magang->tanggal_mulai && $magang->tanggal_selesai) {
+            $mulai = Carbon::parse($magang->tanggal_mulai)->startOfDay();
+            $selesai = Carbon::parse($magang->tanggal_selesai)->startOfDay();
+            $today = Carbon::today();
+
+            // Hitung skor presensi komprehensif menggunakan service resmi
+            /** @var PresensiScoreService $scoreService */
+            $scoreService = app(PresensiScoreService::class);
+            $scoreData = $scoreService->calculateScore($magang);
+
+            $targetHari = max(1, $scoreData['target_hari']);
+            $targetJam = max(1, (int) round($scoreData['target_menit'] / 60));
+            $totalHadir = $scoreData['total_hari_hadir'];
+
+            // Jam aktual dari menit realisasi yang valid
+            $jamAktual = (int) round($scoreData['total_menit_realisasi'] / 60);
+
+            // Hitung hari kerja yang sudah berlalu (Senin-Jumat di luar hari libur nasional)
+            // sejak tanggal mulai sampai dengan hari ini (dibatasi maksimal tanggal selesai)
+            if ($today->gte($mulai)) {
+                $current = $mulai->copy();
+                $batasAkhir = $today->gt($selesai) ? $selesai : $today;
+                while ($current->lte($batasAkhir)) {
+                    if (! $current->isWeekend() && ! HariLibur::isTanggalMerah($current)) {
+                        $hariKerjaBerlalu++;
+                    }
+                    $current->addDay();
+                }
+            }
+
+            $progresPeriode = min(100, (int) round(($hariKerjaBerlalu / $targetHari) * 100));
+            $persenKehadiran = min(100, (int) round(($totalHadir / $targetHari) * 100));
+            $persenJam = min(100, (int) round(($jamAktual / $targetJam) * 100));
+        } else {
+            // Fallback jika belum ada data periode magang
+            $totalHadir = Presensi::where('pengguna_id', $user->id)
+                ->where('status', 'hadir')
+                ->count();
+            $jamAktual = $totalHadir * 8;
+            $persenKehadiran = min(100, (int) round(($totalHadir / max(1, $targetHari)) * 100));
+            $persenJam = min(100, (int) round(($jamAktual / max(1, $targetJam)) * 100));
+        }
 
         $totalAktivitas = Aktivitas::where('pengguna_id', $user->id)->count();
 
         $stats = [
-            'total_hadir' => $totalHadir,
+            'hari_kerja_berlalu' => $hariKerjaBerlalu,
             'target_hari' => $targetHari,
-            'persen_kehadiran' => $persenKehadiran,
-            'jam_magang' => $jamMagang,
-            'total_aktivitas' => $totalAktivitas,
             'progres_periode' => $progresPeriode,
+            'total_hadir' => $totalHadir,
+            'persen_kehadiran' => $persenKehadiran,
+            'jam_aktual' => $jamAktual,
+            'target_jam' => $targetJam,
+            'persen_jam' => $persenJam,
+            // Alias kompatibilitas
+            'jam_magang' => $jamAktual,
+            'total_aktivitas' => $totalAktivitas,
         ];
 
         return view('magang.rekap', compact('user', 'magang', 'stats'));

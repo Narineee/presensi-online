@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\PengaturanController;
 use App\Http\Controllers\AktivitasController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Magang\PenilaianSayaController;
+use App\Http\Controllers\Magang\SertifikatSayaController;
 use App\Http\Controllers\Pembimbing\AktivitasValidasiController;
 use App\Http\Controllers\Pembimbing\BinaanController;
 use App\Http\Controllers\Pembimbing\DashboardController as PembimbingDashboardController;
@@ -221,4 +222,6 @@ Route::middleware(['auth', 'role:magang'])
         // Lembar Penilaian Akhir
         Route::get('/penilaian', [PenilaianSayaController::class, 'index'])->name('penilaian.index');
 
+        // Cetak Sertifikat Magang
+        Route::get('/sertifikat', [SertifikatSayaController::class, 'index'])->name('sertifikat.index');
     });

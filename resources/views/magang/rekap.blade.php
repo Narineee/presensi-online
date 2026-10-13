@@ -19,32 +19,62 @@
 <div class="space-y-5">
 
     {{-- Ringkasan Metrik Periode --}}
-    <section class="rounded-3xl glass-card p-5 shadow-sm">
-        <div class="grid grid-cols-3 gap-2 pb-4 border-b border-slate-200/80">
-            <div class="min-w-0">
-                <p class="text-xs text-slate-500 font-medium truncate">Kehadiran</p>
-                <p class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 truncate">{{ $stats['persen_kehadiran'] }}%</p>
-                <p class="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 leading-tight break-words">{{ $stats['total_hadir'] }} dari {{ $stats['target_hari'] }} hari</p>
+    <section class="rounded-3xl glass-card p-5 shadow-sm space-y-4">
+        {{-- 1. Ringkasan Progres Periode (Atas) --}}
+        <div>
+            <div class="flex items-start justify-between gap-3 mb-2">
+                <div class="min-w-0 flex-1">
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Progres periode</p>
+                    <p class="text-sm sm:text-base font-extrabold text-slate-900 mt-0.5 truncate">
+                        {{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}
+                    </p>
+                    <p class="text-[11px] sm:text-xs text-slate-500 mt-0.5 font-medium break-words">
+                        {{ $stats['hari_kerja_berlalu'] }} dari {{ $stats['target_hari'] }} hari kerja berlalu
+                    </p>
+                </div>
+                <div class="text-right shrink-0">
+                    <span class="text-2xl sm:text-3xl font-black text-brand tracking-tight">{{ $stats['progres_periode'] }}%</span>
+                </div>
             </div>
-            <div class="min-w-0">
-                <p class="text-xs text-slate-500 font-medium truncate">Jam Magang</p>
-                <p class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 truncate">{{ $stats['jam_magang'] }}j</p>
-                <p class="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 leading-tight break-words">{{ $stats['total_hadir'] }} dari {{ $stats['target_hari'] }} hari</p>
-            </div>
-            <div class="min-w-0">
-                <p class="text-xs text-slate-500 font-medium truncate">Aktivitas</p>
-                <p class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 truncate">{{ $stats['total_aktivitas'] }}</p>
-                <p class="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 leading-tight break-words">{{ $stats['total_aktivitas'] > 0 ? 'Semua terisi' : 'Belum terisi' }}</p>
+
+            {{-- Progress Bar Progres Periode --}}
+            <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80 p-0.5">
+                <div class="h-full rounded-full bg-brand transition-all duration-500" style="width: {{ $stats['progres_periode'] }}%"></div>
             </div>
         </div>
 
-        <div class="mt-4">
-            <div class="flex items-center justify-between text-xs font-bold mb-1.5">
-                <span class="text-slate-700">Progres periode</span>
-                <span class="text-brand font-black">{{ $stats['progres_periode'] }}%</span>
-            </div>
-            <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80 p-0.5">
-                <div class="h-full rounded-full bg-brand transition-all duration-500" style="width: {{ $stats['progres_periode'] }}%"></div>
+        {{-- Divider --}}
+        <div class="border-t border-slate-200/80"></div>
+
+        {{-- 2. Ringkasan Kehadiran dan Jam Magang (Bawah) --}}
+        <div>
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5">Kehadiran & Jam Magang</h3>
+
+            <div class="grid grid-cols-2 gap-2.5 sm:gap-3.5">
+                {{-- A. Kehadiran Berdasarkan Hari --}}
+                <div class="rounded-2xl glass-subcard p-3 sm:p-4 border border-white/80 space-y-1 min-w-0">
+                    <p class="text-xs text-slate-500 font-bold truncate">Kehadiran</p>
+                    <p class="text-xl sm:text-2xl font-black text-slate-900 truncate">{{ $stats['persen_kehadiran'] }}%</p>
+                    <p class="text-[10px] sm:text-xs text-slate-600 font-medium leading-tight break-words">
+                        {{ $stats['total_hadir'] }} dari {{ $stats['target_hari'] }} hari
+                    </p>
+                </div>
+
+                {{-- B. Jam Magang --}}
+                <div class="rounded-2xl glass-subcard p-3 sm:p-4 border border-white/80 space-y-2 min-w-0">
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold truncate">Jam Magang</p>
+                        <p class="text-xl sm:text-2xl font-black text-slate-900 truncate">{{ $stats['persen_jam'] }}%</p>
+                        <p class="text-[10px] sm:text-xs text-slate-600 font-medium leading-tight break-words">
+                            {{ $stats['jam_aktual'] }} dari {{ $stats['target_jam'] }} jam
+                        </p>
+                    </div>
+
+                    {{-- Progress Bar Jam Magang --}}
+                    <div class="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80">
+                        <div class="h-full rounded-full bg-emerald-600 transition-all duration-500" style="width: {{ $stats['persen_jam'] }}%"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -126,6 +156,26 @@
                     <div class="min-w-0 flex-1">
                         <h3 class="text-sm font-extrabold text-slate-900 group-hover:text-brand transition truncate">Lembar nilai magang</h3>
                         <p class="text-xs text-slate-500 truncate">Evaluasi pembimbing lapangan.</p>
+                    </div>
+                </div>
+                <div class="text-slate-400 group-hover:text-brand group-hover:translate-x-0.5 transition shrink-0 ml-2">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                </div>
+            </a>
+
+            {{-- 5. Cetak Sertifikat Magang --}}
+            <a href="{{ route('magang.sertifikat.index') }}" class="group flex items-center justify-between rounded-2xl glass-card p-4 shadow-2xs hover:border-brand/40 transition active:scale-[.99]">
+                <div class="flex items-center gap-3.5 min-w-0 flex-1">
+                    <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand group-hover:scale-105 transition shadow-2xs">
+                        <svg class="h-6 w-6 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <h3 class="text-sm font-extrabold text-slate-900 group-hover:text-brand transition truncate">Cetak sertifikat</h3>
+                        <p class="text-xs text-slate-500 truncate">Sertifikat kelulusan magang.</p>
                     </div>
                 </div>
                 <div class="text-slate-400 group-hover:text-brand group-hover:translate-x-0.5 transition shrink-0 ml-2">
