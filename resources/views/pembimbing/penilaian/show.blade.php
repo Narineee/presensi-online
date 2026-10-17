@@ -61,6 +61,31 @@
         </div>
     </div>
 
+    <!-- Multi-pembimbing info banner jika peserta memiliki evaluasi dari beberapa pembimbing -->
+    @if(isset($penilaianAkumulasi) && $penilaianAkumulasi->is_akumulasi)
+        <div class="no-print bg-gradient-to-r from-purple-50 via-indigo-50 to-purple-50 p-4 rounded-2xl border border-purple-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-600 text-white uppercase tracking-wider">Multi-Pembimbing</span>
+                    <span class="text-xs font-bold text-slate-800">Akumulasi {{ $penilaianAkumulasi->evaluasi_count }} Unit Penempatan</span>
+                </div>
+                <p class="text-xs text-slate-600 mt-1">
+                    Nilai Akhir Akumulasi: <strong class="text-purple-700 font-bold text-sm">{{ $penilaianAkumulasi->total_nilai }}</strong> ({{ $penilaianAkumulasi->predikat }} - {{ $penilaianAkumulasi->keterangan_predikat }}). Lembar di bawah ini khusus evaluasi unit: <strong>{{ $penilaian->penempatanMagang->divisi->nama_divisi ?? $penilaian->magang->divisi->nama_divisi ?? '-' }}</strong>.
+                </p>
+            </div>
+            @if($penilaian->magang->penilaians->count() > 1)
+                <div class="flex flex-wrap items-center gap-1.5 shrink-0">
+                    <span class="text-[11px] text-slate-500 font-medium">Beralih Lembar:</span>
+                    @foreach($penilaian->magang->penilaians as $p)
+                        <a href="{{ route('pembimbing.penilaian.show', $p->id) }}" class="px-2.5 py-1 text-xs rounded-xl font-semibold border transition {{ $p->id === $penilaian->id ? 'bg-purple-600 text-white border-purple-600 shadow-xs' : 'bg-white text-slate-700 hover:bg-purple-50 border-slate-300' }}">
+                            {{ $p->penempatanMagang->divisi->nama_divisi ?? $p->magang->divisi->nama_divisi ?? 'Unit #' . $loop->iteration }} ({{ $p->total_nilai }})
+                        </a>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+    @endif
+
     <!-- Lembar Penilaian Resmi (A4) -->
     <div class="print-sheet bg-white p-8 sm:p-12 border border-slate-300">
 
@@ -77,13 +102,27 @@
             <tr><td class="k">Nomor Induk (NIS/NIM)</td><td class="s">:</td><td>{{ $penilaian->magang->no_induk }}</td></tr>
             <tr><td class="k">Asal Lembaga / Kampus</td><td class="s">:</td><td>{{ $penilaian->magang->instansi_pendidikan }}</td></tr>
             <tr><td class="k">Program Studi / Jurusan</td><td class="s">:</td><td>{{ $penilaian->magang->jurusan ?? '-' }}</td></tr>
-            <tr><td class="k">Unit / Divisi Penempatan</td><td class="s">:</td><td>{{ $penilaian->magang->divisi->nama_divisi ?? '-' }}</td></tr>
             <tr>
-                <td class="k">Periode Pelaksanaan</td><td class="s">:</td>
+                <td class="k">Unit / Divisi Penempatan</td><td class="s">:</td>
                 <td>
-                    {{ $penilaian->magang->tanggal_mulai ? $penilaian->magang->tanggal_mulai->isoFormat('D MMMM Y') : '-' }}
-                    s/d
-                    {{ $penilaian->magang->tanggal_selesai ? $penilaian->magang->tanggal_selesai->isoFormat('D MMMM Y') : '-' }}
+                    <strong>{{ $penilaian->penempatanMagang->divisi->nama_divisi ?? $penilaian->magang->divisi->nama_divisi ?? '-' }}</strong>
+                    @if($penilaian->penempatanMagang && $penilaian->magang->divisi && $penilaian->penempatanMagang->divisi_id !== $penilaian->magang->divisi_id)
+                        <span class="text-xs text-slate-500">(Unit Pokok: {{ $penilaian->magang->divisi->nama_divisi }})</span>
+                    @endif
+                </td>
+            </tr>
+            <tr>
+                <td class="k">Periode Penempatan</td><td class="s">:</td>
+                <td>
+                    @if($penilaian->penempatanMagang && $penilaian->penempatanMagang->tanggal_mulai)
+                        {{ $penilaian->penempatanMagang->tanggal_mulai->isoFormat('D MMMM Y') }}
+                        s/d
+                        {{ $penilaian->penempatanMagang->tanggal_selesai ? $penilaian->penempatanMagang->tanggal_selesai->isoFormat('D MMMM Y') : 'Sekarang' }}
+                    @else
+                        {{ $penilaian->magang->tanggal_mulai ? $penilaian->magang->tanggal_mulai->isoFormat('D MMMM Y') : '-' }}
+                        s/d
+                        {{ $penilaian->magang->tanggal_selesai ? $penilaian->magang->tanggal_selesai->isoFormat('D MMMM Y') : '-' }}
+                    @endif
                 </td>
             </tr>
         </table>
@@ -195,12 +234,15 @@
                     <div>{{ $penilaian->pembimbing->jabatan ?? 'Pembimbing Lapangan' }}</div>
                 </td>
                 <td>
+                    @php
+                        $bidangTtdNilai = $penilaian->magang?->divisi?->bidang_induk ?? $penilaian->magang?->divisi;
+                    @endphp
                     <div>{{ $pengaturan->kota_surat ?? 'Banjarbaru' }}, {{ \Carbon\Carbon::now()->isoFormat('D MMMM Y') }}</div>
-                    <div>{{ $penilaian->magang->divisi->jabatan_pimpinan ?? 'Kepala Sub-Bagian / Divisi' }}</div>
+                    <div>{{ $bidangTtdNilai->jabatan_pimpinan ?? 'Kepala Bidang' }}</div>
                     <div class="ruang"></div>
-                    <div class="nm">{{ $penilaian->magang->divisi->nama_pimpinan ?? '( .................................................. )' }}</div>
-                    <div>NIP. {{ $penilaian->magang->divisi->nip_pimpinan ?? '-' }}</div>
-                    <div>{{ $penilaian->magang->divisi->nama_divisi ?? 'Divisi Terkait' }}</div>
+                    <div class="nm">{{ $bidangTtdNilai->nama_pimpinan ?? '( .................................................. )' }}</div>
+                    <div>NIP. {{ $bidangTtdNilai->nip_pimpinan ?? '-' }}</div>
+                    <div>{{ $bidangTtdNilai->nama_divisi ?? ($pengaturan->nama_instansi ?? 'Bidang Terkait') }}</div>
                 </td>
             </tr>
         </table>

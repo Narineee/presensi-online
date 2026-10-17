@@ -125,6 +125,7 @@
                     <tr>
                         <th class="px-6 py-4">No</th>
                         <th class="px-6 py-4">Peserta Magang</th>
+                        <th class="px-6 py-4">Pembimbing Lapangan</th>
                         <th class="px-6 py-4">Mode</th>
                         <th class="px-6 py-4">Jam Masuk</th>
                         <th class="px-6 py-4">Jam Pulang</th>
@@ -141,9 +142,23 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="font-bold text-slate-900">{{ $item->nama_lengkap }}</div>
+                                @php
+                                    $divisiRow = $item->pengguna?->magang?->getDivisiAt($item->tanggal) ?? $item->pengguna?->magang?->divisi;
+                                @endphp
                                 <div class="text-[11px] text-slate-400 font-mono mt-0.5">
-                                    {{ $item->pengguna->magang->divisi->nama_divisi ?? '@' . ($item->pengguna->username ?? '-') }}
+                                    {{ $divisiRow->nama_divisi ?? '@' . ($item->pengguna->username ?? '-') }}
                                 </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                @php
+                                    $pembimbingRow = $item->pengguna?->magang?->getPembimbingAt($item->tanggal);
+                                @endphp
+                                @if($pembimbingRow)
+                                    <div class="font-semibold text-slate-800">{{ $pembimbingRow->nama_lengkap }}</div>
+                                    <div class="text-[11px] text-slate-400 font-mono">NIP: {{ $pembimbingRow->nip ?? '-' }}</div>
+                                @else
+                                    <span class="text-slate-400">-</span>
+                                @endif
                             </td>
                             <td class="px-6 py-4">
                                 @if($item->is_tugas_luar || $item->mode_kerja === 'tugas_luar')

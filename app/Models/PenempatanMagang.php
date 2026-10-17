@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PenempatanMagang extends Model
 {
@@ -19,6 +20,7 @@ class PenempatanMagang extends Model
     protected $fillable = [
         'magang_id',
         'divisi_id',
+        'pembimbing_id',
         'tanggal_mulai',
         'tanggal_selesai',
     ];
@@ -48,6 +50,30 @@ class PenempatanMagang extends Model
     public function divisi(): BelongsTo
     {
         return $this->belongsTo(Divisi::class, 'divisi_id');
+    }
+
+    /**
+     * Relasi ke pembimbing pada penempatan unit ini.
+     */
+    public function pembimbing(): BelongsTo
+    {
+        return $this->belongsTo(Pembimbing::class, 'pembimbing_id');
+    }
+
+    /**
+     * Relasi ke penilaian akhir unit oleh pembimbing terkait penempatan ini.
+     */
+    public function penilaian(): HasOne
+    {
+        return $this->hasOne(Penilaian::class, 'penempatan_magang_id');
+    }
+
+    /**
+     * Pembimbing efektif untuk unit ini (fallback ke pembimbing utama magang jika tidak diset khusus).
+     */
+    public function getPembimbingEfektifAttribute(): ?Pembimbing
+    {
+        return $this->pembimbing ?? $this->magang?->pembimbing;
     }
 
     /**

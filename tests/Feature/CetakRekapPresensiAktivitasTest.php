@@ -8,6 +8,7 @@ use App\Models\Divisi;
 use App\Models\KriteriaPenilaian;
 use App\Models\Magang;
 use App\Models\Pembimbing;
+use App\Models\PengajuanIzin;
 use App\Models\Pengaturan;
 use App\Models\Pengguna;
 use App\Models\Penilaian;
@@ -104,9 +105,14 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         ]));
 
         $response->assertStatus(200);
-        $response->assertSee('REKAPITULASI PRESENSI KEHADIRAN');
+        $response->assertSee('LAPORAN PRESENSI MAGANG');
         $response->assertSee('Ahmad Magang');
-        $response->assertSee('08:00 WITA');
+        $response->assertSee('Dr. Pembimbing, M.Kom');
+        $response->assertSee('Hadir');
+        $response->assertSee('Sakit');
+        $response->assertSee('Izin');
+        $response->assertSee('Alfa');
+        $response->assertSee('Tugas Luar');
         $pengaturan = Pengaturan::getPengaturan();
         $response->assertSee($pengaturan->nama_kepala_dinas);
         $response->assertSee($pengaturan->jabatan_kepala_dinas);
@@ -390,5 +396,155 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         $response->assertSee($pengaturan->nama_kepala_dinas);
         $response->assertDontSee('sidebar-scroll');
         $response->assertDontSee('toggleAdminSidebar');
+    }
+
+    public function test_admin_presensi_cetak_laporan_presensi_magang_rekap_seluruh_peserta_dengan_kolom_lengkap(): void
+    {
+        $admin = $this->createAdminUser();
+
+        $divisi = Divisi::firstOrCreate(
+            ['nama_divisi' => 'Teknologi Informasi'],
+            [
+                'nama_pimpinan' => 'Ir. H. Budi Santoso, M.T.',
+                'nip_pimpinan' => '197501012000031001',
+                'jabatan_pimpinan' => 'Kepala Sub-Bagian IT',
+                'latitude' => -3.4893886,
+                'longitude' => 114.8252584,
+                'radius_meter' => 40,
+            ]
+        );
+
+        $pembimbingUserA = Pengguna::create([
+            'username' => 'pem_a',
+            'password' => 'secret123',
+            'role' => 'pembimbing',
+            'is_active' => true,
+        ]);
+        $pembimbingA = Pembimbing::create([
+            'pengguna_id' => $pembimbingUserA->id,
+            'nip' => '198501012010011001',
+            'nama_lengkap' => 'Pembimbing Alpha',
+            'jabatan' => 'Pranata Komputer',
+            'no_hp' => '0811111111',
+        ]);
+
+        $pembimbingUserB = Pengguna::create([
+            'username' => 'pem_b',
+            'password' => 'secret123',
+            'role' => 'pembimbing',
+            'is_active' => true,
+        ]);
+        $pembimbingB = Pembimbing::create([
+            'pengguna_id' => $pembimbingUserB->id,
+            'nip' => '198601012010011002',
+            'nama_lengkap' => 'Pembimbing Beta',
+            'jabatan' => 'Arsiparis',
+            'no_hp' => '0822222222',
+        ]);
+
+        $internUser1 = Pengguna::create([
+            'username' => 'intern_satu',
+            'password' => 'secret123',
+            'role' => 'magang',
+            'is_active' => true,
+        ]);
+        $magang1 = Magang::create([
+            'pengguna_id' => $internUser1->id,
+            'pembimbing_id' => $pembimbingA->id,
+            'divisi_id' => $divisi->id,
+            'no_induk' => 'NIM001',
+            'nama_lengkap' => 'Intern Satu Lengkap',
+            'instansi_pendidikan' => 'Universitas Indonesia',
+            'tanggal_mulai' => '2026-09-01',
+            'tanggal_selesai' => '2026-09-30',
+            'status' => 'aktif',
+        ]);
+
+        $internUser2 = Pengguna::create([
+            'username' => 'intern_dua',
+            'password' => 'secret123',
+            'role' => 'magang',
+            'is_active' => true,
+        ]);
+        $magang2 = Magang::create([
+            'pengguna_id' => $internUser2->id,
+            'pembimbing_id' => $pembimbingB->id,
+            'divisi_id' => $divisi->id,
+            'no_induk' => 'NIM002',
+            'nama_lengkap' => 'Intern Dua Lengkap',
+            'instansi_pendidikan' => 'Universitas Gadjah Mada',
+            'tanggal_mulai' => '2026-09-01',
+            'tanggal_selesai' => '2026-09-30',
+            'status' => 'aktif',
+        ]);
+
+        // Presensi intern 1:
+        // 1. Hadir
+        Presensi::create([
+            'pengguna_id' => $internUser1->id,
+            'tanggal' => '2026-09-01',
+            'jam_masuk' => '07:55:00',
+            'jam_keluar' => '16:05:00',
+            'status' => 'hadir',
+            'mode_kerja' => 'onsite',
+        ]);
+        // 2. Tugas Luar
+        Presensi::create([
+            'pengguna_id' => $internUser1->id,
+            'tanggal' => '2026-09-02',
+            'jam_masuk' => '08:00:00',
+            'jam_keluar' => '16:00:00',
+            'status' => 'hadir',
+            'mode_kerja' => 'tugas_luar',
+            'keterangan' => 'Tugas luar peliputan',
+        ]);
+        // 3. Sakit
+        PengajuanIzin::create([
+            'pengguna_id' => $internUser1->id,
+            'jenis_izin' => 'sakit',
+            'tanggal_mulai' => '2026-09-03',
+            'tanggal_selesai' => '2026-09-03',
+            'alasan' => 'Sakit flu',
+            'bukti_file' => 'bukti-izin/flu.pdf',
+            'status_approval' => 'disetujui',
+        ]);
+        // 4. Izin
+        PengajuanIzin::create([
+            'pengguna_id' => $internUser1->id,
+            'jenis_izin' => 'izin',
+            'tanggal_mulai' => '2026-09-04',
+            'tanggal_selesai' => '2026-09-04',
+            'alasan' => 'Izin praktikum',
+            'bukti_file' => 'bukti-izin/lab.pdf',
+            'status_approval' => 'disetujui',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.presensi.cetak', [
+            'tanggal_mulai' => '2026-09-01',
+            'tanggal_akhir' => '2026-09-30',
+        ]));
+
+        $response->assertStatus(200);
+        // Judul laporan
+        $response->assertSee('LAPORAN PRESENSI MAGANG');
+        // Subjudul periode
+        $response->assertSee('Dari Tanggal 1 September 2026 Sampai Tanggal 30 September 2026');
+
+        // Header tabel
+        $response->assertSee('No');
+        $response->assertSee('Nama');
+        $response->assertSee('Pembimbing');
+        $response->assertSee('Periode');
+        $response->assertSee('Hadir');
+        $response->assertSee('Sakit');
+        $response->assertSee('Izin');
+        $response->assertSee('Alfa');
+        $response->assertSee('Tugas Luar');
+
+        // Seluruh peserta magang muncul
+        $response->assertSee('Intern Satu Lengkap');
+        $response->assertSee('Pembimbing Alpha');
+        $response->assertSee('Intern Dua Lengkap');
+        $response->assertSee('Pembimbing Beta');
     }
 }

@@ -17,6 +17,17 @@
         <div><dt class="text-xs text-slate-500">Nomor Induk</dt><dd class="font-bold">{{ $magang->no_induk ?? '-' }}</dd></div>
         <div><dt class="text-xs text-slate-500">Nomor Telepon</dt><dd class="font-bold">{{ $magang->no_hp ?? '-' }}</dd></div>
         <div><dt class="text-xs text-slate-500">Jurusan</dt><dd class="font-bold">{{ $magang->jurusan ?? '-' }}</dd></div>
-        <div><dt class="text-xs text-slate-500">Periode magang</dt><dd class="font-bold">{{ $mulai ?? '-' }} - {{ $selesai ?? '-' }}</dd></div>
+        <div><dt class="text-xs text-slate-500">Periode Magang</dt><dd class="font-bold">{{ $mulai ?? '-' }} - {{ $selesai ?? '-' }}</dd></div>
     </dl>
+    @php
+        $penempatanAktif = $magang->getPenempatanAt(today()) ?? ($magang->penempatanMagang->isNotEmpty() ? $magang->penempatanMagang->first() : null);
+    @endphp
+    @if ($penempatanAktif)
+        <div class="mt-3.5 rounded-2xl bg-brand-soft/60 p-3 text-xs border border-brand/20">
+            <span class="font-extrabold text-brand block">Penempatan Unit: {{ $penempatanAktif->divisi?->nama_divisi ?? '-' }}</span>
+            <span class="text-slate-600 font-medium">
+                {{ $penempatanAktif->tanggal_mulai?->locale('id')->isoFormat('D MMM Y') }} s/d {{ $penempatanAktif->tanggal_selesai?->locale('id')->isoFormat('D MMM Y') }}
+            </span>
+        </div>
+    @endif
 </section>

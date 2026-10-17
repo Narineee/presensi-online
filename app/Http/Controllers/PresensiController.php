@@ -157,7 +157,7 @@ class PresensiController extends Controller
 
             $targetHari = max(1, $scoreData['target_hari']);
             $targetJam = max(1, (int) round($scoreData['target_menit'] / 60));
-            $totalHadir = $scoreData['total_hari_hadir'];
+            $totalHadir = $scoreData['total_hari_hadir'] + ($scoreData['total_hari_lupa_checkout'] ?? 0);
 
             // Jam aktual dari menit realisasi yang valid
             $jamAktual = (int) round($scoreData['total_menit_realisasi'] / 60);

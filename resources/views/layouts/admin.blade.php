@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Admin Dashboard') - Presensi Digital</title>
+    <title>@yield('title', 'Admin Dashboard') - SEIRAMA </title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -71,7 +71,7 @@
                     PD
                 </div>
                 <div>
-                    <h2 class="text-sm font-bold text-slate-900 leading-tight">Presensi Digital</h2>
+                    <h2 class="text-sm font-bold text-slate-900 leading-tight">SEIRAMA</h2>
                     <span class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full mt-0.5">
                         <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
                         Administrator
@@ -159,7 +159,7 @@
                             <svg class="w-4 h-4 {{ request()->routeIs('admin.divisi.*') ? 'text-white' : 'text-blue-600' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
                             </svg>
-                            <span>Data Divisi</span>
+                            <span>Data Unit Kerja</span>
                         </span>
                         @if(request()->routeIs('admin.divisi.*'))
                             <span class="w-1.5 h-1.5 rounded-full bg-white"></span>

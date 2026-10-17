@@ -20,7 +20,15 @@ class MonitoringPenilaianController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Magang::with(['divisi', 'pembimbing', 'penilaian.detail.kriteria']);
+        $query = Magang::with([
+            'divisi',
+            'pembimbing',
+            'penilaians.pembimbing',
+            'penilaians.penempatanMagang.divisi',
+            'penilaians.detail.kriteria',
+            'penempatanMagang.divisi',
+            'penempatanMagang.pembimbing',
+        ]);
 
         // Filter divisi
         if ($request->filled('divisi_id')) {
@@ -29,15 +37,20 @@ class MonitoringPenilaianController extends Controller
 
         // Filter pembimbing
         if ($request->filled('pembimbing_id')) {
-            $query->where('pembimbing_id', $request->pembimbing_id);
+            $query->where(function ($q) use ($request) {
+                $q->where('pembimbing_id', $request->pembimbing_id)
+                    ->orWhereHas('penempatanMagang', function ($pq) use ($request) {
+                        $pq->where('pembimbing_id', $request->pembimbing_id);
+                    });
+            });
         }
 
         // Filter status penilaian (sudah / belum)
         if ($request->filled('status_nilai')) {
             if ($request->status_nilai === 'sudah') {
-                $query->has('penilaian');
+                $query->has('penilaians');
             } elseif ($request->status_nilai === 'belum') {
-                $query->doesntHave('penilaian');
+                $query->doesntHave('penilaians');
             }
         }
 
@@ -55,13 +68,17 @@ class MonitoringPenilaianController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        foreach ($magangList as $m) {
+            $m->penilaian_akumulasi = $m->getPenilaianAkumulasi();
+        }
+
         // Data dropdown filter
         $divisiList = Divisi::orderBy('nama_divisi', 'asc')->get();
         $pembimbingList = Pembimbing::orderBy('nama_lengkap', 'asc')->get();
 
         // Statistik
         $totalMagang = Magang::count();
-        $sudahDinilai = Magang::has('penilaian')->count();
+        $sudahDinilai = Magang::has('penilaians')->count();
         $belumDinilai = $totalMagang - $sudahDinilai;
         $rataRataNilai = Penilaian::avg('total_nilai');
 
@@ -81,7 +98,15 @@ class MonitoringPenilaianController extends Controller
      */
     public function cetak(Request $request)
     {
-        $query = Magang::with(['divisi', 'pembimbing', 'penilaian.detail.kriteria']);
+        $query = Magang::with([
+            'divisi',
+            'pembimbing',
+            'penilaians.pembimbing',
+            'penilaians.penempatanMagang.divisi',
+            'penilaians.detail.kriteria',
+            'penempatanMagang.divisi',
+            'penempatanMagang.pembimbing',
+        ]);
 
         // Filter divisi
         if ($request->filled('divisi_id')) {
@@ -90,15 +115,20 @@ class MonitoringPenilaianController extends Controller
 
         // Filter pembimbing
         if ($request->filled('pembimbing_id')) {
-            $query->where('pembimbing_id', $request->pembimbing_id);
+            $query->where(function ($q) use ($request) {
+                $q->where('pembimbing_id', $request->pembimbing_id)
+                    ->orWhereHas('penempatanMagang', function ($pq) use ($request) {
+                        $pq->where('pembimbing_id', $request->pembimbing_id);
+                    });
+            });
         }
 
         // Filter status penilaian (sudah / belum)
         if ($request->filled('status_nilai')) {
             if ($request->status_nilai === 'sudah') {
-                $query->has('penilaian');
+                $query->has('penilaians');
             } elseif ($request->status_nilai === 'belum') {
-                $query->doesntHave('penilaian');
+                $query->doesntHave('penilaians');
             }
         }
 
@@ -113,13 +143,17 @@ class MonitoringPenilaianController extends Controller
         }
 
         $magangList = $query->orderBy('nama_lengkap', 'asc')->get();
+        foreach ($magangList as $m) {
+            $m->penilaian_akumulasi = $m->getPenilaianAkumulasi();
+        }
+
         $pengaturan = Pengaturan::getPengaturan();
 
         $stats = [
             'total' => $magangList->count(),
-            'sudah' => $magangList->filter(fn ($m) => $m->penilaian !== null)->count(),
-            'belum' => $magangList->filter(fn ($m) => $m->penilaian === null)->count(),
-            'rata_rata' => $magangList->filter(fn ($m) => $m->penilaian !== null)->avg(fn ($m) => $m->penilaian->total_nilai) ?? 0,
+            'sudah' => $magangList->filter(fn ($m) => $m->penilaians->isNotEmpty())->count(),
+            'belum' => $magangList->filter(fn ($m) => $m->penilaians->isEmpty())->count(),
+            'rata_rata' => $magangList->filter(fn ($m) => $m->penilaian_akumulasi !== null)->avg(fn ($m) => $m->penilaian_akumulasi->total_nilai) ?? 0,
         ];
 
         return view('admin.penilaian.cetak', compact('magangList', 'pengaturan', 'stats'));
@@ -133,14 +167,21 @@ class MonitoringPenilaianController extends Controller
         $penilaian = Penilaian::with([
             'magang.divisi',
             'magang.pengguna',
+            'magang.penilaians.pembimbing',
+            'magang.penilaians.penempatanMagang.divisi',
+            'magang.penilaians.detail.kriteria',
+            'magang.penempatanMagang.divisi',
+            'magang.penempatanMagang.pembimbing',
             'pembimbing',
+            'penempatanMagang.divisi',
             'detail.kriteria',
         ])->findOrFail($id);
 
+        $penilaianAkumulasi = $penilaian->magang->getPenilaianAkumulasi();
         $pengaturan = Pengaturan::getPengaturan();
-        $presensiScore = $this->presensiScoreService->calculateScore($penilaian->magang);
+        $presensiScore = $this->presensiScoreService->calculateScore($penilaian->magang, $penilaian->penempatanMagang);
 
-        return view('admin.penilaian.show', compact('penilaian', 'pengaturan', 'presensiScore'));
+        return view('admin.penilaian.show', compact('penilaian', 'penilaianAkumulasi', 'pengaturan', 'presensiScore'));
     }
 
     /**

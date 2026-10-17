@@ -26,8 +26,20 @@ class PenilaianMagangController extends Controller
             return redirect()->route('pembimbing.dashboard')->with('error', 'Profil pembimbing tidak ditemukan.');
         }
 
-        $query = Magang::where('pembimbing_id', $pembimbing->id)
-            ->with(['divisi', 'penilaian.detail.kriteria', 'pengguna']);
+        $query = Magang::where(function ($q) use ($pembimbing) {
+            $q->where('pembimbing_id', $pembimbing->id)
+                ->orWhereHas('penempatanMagang', function ($pq) use ($pembimbing) {
+                    $pq->where('pembimbing_id', $pembimbing->id);
+                });
+        })->with([
+            'divisi',
+            'penilaians.detail.kriteria',
+            'penilaians.pembimbing',
+            'penilaians.penempatanMagang.divisi',
+            'penempatanMagang.divisi',
+            'penempatanMagang.pembimbing',
+            'pengguna',
+        ]);
 
         // Filter pencarian nama / no induk / instansi
         $search = $request->input('q', $request->input('search'));
@@ -58,24 +70,34 @@ class PenilaianMagangController extends Controller
             $query->whereDate('tanggal_selesai', '<=', $tanggalSelesai);
         }
 
-        // Filter status penilaian (sudah / belum)
+        // Filter status penilaian terhadap pembimbing yang sedang login (sudah / belum)
         $statusNilai = $request->input('status_nilai');
         if ($statusNilai === 'sudah') {
-            $query->has('penilaian');
+            $query->whereHas('penilaians', function ($pq) use ($pembimbing) {
+                $pq->where('pembimbing_id', $pembimbing->id);
+            });
         } elseif ($statusNilai === 'belum') {
-            $query->doesntHave('penilaian');
+            $query->whereDoesntHave('penilaians', function ($pq) use ($pembimbing) {
+                $pq->where('pembimbing_id', $pembimbing->id);
+            });
         }
 
         $allMagang = $query->orderBy('nama_lengkap', 'asc')->get();
 
-        // Pisahkan menjadi Perlu Dinilai dan Sudah Dinilai
-        $perluDinilai = $allMagang->filter(fn ($m) => $m->penilaian === null);
-        $sudahDinilaiList = $allMagang->filter(fn ($m) => $m->penilaian !== null);
+        // Siapkan atribut pembimbing untuk setiap peserta
+        foreach ($allMagang as $m) {
+            $m->penilaian_saya = $m->penilaians->where('pembimbing_id', $pembimbing->id)->first();
+            $m->penilaian_akumulasi = $m->getPenilaianAkumulasi();
+        }
+
+        // Pisahkan menjadi Perlu Dinilai dan Sudah Dinilai dari sudut pandang pembimbing ini
+        $perluDinilai = $allMagang->filter(fn ($m) => $m->penilaian_saya === null);
+        $sudahDinilaiList = $allMagang->filter(fn ($m) => $m->penilaian_saya !== null);
 
         // Statistik
-        $totalBinaan = Magang::where('pembimbing_id', $pembimbing->id)->count();
-        $sudahDinilai = Magang::where('pembimbing_id', $pembimbing->id)->has('penilaian')->count();
-        $belumDinilai = $totalBinaan - $sudahDinilai;
+        $totalBinaan = $allMagang->count();
+        $sudahDinilai = $sudahDinilaiList->count();
+        $belumDinilai = $perluDinilai->count();
         $totalKriteria = KriteriaPenilaian::count();
 
         $magangList = $allMagang;
@@ -105,8 +127,20 @@ class PenilaianMagangController extends Controller
             return redirect()->route('pembimbing.dashboard')->with('error', 'Profil pembimbing tidak ditemukan.');
         }
 
-        $query = Magang::where('pembimbing_id', $pembimbing->id)
-            ->with(['divisi', 'penilaian.detail.kriteria', 'pengguna']);
+        $query = Magang::where(function ($q) use ($pembimbing) {
+            $q->where('pembimbing_id', $pembimbing->id)
+                ->orWhereHas('penempatanMagang', function ($pq) use ($pembimbing) {
+                    $pq->where('pembimbing_id', $pembimbing->id);
+                });
+        })->with([
+            'divisi',
+            'penilaians.detail.kriteria',
+            'penilaians.pembimbing',
+            'penilaians.penempatanMagang.divisi',
+            'penempatanMagang.divisi',
+            'penempatanMagang.pembimbing',
+            'pengguna',
+        ]);
 
         $search = $request->input('q', $request->input('search'));
         if ($search) {
@@ -133,22 +167,41 @@ class PenilaianMagangController extends Controller
 
         $statusNilai = $request->input('status_nilai');
         if ($statusNilai === 'sudah') {
-            $query->has('penilaian');
+            $query->whereHas('penilaians', function ($pq) use ($pembimbing) {
+                $pq->where('pembimbing_id', $pembimbing->id);
+            });
         } elseif ($statusNilai === 'belum') {
-            $query->doesntHave('penilaian');
+            $query->whereDoesntHave('penilaians', function ($pq) use ($pembimbing) {
+                $pq->where('pembimbing_id', $pembimbing->id);
+            });
+        }
+
+        // Filter peserta magang tertentu jika dipilih
+        $selectedMagang = null;
+        if ($request->filled('magang_id')) {
+            $selectedMagang = Magang::find($request->magang_id);
+            if ($selectedMagang) {
+                $query->where('id', $selectedMagang->id);
+            }
         }
 
         $magangList = $query->orderBy('nama_lengkap', 'asc')->get();
+        foreach ($magangList as $m) {
+            $m->penilaian_saya = $m->penilaians->where('pembimbing_id', $pembimbing->id)->first();
+            $m->penilaian_akumulasi = $m->getPenilaianAkumulasi();
+        }
+
+        $kriteriaList = KriteriaPenilaian::orderBy('id', 'asc')->get();
         $pengaturan = Pengaturan::getPengaturan();
 
         $stats = [
             'total' => $magangList->count(),
-            'sudah' => $magangList->filter(fn ($m) => $m->penilaian !== null)->count(),
-            'belum' => $magangList->filter(fn ($m) => $m->penilaian === null)->count(),
-            'rata_rata' => $magangList->filter(fn ($m) => $m->penilaian !== null)->avg(fn ($m) => $m->penilaian->total_nilai) ?? 0,
+            'sudah' => $magangList->filter(fn ($m) => $m->penilaian_saya !== null)->count(),
+            'belum' => $magangList->filter(fn ($m) => $m->penilaian_saya === null)->count(),
+            'rata_rata' => $magangList->filter(fn ($m) => $m->penilaian_akumulasi !== null)->avg(fn ($m) => $m->penilaian_akumulasi->total_nilai) ?? 0,
         ];
 
-        return view('pembimbing.penilaian.cetak', compact('magangList', 'pengaturan', 'stats', 'pembimbing'));
+        return view('pembimbing.penilaian.cetak', compact('magangList', 'pengaturan', 'stats', 'pembimbing', 'kriteriaList', 'selectedMagang'));
     }
 
     /**
@@ -162,19 +215,43 @@ class PenilaianMagangController extends Controller
         }
 
         $magangId = $request->get('magang_id');
+        $penempatanId = $request->get('penempatan_magang_id');
+
         if (! $magangId) {
             return redirect()->route('pembimbing.penilaian.index')->with('error', 'Pilih anak magang yang ingin dinilai.');
         }
 
         $magang = Magang::where('id', $magangId)
-            ->where('pembimbing_id', $pembimbing->id)
-            ->with('divisi')
+            ->where(function ($q) use ($pembimbing) {
+                $q->where('pembimbing_id', $pembimbing->id)
+                    ->orWhereHas('penempatanMagang', function ($pq) use ($pembimbing) {
+                        $pq->where('pembimbing_id', $pembimbing->id);
+                    });
+            })
+            ->with(['divisi', 'penempatanMagang.divisi', 'penempatanMagang.pembimbing'])
             ->firstOrFail();
 
-        // Jika sudah pernah dinilai, arahkan ke halaman detail nilai
-        if ($magang->penilaian) {
-            return redirect()->route('pembimbing.penilaian.show', $magang->penilaian->id)
-                ->with('info', 'Anak magang ini sudah memiliki penilaian akhir.');
+        // Cari penempatan terkait yang diasuh pembimbing ini
+        $penempatan = null;
+        if ($penempatanId) {
+            $penempatan = $magang->penempatanMagang()->find($penempatanId);
+        } else {
+            $penempatan = $magang->penempatanMagang()
+                ->where('pembimbing_id', $pembimbing->id)
+                ->first()
+                ?? $magang->getPenempatanAt(today())
+                ?? $magang->penempatanMagang()->first();
+        }
+
+        // Cek jika pembimbing ini sudah memberikan penilaian untuk penempatan ini
+        $existingPenilaian = Penilaian::where('magang_id', $magang->id)
+            ->where('pembimbing_id', $pembimbing->id)
+            ->when($penempatan, fn ($q) => $q->where('penempatan_magang_id', $penempatan->id))
+            ->first();
+
+        if ($existingPenilaian) {
+            return redirect()->route('pembimbing.penilaian.show', $existingPenilaian->id)
+                ->with('info', 'Anda sudah memberikan penilaian untuk peserta ini pada unit penempatan terkait.');
         }
 
         // Ambil seluruh kriteria penilaian aktif
@@ -185,10 +262,10 @@ class PenilaianMagangController extends Controller
                 ->with('error', 'Belum ada kriteria penilaian yang dibuat admin. Hubungi admin sistem.');
         }
 
-        // Hitung skor presensi objektif
-        $presensiScore = $this->presensiScoreService->calculateScore($magang);
+        // Hitung skor presensi objektif (sesuai periode penempatan jika ada)
+        $presensiScore = $this->presensiScoreService->calculateScore($magang, $penempatan);
 
-        return view('pembimbing.penilaian.create', compact('magang', 'kriteriaList', 'presensiScore'));
+        return view('pembimbing.penilaian.create', compact('magang', 'kriteriaList', 'presensiScore', 'penempatan'));
     }
 
     /**
@@ -201,9 +278,10 @@ class PenilaianMagangController extends Controller
             return redirect()->route('pembimbing.dashboard')->with('error', 'Profil pembimbing tidak ditemukan.');
         }
 
-        // Validasi input sederhana
+        // Validasi input
         $request->validate([
             'magang_id' => 'required|exists:magang,id',
+            'penempatan_magang_id' => 'nullable|exists:penempatan_magang,id',
             'nilai' => 'required|array',
             'nilai.*' => 'required|numeric|min:0|max:100',
             'status_magang' => 'nullable|in:aktif,selesai',
@@ -217,17 +295,38 @@ class PenilaianMagangController extends Controller
         ]);
 
         $magang = Magang::where('id', $request->magang_id)
-            ->where('pembimbing_id', $pembimbing->id)
+            ->where(function ($q) use ($pembimbing) {
+                $q->where('pembimbing_id', $pembimbing->id)
+                    ->orWhereHas('penempatanMagang', function ($pq) use ($pembimbing) {
+                        $pq->where('pembimbing_id', $pembimbing->id);
+                    });
+            })
             ->firstOrFail();
 
-        // Cek jika sudah pernah dinilai
-        if ($magang->penilaian) {
-            return redirect()->route('pembimbing.penilaian.show', $magang->penilaian->id)
-                ->with('error', 'Penilaian untuk anak magang ini sudah ada.');
+        $penempatanId = $request->penempatan_magang_id;
+        $penempatan = null;
+        if ($penempatanId) {
+            $penempatan = $magang->penempatanMagang()->find($penempatanId);
+        } else {
+            $penempatan = $magang->penempatanMagang()
+                ->where('pembimbing_id', $pembimbing->id)
+                ->first();
+            $penempatanId = $penempatan?->id;
         }
 
-        // Hitung skor objektif presensi digital (Opsi A)
-        $presensiScore = $this->presensiScoreService->calculateScore($magang);
+        // Cek jika sudah pernah dinilai oleh pembimbing ini untuk penempatan ini
+        $existingPenilaian = Penilaian::where('magang_id', $magang->id)
+            ->where('pembimbing_id', $pembimbing->id)
+            ->when($penempatanId, fn ($q) => $q->where('penempatan_magang_id', $penempatanId))
+            ->first();
+
+        if ($existingPenilaian) {
+            return redirect()->route('pembimbing.penilaian.show', $existingPenilaian->id)
+                ->with('error', 'Penilaian Anda untuk peserta pada penempatan ini sudah ada.');
+        }
+
+        // Hitung skor objektif presensi digital (berdasarkan penempatan jika ada)
+        $presensiScore = $this->presensiScoreService->calculateScore($magang, $penempatan);
         $presensiKriteriaId = $presensiScore['kriteria_presensi']?->id;
 
         $kriteriaList = KriteriaPenilaian::all();
@@ -256,6 +355,7 @@ class PenilaianMagangController extends Controller
         $penilaian = Penilaian::create([
             'magang_id' => $magang->id,
             'pembimbing_id' => $pembimbing->id,
+            'penempatan_magang_id' => $penempatanId,
             'total_nilai' => $totalNilai,
         ]);
 
@@ -296,18 +396,33 @@ class PenilaianMagangController extends Controller
         }
 
         $penilaian = Penilaian::where('id', $id)
-            ->where('pembimbing_id', $pembimbing->id)
             ->with([
                 'magang.divisi',
                 'magang.pengguna',
+                'magang.penempatanMagang.divisi',
+                'magang.penempatanMagang.pembimbing',
+                'magang.penilaians.pembimbing',
+                'magang.penilaians.penempatanMagang.divisi',
+                'magang.penilaians.detail.kriteria',
                 'pembimbing',
+                'penempatanMagang.divisi',
                 'detail.kriteria',
             ])
             ->firstOrFail();
 
-        $presensiScore = $this->presensiScoreService->calculateScore($penilaian->magang);
+        // Otorisasi: hanya pembimbing pembuat atau pembimbing yang membina peserta ini
+        $isMyAssessment = ($penilaian->pembimbing_id === $pembimbing->id);
+        $isMyIntern = ($penilaian->magang->pembimbing_id === $pembimbing->id) ||
+            $penilaian->magang->penempatanMagang()->where('pembimbing_id', $pembimbing->id)->exists();
 
-        return view('pembimbing.penilaian.show', compact('penilaian', 'presensiScore'));
+        if (! $isMyAssessment && ! $isMyIntern) {
+            abort(403, 'Anda tidak memiliki akses ke lembar penilaian ini.');
+        }
+
+        $penilaianAkumulasi = $penilaian->magang->getPenilaianAkumulasi();
+        $presensiScore = $this->presensiScoreService->calculateScore($penilaian->magang, $penilaian->penempatanMagang);
+
+        return view('pembimbing.penilaian.show', compact('penilaian', 'penilaianAkumulasi', 'presensiScore'));
     }
 
     /**
@@ -324,6 +439,7 @@ class PenilaianMagangController extends Controller
             ->where('pembimbing_id', $pembimbing->id)
             ->with([
                 'magang.divisi',
+                'penempatanMagang.divisi',
                 'detail.kriteria',
             ])
             ->firstOrFail();
@@ -331,7 +447,7 @@ class PenilaianMagangController extends Controller
         $kriteriaList = KriteriaPenilaian::orderBy('id', 'asc')->get();
 
         // Hitung skor objektif presensi
-        $presensiScore = $this->presensiScoreService->calculateScore($penilaian->magang);
+        $presensiScore = $this->presensiScoreService->calculateScore($penilaian->magang, $penilaian->penempatanMagang);
 
         // Format nilai per kriteria ID agar mudah diakses di form blade
         $nilaiMap = $penilaian->detail->pluck('nilai', 'kriteria_id')->toArray();
@@ -366,7 +482,7 @@ class PenilaianMagangController extends Controller
         ]);
 
         // Hitung skor objektif presensi
-        $presensiScore = $this->presensiScoreService->calculateScore($penilaian->magang);
+        $presensiScore = $this->presensiScoreService->calculateScore($penilaian->magang, $penilaian->penempatanMagang);
         $presensiKriteriaId = $presensiScore['kriteria_presensi']?->id;
 
         $kriteriaList = KriteriaPenilaian::all();

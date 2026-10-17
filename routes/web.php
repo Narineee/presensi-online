@@ -83,6 +83,9 @@ Route::middleware(['auth', 'role:admin'])
         Route::put('magang/{magang}/penempatan/{penempatan}', [PenempatanMagangController::class, 'update'])->name('magang.penempatan.update');
         Route::delete('magang/{magang}/penempatan/{penempatan}', [PenempatanMagangController::class, 'destroy'])->name('magang.penempatan.destroy');
 
+        // Toggle Status Aktif Akun Magang
+        Route::post('magang/{magang}/toggle-status', [MagangController::class, 'toggleStatus'])->name('magang.toggle-status');
+
         // CRUD Magang & Plotting
         Route::resource('magang', MagangController::class);
 
@@ -181,14 +184,9 @@ Route::middleware(['auth', 'role:pembimbing'])
         // Monitoring Rencana Kerja Peserta Binaan
         Route::get('/rencana', [PembimbingRencanaKerjaController::class, 'index'])->name('rencana.index');
         Route::get('/rencana/{id}', [PembimbingRencanaKerjaController::class, 'show'])->name('rencana.show');
-        Route::get('/pekerjaan', function () {
-            return redirect()->route('pembimbing.rencana.index');
-        })->name('pekerjaan.index');
-        Route::get('/pekerjaan/{id}', function ($id) {
-            return redirect()->route('pembimbing.rencana.show', $id);
-        })->name('pekerjaan.show');
 
-        // Validasi Aktivitas Binaan
+        // Monitoring & Validasi Aktivitas Binaan
+        Route::get('/aktivitas/cetak', [AktivitasValidasiController::class, 'cetak'])->name('aktivitas.cetak');
         Route::get('/aktivitas', [AktivitasValidasiController::class, 'index'])->name('aktivitas.index');
         Route::post('/aktivitas/{id}/validasi', [AktivitasValidasiController::class, 'validasi'])->name('aktivitas.validasi');
 

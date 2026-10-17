@@ -37,8 +37,9 @@
                 <thead class="bg-slate-50 border-b border-slate-200/80 text-xs font-bold uppercase tracking-wider text-slate-500">
                     <tr>
                         <th class="px-6 py-4">No</th>
-                        <th class="px-6 py-4">Nama Divisi</th>
-                        <th class="px-6 py-4">Pimpinan Sub-Bagian</th>
+                        <th class="px-6 py-4">Nama Unit Kerja</th>
+                        <th class="px-6 py-4">Tingkat / Bidang Induk</th>
+                        <th class="px-6 py-4">Pimpinan Unit</th>
                         <th class="px-6 py-4">NIP & Jabatan</th>
                         <th class="px-6 py-4">Lokasi & Radius</th>
                         <th class="px-6 py-4 text-center">Aksi</th>
@@ -52,6 +53,24 @@
                             </td>
                             <td class="px-6 py-4 font-bold text-slate-900">
                                 {{ $item->nama_divisi }}
+                            </td>
+                            <td class="px-6 py-4">
+                                @if (is_null($item->parent_id))
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                                        Bidang / Sekretariat
+                                    </span>
+                                @else
+                                    <div class="space-y-1">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                                            Subbagian / Seksi
+                                        </span>
+                                        <div class="text-xs font-semibold text-slate-800 flex items-center gap-1">
+                                            <svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                            <span>{{ $item->parent->nama_divisi ?? '-' }}</span>
+                                        </div>
+                                    </div>
+                                @endif
                             </td>
                             <td class="px-6 py-4 font-medium text-slate-800">
                                 {{ $item->nama_pimpinan ?? '-' }}
@@ -92,7 +111,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-slate-400">
+                            <td colspan="7" class="px-6 py-12 text-center text-slate-400">
                                 <svg class="w-12 h-12 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
                                 </svg>

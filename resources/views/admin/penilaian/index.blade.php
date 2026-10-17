@@ -176,8 +176,21 @@
 
                             <!-- Pembimbing -->
                             <td class="py-3.5 px-4">
-                                <div class="font-medium text-slate-800">{{ $magang->pembimbing->nama_lengkap ?? '-' }}</div>
-                                <div class="text-[11px] text-slate-400">NIP: {{ $magang->pembimbing->nip ?? '-' }}</div>
+                                @php
+                                    $semuaPembimbing = $magang->getSemuaPembimbing();
+                                @endphp
+                                @if($semuaPembimbing->isNotEmpty())
+                                    <div class="font-medium text-slate-800">{{ $semuaPembimbing->first()->nama_lengkap }}</div>
+                                    @if($semuaPembimbing->count() > 1)
+                                        <div class="text-[10px] text-indigo-600 font-semibold mt-0.5">
+                                            + {{ $semuaPembimbing->count() - 1 }} pembimbing unit lainnya
+                                        </div>
+                                    @else
+                                        <div class="text-[11px] text-slate-400">NIP: {{ $semuaPembimbing->first()->nip ?? '-' }}</div>
+                                    @endif
+                                @else
+                                    <div class="text-slate-400 italic">Belum ditentukan</div>
+                                @endif
                             </td>
 
                             <!-- Status Magang -->
@@ -199,11 +212,19 @@
 
                             <!-- Nilai Akhir -->
                             <td class="py-3.5 px-4 text-center">
-                                @if($magang->penilaian)
+                                @php
+                                    $penilaianRef = $magang->penilaian_akumulasi ?? $magang->penilaian;
+                                @endphp
+                                @if($penilaianRef)
                                     <span class="text-sm font-black text-slate-900">
-                                        {{ $magang->penilaian->total_nilai }}
+                                        {{ $penilaianRef->total_nilai }}
                                     </span>
                                     <span class="text-[11px] text-slate-400 block">/ 100</span>
+                                    @if(isset($penilaianRef->is_akumulasi) && $penilaianRef->is_akumulasi)
+                                        <span class="inline-flex items-center text-[10px] text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.2 rounded font-semibold mt-0.5">
+                                            Rata-rata {{ $penilaianRef->evaluasi_count }} mentor
+                                        </span>
+                                    @endif
                                 @else
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
                                         Belum Dinilai
@@ -213,9 +234,9 @@
 
                             <!-- Predikat -->
                             <td class="py-3.5 px-4 text-center">
-                                @if($magang->penilaian)
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border {{ $magang->penilaian->badge_class }}">
-                                        {{ $magang->penilaian->predikat }}
+                                @if($penilaianRef)
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border {{ $penilaianRef->badge_class }}">
+                                        {{ $penilaianRef->predikat }}
                                     </span>
                                 @else
                                     <span class="text-slate-300">-</span>

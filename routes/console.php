@@ -11,3 +11,7 @@ Artisan::command('inspire', function () {
 Schedule::command('app:sync-hari-libur --all')
     ->monthly()
     ->withoutOverlapping();
+
+Schedule::command('magang:sync-periode')
+    ->daily()
+    ->withoutOverlapping();

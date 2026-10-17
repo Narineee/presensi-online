@@ -27,6 +27,22 @@ class RoleMiddleware
             abort(403, 'Anda tidak memiliki akses.');
         }
 
+        // Cek keaktifan akun pengguna
+        if (! $user->is_active) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors([
+                'username' => 'Akun Anda sedang berstatus non-aktif. Silakan hubungi Administrator.',
+            ]);
+        }
+
+        // Sinkronisasi status magang menjadi 'selesai' jika periode telah berakhir
+        if ($user->role === 'magang' && $user->magang) {
+            $user->magang->syncStatusKeaktifan();
+        }
+
         return $next($request);
     }
 }

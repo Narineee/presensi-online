@@ -98,9 +98,25 @@
                 <span class="rounded-full px-3 py-1 text-xs font-extrabold {{ $aktif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' }}">{{ $aktif ? 'Aktif' : 'Selesai' }}</span>
             </div>
 
-            <div class="mt-3 flex items-center justify-between text-sm">
-                <span class="text-slate-600">Total hari magang</span>
-                <span class="font-extrabold">{{ $r['hari_kerja_berjalan'] }} hari</span>
+            <div class="mt-3 space-y-1.5 rounded-2xl bg-slate-50 p-3 text-xs border border-slate-100">
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-500 font-medium">Periode Unit ({{ $r['nama_unit'] }})</span>
+                    <span class="font-extrabold text-slate-800">{{ $r['durasi_bulan_unit_teks'] }} · {{ $r['total_hari_unit'] }} Hari Kerja</span>
+                </div>
+                @if ($r['is_berbeda_periode_dinas'])
+                    <div class="flex items-center justify-between text-[11px] text-slate-500">
+                        <span>Total Magang Dinas</span>
+                        <span class="font-semibold">{{ $r['durasi_bulan_dinas_teks'] }}</span>
+                    </div>
+                @endif
+                <div class="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                    <span class="text-slate-600 font-medium">Progres Masa Binaan</span>
+                    <span class="font-extrabold text-brand">{{ $r['hari_ke_label'] }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-600 font-medium">Rekap Hadir</span>
+                    <span class="font-extrabold text-emerald-700">Hadir {{ $r['total_hadir'] }} kali ({{ $r['persentase_kehadiran'] }}%)</span>
+                </div>
             </div>
 
             <dl class="mt-2 grid grid-cols-6 gap-1 rounded-2xl bg-slate-100 px-2 py-3 text-center">

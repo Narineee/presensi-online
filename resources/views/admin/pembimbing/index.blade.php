@@ -38,6 +38,7 @@
                     <tr>
                         <th class="px-6 py-4">No</th>
                         <th class="px-6 py-4">Nama Lengkap & NIP</th>
+                        <th class="px-6 py-4">Unit / Divisi</th>
                         <th class="px-6 py-4">Jabatan & No HP</th>
                         <th class="px-6 py-4">Akun Login</th>
                         <th class="px-6 py-4 text-center">Magang Dibimbing</th>
@@ -53,6 +54,14 @@
                             <td class="px-6 py-4">
                                 <div class="font-bold text-slate-900">{{ $item->nama_lengkap }}</div>
                                 <div class="text-xs text-slate-500">NIP: {{ $item->nip }}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200/80 text-blue-800 text-xs font-semibold">
+                                    <svg class="w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+                                    </svg>
+                                    <span>{{ $item->divisi->nama_divisi ?? 'Belum Ditentukan' }}</span>
+                                </div>
                             </td>
                             <td class="px-6 py-4 text-xs text-slate-600">
                                 <div><span class="font-semibold text-slate-700">Jabatan:</span> {{ $item->jabatan ?? '-' }}</div>
@@ -105,7 +114,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-slate-400">
+                            <td colspan="7" class="px-6 py-12 text-center text-slate-400">
                                 <svg class="w-12 h-12 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
                                 </svg>

@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             AdminSeeder::class,
             KriteriaSeeder::class,
             PengaturanSeeder::class,
+            DivisiSeeder::class,
         ]);
     }
 }

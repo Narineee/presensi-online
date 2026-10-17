@@ -72,6 +72,19 @@
                             </span>
                         @endif
 
+                        <!-- Akun Login Status -->
+                        @if ($magang->pengguna && $magang->pengguna->is_active)
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Akun Login Aktif
+                            </span>
+                        @else
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                Akun Non-Aktif
+                            </span>
+                        @endif
+
                         <!-- Divisi Aktif Berjalan -->
                         @php
                             $penempatanAktif = $magang->penempatanAktif;
@@ -91,6 +104,21 @@
 
             <!-- Header Action Buttons -->
             <div class="flex flex-wrap items-center gap-2">
+                <form action="{{ route('admin.magang.toggle-status', $magang->id) }}" method="POST" class="inline">
+                    @csrf
+                    @if ($magang->pengguna && $magang->pengguna->is_active)
+                        <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition cursor-pointer" onclick="return confirm('Nonaktifkan akun {{ $magang->nama_lengkap }}? Peserta tidak akan bisa login lagi.');">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                            <span>Nonaktifkan Akun</span>
+                        </button>
+                    @else
+                        <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition cursor-pointer" onclick="return confirm('Aktifkan akun {{ $magang->nama_lengkap }} agar dapat login kembali?');">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span>Aktifkan Akun</span>
+                        </button>
+                    @endif
+                </form>
+
                 <a href="{{ route('admin.magang.edit', $magang->id) }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition">
                     <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
@@ -280,6 +308,7 @@
                     <thead>
                         <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-[11px] font-bold uppercase tracking-wider">
                             <th class="py-3 px-4">Divisi</th>
+                            <th class="py-3 px-4">Pembimbing Unit</th>
                             <th class="py-3 px-4 text-center">Tanggal Mulai</th>
                             <th class="py-3 px-4 text-center">Tanggal Selesai</th>
                             <th class="py-3 px-4 text-center">Durasi</th>
@@ -299,6 +328,14 @@
                                         @if ($item->divisi->jabatan_pimpinan)
                                             ({{ $item->divisi->jabatan_pimpinan }})
                                         @endif
+                                    </div>
+                                </td>
+                                <td class="py-3.5 px-4">
+                                    <div class="font-semibold text-slate-900 text-xs">
+                                        {{ $item->pembimbingEfektif?->nama_lengkap ?? '-' }}
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 font-mono mt-0.5">
+                                        NIP. {{ $item->pembimbingEfektif?->nip ?? '-' }}
                                     </div>
                                 </td>
                                 <td class="py-3.5 px-4 text-center whitespace-nowrap font-medium text-slate-700">
@@ -368,7 +405,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="py-12 px-4 text-center">
+                                <td colspan="7" class="py-12 px-4 text-center">
                                     <div class="max-w-sm mx-auto text-center">
                                         <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3">
                                             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -719,27 +756,64 @@
                 <span>Lembar Penilaian Akhir Magang</span>
             </h2>
 
-            @if ($magang->penilaian)
+            @if ($penilaianAkumulasi)
                 <div class="mt-6 p-6 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-6">
                     <div class="space-y-1 text-center sm:text-left">
-                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full inline-block mb-1">Sudah Dinilai</span>
-                        <h3 class="text-xl font-bold text-slate-900">Total Nilai: {{ $magang->penilaian->nilai_akhir ?? '-' }}</h3>
+                        <div class="flex items-center gap-2 justify-center sm:justify-start">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full inline-block">
+                                {{ $penilaianAkumulasi->is_akumulasi ? 'Nilai Akumulasi' : 'Sudah Dinilai' }}
+                            </span>
+                            @if ($penilaianAkumulasi->is_akumulasi)
+                                <span class="text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-full inline-block">
+                                    {{ $penilaianAkumulasi->jumlah_pembimbing }} Pembimbing
+                                </span>
+                            @endif
+                        </div>
+                        <h3 class="text-2xl font-black text-slate-900 mt-2">Total Nilai: {{ $penilaianAkumulasi->total_nilai }} / 100</h3>
                         <p class="text-xs text-slate-500">
-                            Predikat: <strong class="text-slate-800">{{ $magang->penilaian->grade ?? '-' }}</strong> &bull;
-                            Dinilai pada: {{ $magang->penilaian->created_at->format('d M Y') }}
+                            Predikat: <strong class="text-slate-800">{{ $penilaianAkumulasi->predikat }} ({{ $penilaianAkumulasi->keterangan_predikat }})</strong> &bull;
+                            Terakhir dinilai: {{ $penilaianAkumulasi->created_at ? $penilaianAkumulasi->created_at->format('d M Y') : '-' }}
                         </p>
                     </div>
-                    <a
-                        href="{{ route('admin.penilaian.show', $magang->penilaian->id) }}"
-                        target="_blank"
-                        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs"
-                    >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24-1.077-.42-2.18-.54-3.298M16.5 12c0 2.25-1.5 4.5-4.5 4.5S7.5 14.25 7.5 12 9 7.5 12 7.5s4.5 2.25 4.5 4.5zm0 0c.937 0 1.83.18 2.648.513" />
-                        </svg>
-                        <span>Lihat &amp; Cetak Lembar Penilaian</span>
-                    </a>
+                    @if ($magang->penilaian)
+                        <a
+                            href="{{ route('admin.penilaian.show', $magang->penilaian->id) }}"
+                            target="_blank"
+                            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24-1.077-.42-2.18-.54-3.298M16.5 12c0 2.25-1.5 4.5-4.5 4.5S7.5 14.25 7.5 12 9 7.5 12 7.5s4.5 2.25 4.5 4.5zm0 0c.937 0 1.83.18 2.648.513" />
+                            </svg>
+                            <span>Lihat &amp; Cetak Lembar Penilaian</span>
+                        </a>
+                    @endif
                 </div>
+
+                @if ($penilaianAkumulasi->is_akumulasi)
+                    <div class="mt-6 space-y-3">
+                        <h4 class="text-sm font-bold text-slate-800">Riwayat Penilaian Masing-Masing Pembimbing:</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            @foreach ($penilaianAkumulasi->evaluasi_list as $ev)
+                                <div class="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-bold text-slate-900">{{ $ev->penempatanMagang?->divisi?->nama_divisi ?? 'Unit Terdaftar' }}</span>
+                                        <span class="text-xs font-black text-blue-600">{{ $ev->total_nilai }}/100 ({{ $ev->predikat }})</span>
+                                    </div>
+                                    <p class="text-xs text-slate-600">Pembimbing: <strong class="text-slate-800">{{ $ev->pembimbing?->nama_lengkap ?? '-' }}</strong></p>
+                                    <p class="text-[11px] text-slate-400">Dinilai pada: {{ $ev->created_at ? $ev->created_at->format('d M Y') : '-' }}</p>
+                                    <div class="pt-1">
+                                        <a href="{{ route('admin.penilaian.show', $ev->id) }}" target="_blank" class="text-xs text-blue-600 hover:underline font-bold inline-flex items-center gap-1">
+                                            <span>Buka Lembar Nilai</span>
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                                            </svg>
+                                        </a>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
             @else
                 <div class="mt-6 p-8 text-center text-slate-400">
                     <p class="font-semibold text-slate-600">Peserta belum mendapatkan penilaian akhir.</p>
@@ -784,22 +858,48 @@
                 >
             </div>
 
-            <!-- Divisi Dropdown -->
+            <!-- Pembimbing Unit Dropdown (Input Utama) -->
             <div>
-                <label for="tambah_divisi_id" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Divisi Penempatan <span class="text-rose-500">*</span>
+                <label for="tambah_pembimbing_id" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Pilih Pembimbing Lapangan <span class="text-rose-500">*</span>
                 </label>
                 <select
-                    name="divisi_id"
-                    id="tambah_divisi_id"
+                    name="pembimbing_id"
+                    id="tambah_pembimbing_id"
                     required
                     class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-xs font-medium text-slate-800 bg-white"
                 >
-                    <option value="">-- Pilih Divisi --</option>
-                    @foreach ($divisiList as $div)
-                        <option value="{{ $div->id }}">{{ $div->nama_divisi }} (Pimpinan: {{ $div->nama_pimpinan ?? '-' }})</option>
+                    <option value="" data-divisi-id="" data-divisi-nama="">-- Pilih Pembimbing Penempatan --</option>
+                    @foreach ($pembimbingList as $pem)
+                        <option
+                            value="{{ $pem->id }}"
+                            data-divisi-id="{{ $pem->divisi_id ?? '' }}"
+                            data-divisi-nama="{{ $pem->divisi->nama_divisi ?? 'Belum Ditentukan' }}"
+                        >
+                            {{ $pem->nama_lengkap }} — Unit: {{ $pem->divisi->nama_divisi ?? 'Belum Ditentukan' }} ({{ $pem->jabatan ?? 'Pembimbing' }})
+                        </option>
                     @endforeach
                 </select>
+            </div>
+
+            <!-- Input Tersembunyi Divisi (Otomatis dari Pembimbing) -->
+            <input type="hidden" name="divisi_id" id="tambah_divisi_id">
+
+            <!-- Card Info Unit Penempatan Otomatis -->
+            <div class="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80 text-blue-900 text-xs flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <svg class="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                    </svg>
+                    <div>
+                        <span class="font-bold">Unit / Seksi Penempatan:</span>
+                        <span id="tambah_unit_preview" class="font-semibold text-blue-800 ml-1">Pilih pembimbing untuk penempatan unit otomatis</span>
+                    </div>
+                </div>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                    Otomatis
+                </span>
             </div>
 
             <!-- Grid Tanggal Mulai & Tanggal Selesai -->
@@ -884,22 +984,48 @@
             @csrf
             @method('PUT')
 
-            <!-- Divisi Dropdown -->
+            <!-- Pembimbing Unit Dropdown (Input Utama) -->
             <div>
-                <label for="edit_divisi_id" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Divisi Penempatan <span class="text-rose-500">*</span>
+                <label for="edit_pembimbing_id" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Pilih Pembimbing Lapangan <span class="text-rose-500">*</span>
                 </label>
                 <select
-                    name="divisi_id"
-                    id="edit_divisi_id"
+                    name="pembimbing_id"
+                    id="edit_pembimbing_id"
                     required
                     class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-xs font-medium text-slate-800 bg-white"
                 >
-                    <option value="">-- Pilih Divisi --</option>
-                    @foreach ($divisiList as $div)
-                        <option value="{{ $div->id }}">{{ $div->nama_divisi }} (Pimpinan: {{ $div->nama_pimpinan ?? '-' }})</option>
+                    <option value="" data-divisi-id="" data-divisi-nama="">-- Pilih Pembimbing Penempatan --</option>
+                    @foreach ($pembimbingList as $pem)
+                        <option
+                            value="{{ $pem->id }}"
+                            data-divisi-id="{{ $pem->divisi_id ?? '' }}"
+                            data-divisi-nama="{{ $pem->divisi->nama_divisi ?? 'Belum Ditentukan' }}"
+                        >
+                            {{ $pem->nama_lengkap }} — Unit: {{ $pem->divisi->nama_divisi ?? 'Belum Ditentukan' }} ({{ $pem->jabatan ?? 'Pembimbing' }})
+                        </option>
                     @endforeach
                 </select>
+            </div>
+
+            <!-- Input Tersembunyi Divisi (Otomatis dari Pembimbing) -->
+            <input type="hidden" name="divisi_id" id="edit_divisi_id">
+
+            <!-- Card Info Unit Penempatan Otomatis -->
+            <div class="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80 text-blue-900 text-xs flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <svg class="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                    </svg>
+                    <div>
+                        <span class="font-bold">Unit / Seksi Penempatan:</span>
+                        <span id="edit_unit_preview" class="font-semibold text-blue-800 ml-1">Pilih pembimbing untuk penempatan unit otomatis</span>
+                    </div>
+                </div>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                    Otomatis
+                </span>
             </div>
 
             <!-- Grid Tanggal Mulai & Tanggal Selesai -->
@@ -985,9 +1111,47 @@
         window.history.replaceState({}, '', url);
     }
 
+    function updateTambahUnitPreview() {
+        const pemSelect = document.getElementById('tambah_pembimbing_id');
+        const divInput = document.getElementById('tambah_divisi_id');
+        const previewEl = document.getElementById('tambah_unit_preview');
+        if (!pemSelect) return;
+        const opt = pemSelect.options[pemSelect.selectedIndex];
+        const divId = opt ? opt.getAttribute('data-divisi-id') : '';
+        const divNama = opt ? opt.getAttribute('data-divisi-nama') : '';
+        if (divId && divNama) {
+            if (divInput) divInput.value = divId;
+            if (previewEl) previewEl.textContent = divNama;
+        } else if (pemSelect.value) {
+            if (previewEl) previewEl.textContent = 'Pembimbing belum memiliki unit kerja';
+        } else {
+            if (divInput) divInput.value = '';
+            if (previewEl) previewEl.textContent = 'Pilih pembimbing untuk penempatan unit otomatis';
+        }
+    }
+
+    function updateEditUnitPreview() {
+        const pemSelect = document.getElementById('edit_pembimbing_id');
+        const divInput = document.getElementById('edit_divisi_id');
+        const previewEl = document.getElementById('edit_unit_preview');
+        if (!pemSelect) return;
+        const opt = pemSelect.options[pemSelect.selectedIndex];
+        const divId = opt ? opt.getAttribute('data-divisi-id') : '';
+        const divNama = opt ? opt.getAttribute('data-divisi-nama') : '';
+        if (divId && divNama) {
+            if (divInput) divInput.value = divId;
+            if (previewEl) previewEl.textContent = divNama;
+        } else if (pemSelect.value) {
+            if (previewEl) previewEl.textContent = 'Pembimbing belum memiliki unit kerja';
+        } else {
+            if (previewEl) previewEl.textContent = 'Pilih pembimbing untuk penempatan unit otomatis';
+        }
+    }
+
     // Modal Tambah
     function openTambahModal() {
         document.getElementById('modal-tambah-penempatan').classList.remove('hidden');
+        updateTambahUnitPreview();
     }
     function closeTambahModal() {
         document.getElementById('modal-tambah-penempatan').classList.add('hidden');
@@ -1002,9 +1166,15 @@
         form.action = `/admin/magang/{{ $magang->id }}/penempatan/${item.id}`;
 
         // Set values
-        document.getElementById('edit_divisi_id').value = item.divisi_id;
+        document.getElementById('edit_pembimbing_id').value = item.pembimbing_id || '';
+        document.getElementById('edit_divisi_id').value = item.divisi_id || '';
         document.getElementById('edit_tanggal_mulai').value = item.tanggal_mulai ? item.tanggal_mulai.substring(0, 10) : '';
         document.getElementById('edit_tanggal_selesai').value = item.tanggal_selesai ? item.tanggal_selesai.substring(0, 10) : '';
+
+        updateEditUnitPreview();
+        if (item.divisi && item.divisi.nama_divisi) {
+            document.getElementById('edit_unit_preview').textContent = item.divisi.nama_divisi;
+        }
 
         modal.classList.remove('hidden');
     }
@@ -1016,6 +1186,16 @@
     document.addEventListener('DOMContentLoaded', function() {
         const initialTab = '{{ $activeTab ?? "penempatan" }}';
         switchTab(initialTab);
+
+        const tambahPem = document.getElementById('tambah_pembimbing_id');
+        if (tambahPem) {
+            tambahPem.addEventListener('change', updateTambahUnitPreview);
+        }
+
+        const editPem = document.getElementById('edit_pembimbing_id');
+        if (editPem) {
+            editPem.addEventListener('change', updateEditUnitPreview);
+        }
     });
 </script>
 @endpush

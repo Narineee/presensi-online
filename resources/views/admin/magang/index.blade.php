@@ -108,7 +108,7 @@
                                 <div class="font-mono font-semibold text-slate-800">
                                     {{ $item->pengguna->username ?? '-' }}
                                 </div>
-                                <div class="mt-1">
+                                <div class="mt-1 flex items-center gap-1.5 flex-wrap">
                                     @if ($item->pengguna && $item->pengguna->is_active)
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -120,6 +120,20 @@
                                             Non-Aktif
                                         </span>
                                     @endif
+                                </div>
+                                <div class="mt-1.5">
+                                    <form action="{{ route('admin.magang.toggle-status', $item->id) }}" method="POST" class="inline">
+                                        @csrf
+                                        @if ($item->pengguna && $item->pengguna->is_active)
+                                            <button type="submit" class="text-[11px] font-semibold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer" onclick="return confirm('Nonaktifkan akun {{ $item->nama_lengkap }}? Peserta tidak akan bisa login.');">
+                                                Nonaktifkan Akun
+                                            </button>
+                                        @else
+                                            <button type="submit" class="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer" onclick="return confirm('Aktifkan akun {{ $item->nama_lengkap }} agar dapat login kembali?');">
+                                                Aktifkan Akun
+                                            </button>
+                                        @endif
+                                    </form>
                                 </div>
                                 <div class="mt-2 text-[11px]">
                                     @if ($item->face_registered_at)

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Divisi;
 use App\Models\Pembimbing;
 use App\Models\Pengguna;
 use Illuminate\Http\Request;
@@ -12,8 +13,8 @@ class PembimbingController extends Controller
     // Menampilkan daftar data pembimbing
     public function index()
     {
-        // Ambil data pembimbing beserta relasi akun login pengguna dan jumlah anak magang
-        $pembimbing = Pembimbing::with('pengguna')->withCount('magang')->latest()->paginate(10);
+        // Ambil data pembimbing beserta relasi akun login pengguna, divisi, dan jumlah anak magang
+        $pembimbing = Pembimbing::with(['pengguna', 'divisi'])->withCount('magang')->latest()->paginate(10);
 
         return view('admin.pembimbing.index', compact('pembimbing'));
     }
@@ -21,7 +22,9 @@ class PembimbingController extends Controller
     // Menampilkan form tambah pembimbing
     public function create()
     {
-        return view('admin.pembimbing.create');
+        $divisi = Divisi::with('parent')->orderBy('nama_divisi')->get();
+
+        return view('admin.pembimbing.create', compact('divisi'));
     }
 
     // Menyimpan data pembimbing baru beserta akun loginnya
@@ -32,6 +35,7 @@ class PembimbingController extends Controller
             // Validasi data profil
             'nip' => 'required|string|max:30|unique:pembimbing,nip',
             'nama_lengkap' => 'required|string|max:100',
+            'divisi_id' => 'required|exists:divisi,id',
             'jabatan' => 'nullable|string|max:50',
             'no_hp' => 'nullable|string|max:20',
 
@@ -42,6 +46,8 @@ class PembimbingController extends Controller
             'nip.required' => 'NIP wajib diisi.',
             'nip.unique' => 'NIP ini sudah terdaftar.',
             'nama_lengkap.required' => 'Nama lengkap wajib diisi.',
+            'divisi_id.required' => 'Unit / Seksi kerja pembimbing wajib dipilih.',
+            'divisi_id.exists' => 'Unit yang dipilih tidak ditemukan dalam sistem.',
             'username.required' => 'Username login wajib diisi.',
             'username.unique' => 'Username sudah digunakan oleh akun lain.',
             'password.required' => 'Password login wajib diisi.',
@@ -56,9 +62,10 @@ class PembimbingController extends Controller
             'is_active' => $request->has('is_active') ? true : false,
         ]);
 
-        // 2. Buat profil pembimbing dan hubungkan dengan pengguna_id
+        // 2. Buat profil pembimbing dan hubungkan dengan pengguna_id dan divisi_id
         Pembimbing::create([
             'pengguna_id' => $pengguna->id,
+            'divisi_id' => $request->divisi_id,
             'nip' => $request->nip,
             'nama_lengkap' => $request->nama_lengkap,
             'jabatan' => $request->jabatan,
@@ -77,9 +84,10 @@ class PembimbingController extends Controller
     // Menampilkan form edit pembimbing
     public function edit($id)
     {
-        $pembimbing = Pembimbing::with('pengguna')->findOrFail($id);
+        $pembimbing = Pembimbing::with(['pengguna', 'divisi'])->findOrFail($id);
+        $divisi = Divisi::with('parent')->orderBy('nama_divisi')->get();
 
-        return view('admin.pembimbing.edit', compact('pembimbing'));
+        return view('admin.pembimbing.edit', compact('pembimbing', 'divisi'));
     }
 
     // Memperbarui data pembimbing dan akun loginnya
@@ -91,6 +99,7 @@ class PembimbingController extends Controller
         $request->validate([
             'nip' => 'required|string|max:30|unique:pembimbing,nip,'.$pembimbing->id,
             'nama_lengkap' => 'required|string|max:100',
+            'divisi_id' => 'required|exists:divisi,id',
             'jabatan' => 'nullable|string|max:50',
             'no_hp' => 'nullable|string|max:20',
 
@@ -101,6 +110,8 @@ class PembimbingController extends Controller
             'nip.required' => 'NIP wajib diisi.',
             'nip.unique' => 'NIP ini sudah terdaftar.',
             'nama_lengkap.required' => 'Nama lengkap wajib diisi.',
+            'divisi_id.required' => 'Unit / Seksi kerja pembimbing wajib dipilih.',
+            'divisi_id.exists' => 'Unit yang dipilih tidak ditemukan dalam sistem.',
             'username.required' => 'Username login wajib diisi.',
             'username.unique' => 'Username sudah digunakan oleh akun lain.',
             'password.min' => 'Password baru minimal 6 karakter.',
@@ -110,6 +121,7 @@ class PembimbingController extends Controller
         $pembimbing->update([
             'nip' => $request->nip,
             'nama_lengkap' => $request->nama_lengkap,
+            'divisi_id' => $request->divisi_id,
             'jabatan' => $request->jabatan,
             'no_hp' => $request->no_hp,
         ]);

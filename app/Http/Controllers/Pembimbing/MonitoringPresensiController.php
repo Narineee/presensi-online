@@ -23,7 +23,8 @@ class MonitoringPresensiController extends Controller
     }
 
     /**
-     * Peserta magang yang dibimbing oleh pembimbing yang login.
+     * Peserta magang yang dibimbing oleh pembimbing yang login
+     * (baik pembimbing pokok maupun penempatan rotasi unit).
      */
     private function getSupervisedMagangList(): Collection
     {
@@ -32,8 +33,8 @@ class MonitoringPresensiController extends Controller
             return collect();
         }
 
-        return Magang::where('pembimbing_id', $pembimbing->id)
-            ->with(['divisi', 'pengguna'])
+        return $pembimbing->getSupervisedMagangQuery()
+            ->with(['divisi', 'pengguna', 'penempatanMagang.divisi', 'penempatanMagang.pembimbing'])
             ->orderBy('nama_lengkap', 'asc')
             ->get();
     }
@@ -89,10 +90,11 @@ class MonitoringPresensiController extends Controller
     {
         $pembimbing = $this->getPembimbing();
         $magangList = $this->getSupervisedMagangList();
-        $supervisedUserIds = $magangList->pluck('pengguna_id')->filter()->values();
-
-        $query = Presensi::whereIn('pengguna_id', $supervisedUserIds)
+        $query = Presensi::query()
             ->with(['pengguna.magang', 'pengajuanTugasLuar']);
+
+        // Batasi presensi hanya pada saat peserta dibina oleh pembimbing ini (sesuai periode unit)
+        $pembimbing->applyPeriodConstraint($query, 'presensi.tanggal', 'presensi.pengguna_id');
 
         // Rentang tanggal
         if ($request->filled('tanggal_mulai') && $request->filled('tanggal_akhir')) {
@@ -158,6 +160,26 @@ class MonitoringPresensiController extends Controller
             $keterangan = $lokasi.(is_null($p->face_distance_masuk) ? '' : ' - Lokasi & wajah terverifikasi');
         }
 
+        $catatanPulang = null;
+        if (! $isIzin && $p->jam_keluar && $p->jam_keluar < '16:00:00') {
+            $rawKet = (string) $p->keterangan;
+            if (preg_match('/\|\s*Pulang:\s*([^|]+)/i', $rawKet, $m)) {
+                $catatanPulang = trim($m[1]);
+            } elseif (preg_match('/Pulang:\s*([^|]+)/i', $rawKet, $m)) {
+                $catatanPulang = trim($m[1]);
+            } elseif (preg_match('/\b(Sakit|Izin)(?:\s*\([^)]+\))?/i', $rawKet, $m)) {
+                $catatanPulang = trim($m[0]);
+            } else {
+                $izinHari = $izinUser->first(fn ($i) => $p->tanggal && $p->tanggal->betweenIncluded($i->tanggal_mulai, $i->tanggal_selesai));
+                if ($izinHari) {
+                    $catatanPulang = $izinHari->jenis_izin;
+                }
+            }
+            if ($catatanPulang) {
+                $catatanPulang = strtolower(trim(preg_replace('/^Pulang:\s*/i', '', $catatanPulang)));
+            }
+        }
+
         return [
             'magang' => $magang,
             'nama' => $magang?->nama_lengkap ?? ($p->pengguna->username ?? '-'),
@@ -166,6 +188,7 @@ class MonitoringPresensiController extends Controller
             'badge_kunci' => $isIzin ? $p->status : ($isTl ? 'tl' : ($p->status === 'alpa' ? 'alpa' : 'hadir')),
             'jam_masuk' => $isIzin ? '-' : $jam($p->jam_masuk),
             'jam_keluar' => $isIzin ? '-' : $jam($p->jam_keluar),
+            'catatan_pulang' => $catatanPulang,
             'terlambat' => $terlambat,
             'foto_masuk_url' => $isIzin ? null : $p->foto_masuk_url,
             'foto_keluar_url' => $isIzin ? null : $p->foto_keluar_url,
@@ -181,10 +204,11 @@ class MonitoringPresensiController extends Controller
     {
         $pembimbing = $this->getPembimbing();
         $magangList = $this->getSupervisedMagangList();
-        $supervisedUserIds = $magangList->pluck('pengguna_id')->filter()->values();
-
-        $query = Presensi::whereIn('pengguna_id', $supervisedUserIds)
+        $query = Presensi::query()
             ->with(['pengguna.magang.divisi', 'pengajuanTugasLuar']);
+
+        // Batasi presensi hanya pada saat peserta dibina oleh pembimbing ini (sesuai periode unit)
+        $pembimbing->applyPeriodConstraint($query, 'presensi.tanggal', 'presensi.pengguna_id');
 
         $selectedMagang = $this->applyFilters($query, $request, $magangList);
 

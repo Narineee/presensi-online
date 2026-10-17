@@ -384,4 +384,62 @@ class PulangSebelum16Test extends TestCase
         $cetakResponse->assertStatus(200);
         $cetakResponse->assertSee('Sakit');
     }
+
+    public function test_alur_hari_ini_shows_terlambat_on_masuk_and_early_note_on_pulang(): void
+    {
+        [$pembimbingUser, $pembimbing] = $this->createPembimbingWithUser('pem_alur');
+        [$internUser, $intern] = $this->createInternWithPembimbing($pembimbing, 'Peserta Alur', 'magang_alur');
+
+        Carbon::setTestNow(Carbon::parse('2026-10-13 17:00:00', 'Asia/Makassar'));
+        $today = '2026-10-13';
+
+        // Case 1: Masuk terlambat (12:41), pulang normal (17:00)
+        $presensi = Presensi::create([
+            'pengguna_id' => $internUser->id,
+            'tanggal' => $today,
+            'jam_masuk' => '12:41:00',
+            'jam_keluar' => '17:00:00',
+            'mode_kerja' => 'onsite',
+            'status' => 'hadir',
+            'keterangan' => '[Terlambat 281 menit]',
+        ]);
+
+        Aktivitas::create([
+            'pengguna_id' => $internUser->id,
+            'tanggal' => $today,
+            'isi' => 'Aktivitas hari ini.',
+            'progress' => 100,
+            'status' => 'pending',
+        ]);
+
+        $res1 = $this->actingAs($internUser)->get(route('presensi.index'));
+        $res1->assertStatus(200);
+        $res1->assertSee('12:41 (Terlambat 281 menit)');
+        $res1->assertSee('17:00');
+        $res1->assertDontSee('17:00 ([Terlambat');
+
+        // Case 2: Masuk terlambat (12:41), pulang awal karena Sakit (14:00)
+        $presensi->update([
+            'jam_keluar' => '14:00:00',
+            'keterangan' => '[Terlambat 281 menit] | Pulang: Sakit',
+        ]);
+
+        $res2 = $this->actingAs($internUser)->get(route('presensi.index'));
+        $res2->assertStatus(200);
+        $res2->assertSee('12:41 (Terlambat 281 menit)');
+        $res2->assertSee('14:00 (Pulang: Sakit)');
+        $res2->assertDontSee('14:00 ([Terlambat');
+
+        // Case 3: Masuk tepat waktu (07:45), pulang awal karena Izin (13:30)
+        $presensi->update([
+            'jam_masuk' => '07:45:00',
+            'jam_keluar' => '13:30:00',
+            'keterangan' => 'Izin',
+        ]);
+
+        $res3 = $this->actingAs($internUser)->get(route('presensi.index'));
+        $res3->assertStatus(200);
+        $res3->assertSee('07:45 (Tepat Waktu)');
+        $res3->assertSee('13:30 (Pulang: Izin)');
+    }
 }

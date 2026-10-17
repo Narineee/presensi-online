@@ -5,6 +5,31 @@
 @section('content')
 <div class="max-w-4xl mx-auto">
 
+    @if(isset($penilaianAkumulasi) && $penilaianAkumulasi->is_akumulasi)
+        <!-- Multi-mentor info bar (hanya tampil di layar) -->
+        <div class="no-print bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 p-4 mb-4 rounded-2xl border border-blue-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-700 text-white uppercase tracking-wider">Multi-Pembimbing</span>
+                    <span class="text-xs font-bold text-slate-800">Akumulasi {{ $penilaianAkumulasi->evaluasi_count }} Unit Penempatan</span>
+                </div>
+                <p class="text-xs text-slate-600 mt-1">
+                    Nilai Akhir Akumulasi: <strong class="text-blue-700 font-bold text-sm">{{ $penilaianAkumulasi->total_nilai }}</strong> ({{ $penilaianAkumulasi->predikat }} - {{ $penilaianAkumulasi->keterangan_predikat }}). Lembar cetak ini menampilkan evaluasi unit: <strong>{{ $penilaian->penempatanMagang->divisi->nama_divisi ?? $penilaian->magang->divisi->nama_divisi ?? '-' }}</strong>.
+                </p>
+            </div>
+            @if($penilaian->magang->penilaians->count() > 1)
+                <div class="flex flex-wrap items-center gap-1.5 shrink-0">
+                    <span class="text-[11px] text-slate-500 font-medium">Beralih Lembar:</span>
+                    @foreach($penilaian->magang->penilaians as $p)
+                        <a href="{{ route('admin.penilaian.show', $p->id) }}" class="px-2.5 py-1 text-xs rounded-xl font-semibold border transition {{ $p->id === $penilaian->id ? 'bg-blue-600 text-white border-blue-600 shadow-xs' : 'bg-white text-slate-700 hover:bg-blue-50 border-slate-300' }}">
+                            {{ $p->penempatanMagang->divisi->nama_divisi ?? $p->magang->divisi->nama_divisi ?? 'Unit #' . $loop->iteration }} ({{ $p->total_nilai }})
+                        </a>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+    @endif
+
     <!-- Official Printable Score Sheet (A4 format 1 lembar utuh) -->
     <div class="print-sheet bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm text-slate-800 space-y-4">
 
@@ -19,7 +44,7 @@
                         {{ $pengaturan->nama_instansi ?? 'SISTEM PRESENSI & MANAJEMEN DIGITAL' }}
                     </h2>
                     <p class="text-[11px] text-slate-500 font-medium">
-                        Divisi {{ $penilaian->magang->divisi->nama_divisi ?? 'Operasional & Sumber Daya' }}
+                        Divisi {{ $penilaian->penempatanMagang->divisi->nama_divisi ?? $penilaian->magang->divisi->nama_divisi ?? 'Operasional & Sumber Daya' }}
                     </p>
                 </div>
             </div>
@@ -43,7 +68,12 @@
                 </div>
                 <div class="flex items-baseline">
                     <span class="w-36 text-slate-500 shrink-0">Unit / Divisi:</span>
-                    <span class="font-semibold text-slate-800 break-words">{{ $penilaian->magang->divisi->nama_divisi ?? '-' }}</span>
+                    <span class="font-semibold text-slate-800 break-words">
+                        {{ $penilaian->penempatanMagang->divisi->nama_divisi ?? $penilaian->magang->divisi->nama_divisi ?? '-' }}
+                        @if($penilaian->penempatanMagang && $penilaian->magang->divisi && $penilaian->penempatanMagang->divisi_id !== $penilaian->magang->divisi_id)
+                            <span class="text-[10px] text-slate-400 font-normal">(Unit Pokok: {{ $penilaian->magang->divisi->nama_divisi }})</span>
+                        @endif
+                    </span>
                 </div>
                 <div class="flex items-baseline">
                     <span class="w-36 text-slate-500 shrink-0">Nomor Induk (NIS/NIM):</span>
@@ -58,11 +88,17 @@
                     <span class="text-slate-800 break-words">{{ $penilaian->magang->instansi_pendidikan }}</span>
                 </div>
                 <div class="flex items-baseline">
-                    <span class="w-36 text-slate-500 shrink-0">Periode Pelaksanaan:</span>
+                    <span class="w-36 text-slate-500 shrink-0">Periode Penempatan:</span>
                     <span class="text-slate-800 break-words">
-                        {{ $penilaian->magang->tanggal_mulai ? $penilaian->magang->tanggal_mulai->format('d/m/Y') : '-' }}
-                        s/d
-                        {{ $penilaian->magang->tanggal_selesai ? $penilaian->magang->tanggal_selesai->format('d/m/Y') : '-' }}
+                        @if($penilaian->penempatanMagang && $penilaian->penempatanMagang->tanggal_mulai)
+                            {{ $penilaian->penempatanMagang->tanggal_mulai->format('d/m/Y') }}
+                            s/d
+                            {{ $penilaian->penempatanMagang->tanggal_selesai ? $penilaian->penempatanMagang->tanggal_selesai->format('d/m/Y') : 'Sekarang' }}
+                        @else
+                            {{ $penilaian->magang->tanggal_mulai ? $penilaian->magang->tanggal_mulai->format('d/m/Y') : '-' }}
+                            s/d
+                            {{ $penilaian->magang->tanggal_selesai ? $penilaian->magang->tanggal_selesai->format('d/m/Y') : '-' }}
+                        @endif
                     </span>
                 </div>
             </div>
@@ -197,16 +233,19 @@
                 </div>
             </div>
 
-            <!-- Tanda Tangan Pimpinan Divisi / Kepala Dinas -->
+            <!-- Tanda Tangan Pimpinan Divisi / Kepala Bidang / Kepala Dinas -->
+            @php
+                $bidangTtdPenilaian = $penilaian->magang?->divisi?->bidang_induk ?? $penilaian->magang?->divisi;
+            @endphp
             <div class="space-y-12">
                 <div>
                     <p class="text-slate-500">{{ $pengaturan->kota_surat ?? 'Banjarbaru' }}, {{ $penilaian->created_at ? $penilaian->created_at->isoFormat('D MMMM Y') : \Carbon\Carbon::now()->isoFormat('D MMMM Y') }}</p>
-                    <p class="font-bold text-slate-800 text-xs">{{ $penilaian->magang->divisi->jabatan_pimpinan ?? ($pengaturan->jabatan_kepala_dinas ?? 'Kepala Dinas') }}</p>
+                    <p class="font-bold text-slate-800 text-xs">{{ $bidangTtdPenilaian->jabatan_pimpinan ?? ($pengaturan->jabatan_kepala_dinas ?? 'Kepala Bidang') }}</p>
                 </div>
                 <div>
-                    <p class="font-bold text-slate-900 underline text-xs sm:text-sm">{{ $penilaian->magang->divisi->nama_pimpinan ?? ($pengaturan->nama_kepala_dinas ?? '-') }}</p>
-                    <p class="text-slate-500 text-[11px]">NIP. {{ $penilaian->magang->divisi->nip_pimpinan ?? ($pengaturan->nip_kepala_dinas ?? '-') }}</p>
-                    <p class="text-slate-400 text-[10px]">{{ $penilaian->magang->divisi->nama_divisi ?? ($pengaturan->nama_instansi ?? 'Instansi') }}</p>
+                    <p class="font-bold text-slate-900 underline text-xs sm:text-sm">{{ $bidangTtdPenilaian->nama_pimpinan ?? ($pengaturan->nama_kepala_dinas ?? '-') }}</p>
+                    <p class="text-slate-500 text-[11px]">NIP. {{ $bidangTtdPenilaian->nip_pimpinan ?? ($pengaturan->nip_kepala_dinas ?? '-') }}</p>
+                    <p class="text-slate-400 text-[10px]">{{ $bidangTtdPenilaian->nama_divisi ?? ($pengaturan->nama_instansi ?? 'Instansi') }}</p>
                 </div>
             </div>
         </div>

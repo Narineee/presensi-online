@@ -35,8 +35,13 @@
             </div>
 
             <div class="text-left sm:text-right">
-                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Divisi / Penempatan</div>
-                <div class="text-sm font-bold text-purple-700">{{ $magang->divisi->nama_divisi ?? '-' }}</div>
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Unit Penempatan yang Dinilai</div>
+                <div class="text-sm font-bold text-purple-700">{{ $penempatan?->divisi?->nama_divisi ?? ($magang->divisi->nama_divisi ?? '-') }}</div>
+                @if ($penempatan)
+                    <div class="text-[11px] text-slate-400 mt-0.5 font-medium">
+                        Periode: {{ $penempatan->tanggal_mulai?->format('d M Y') }} s/d {{ $penempatan->tanggal_selesai?->format('d M Y') }}
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -64,6 +69,9 @@
     <form action="{{ route('pembimbing.penilaian.store') }}" method="POST" id="formPenilaian" class="space-y-6">
         @csrf
         <input type="hidden" name="magang_id" value="{{ $magang->id }}">
+        @if(isset($penempatan) && $penempatan)
+            <input type="hidden" name="penempatan_magang_id" value="{{ $penempatan->id }}">
+        @endif
 
         <!-- Live Score Summary Card -->
         <div class="bg-gradient-to-br from-slate-900 via-purple-950 to-indigo-950 rounded-3xl p-6 sm:p-7 text-white shadow-xl border border-purple-800/40 relative overflow-hidden">

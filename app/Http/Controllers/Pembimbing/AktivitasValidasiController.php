@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Pembimbing;
 
 use App\Http\Controllers\Controller;
 use App\Models\Aktivitas;
+use App\Models\Divisi;
+use App\Models\Pengaturan;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,10 +30,16 @@ class AktivitasValidasiController extends Controller
      */
     public function index(Request $request)
     {
-        $supervisedIds = $this->getSupervisedUserIds();
+        $pembimbing = Auth::user()->pembimbing;
+        if (! $pembimbing) {
+            return redirect()->route('pembimbing.dashboard')->with('error', 'Profil pembimbing tidak ditemukan.');
+        }
 
-        $query = Aktivitas::whereIn('pengguna_id', $supervisedIds)
+        $query = Aktivitas::query()
             ->with(['pengguna.magang.divisi', 'details.rencanaKerja', 'pekerjaan', 'validator.pembimbing']);
+
+        // Batasi aktivitas hanya pada tanggal saat peserta dibina oleh pembimbing ini (sesuai periode unit)
+        $pembimbing->applyPeriodConstraint($query, 'aktivitas.tanggal', 'aktivitas.pengguna_id');
 
         // Filter pencarian nama / no induk
         if ($request->filled('q')) {
@@ -91,7 +99,12 @@ class AktivitasValidasiController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return view('pembimbing.aktivitas.index', compact('menunggu', 'keputusan'));
+        $magangList = $pembimbing->getSupervisedMagangQuery()
+            ->with('divisi')
+            ->orderBy('nama_lengkap', 'asc')
+            ->get();
+
+        return view('pembimbing.aktivitas.index', compact('menunggu', 'keputusan', 'magangList'));
     }
 
     /**
@@ -99,11 +112,15 @@ class AktivitasValidasiController extends Controller
      */
     public function validasi(Request $request, $id)
     {
-        $supervisedIds = $this->getSupervisedUserIds();
+        $pembimbing = Auth::user()->pembimbing;
+        if (! $pembimbing) {
+            abort(403, 'Profil pembimbing tidak ditemukan.');
+        }
 
-        $aktivitas = Aktivitas::whereIn('pengguna_id', $supervisedIds)
-            ->with('pekerjaan')
-            ->findOrFail($id);
+        $query = Aktivitas::where('id', $id)->with('pekerjaan');
+        $pembimbing->applyPeriodConstraint($query, 'aktivitas.tanggal', 'aktivitas.pengguna_id');
+
+        $aktivitas = $query->firstOrFail();
 
         $rules = [
             'status' => 'required|in:approve,revisi',
@@ -155,5 +172,111 @@ class AktivitasValidasiController extends Controller
             : 'Aktivitas dikembalikan ke peserta dengan status Permintaan Revisi.';
 
         return redirect()->back()->with('success', $pesan);
+    }
+
+    /**
+     * Cetak rekapitulasi aktivitas harian peserta magang binaan (dikelompokkan per Rencana Kerja sesuai alur-rekap.md).
+     */
+    public function cetak(Request $request)
+    {
+        $pembimbing = Auth::user()->pembimbing;
+        if (! $pembimbing) {
+            return redirect()->route('pembimbing.dashboard')->with('error', 'Profil pembimbing tidak ditemukan.');
+        }
+
+        $magangList = $pembimbing->getSupervisedMagangQuery()
+            ->with(['divisi', 'pengguna'])
+            ->orderBy('nama_lengkap', 'asc')
+            ->get();
+
+        $query = Aktivitas::query()
+            ->with(['pengguna.magang.divisi', 'details.rencanaKerja', 'pekerjaan', 'validator.pembimbing']);
+
+        // Terapkan batas periode binaan
+        $pembimbing->applyPeriodConstraint($query, 'aktivitas.tanggal', 'aktivitas.pengguna_id');
+
+        $selectedMagang = null;
+        if ($request->filled('magang_id')) {
+            $selectedMagang = $magangList->firstWhere('id', (int) $request->magang_id);
+            if ($selectedMagang && $selectedMagang->pengguna_id) {
+                $query->where('pengguna_id', $selectedMagang->pengguna_id);
+            }
+        }
+
+        $tanggalMulai = $request->input('tanggal_mulai');
+        $tanggalAkhir = $request->input('tanggal_akhir');
+        $singleTanggal = $request->input('tanggal');
+        $bulan = $request->input('bulan');
+
+        if ($tanggalMulai && $tanggalAkhir && strtotime($tanggalMulai) && strtotime($tanggalAkhir)) {
+            $query->whereBetween('tanggal', [$tanggalMulai, $tanggalAkhir]);
+            $periodeText = Carbon::parse($tanggalMulai)->isoFormat('D MMMM Y').' s/d '.Carbon::parse($tanggalAkhir)->isoFormat('D MMMM Y');
+        } elseif ($tanggalMulai && strtotime($tanggalMulai)) {
+            $query->where('tanggal', '>=', $tanggalMulai);
+            $periodeText = 'Mulai '.Carbon::parse($tanggalMulai)->isoFormat('D MMMM Y');
+        } elseif ($tanggalAkhir && strtotime($tanggalAkhir)) {
+            $query->where('tanggal', '<=', $tanggalAkhir);
+            $periodeText = 'Sampai '.Carbon::parse($tanggalAkhir)->isoFormat('D MMMM Y');
+        } elseif ($singleTanggal && strtotime($singleTanggal)) {
+            $query->whereDate('tanggal', $singleTanggal);
+            $periodeText = Carbon::parse($singleTanggal)->isoFormat('D MMMM Y');
+        } elseif ($bulan && preg_match('/^\d{4}-\d{2}$/', $bulan)) {
+            $query->whereYear('tanggal', substr($bulan, 0, 4))->whereMonth('tanggal', substr($bulan, 5, 2));
+            $periodeText = Carbon::createFromFormat('Y-m-d', $bulan.'-01')->isoFormat('MMMM Y');
+        } else {
+            $query->whereYear('tanggal', Carbon::today()->year)->whereMonth('tanggal', Carbon::today()->month);
+            $periodeText = Carbon::today()->isoFormat('MMMM Y');
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $aktivitas = $query->orderBy('tanggal', 'asc')->orderBy('id', 'asc')->get();
+
+        $stats = [
+            'total' => $aktivitas->count(),
+            'approve' => $aktivitas->where('status', 'approve')->count(),
+            'pending' => $aktivitas->where('status', 'pending')->count(),
+            'revisi' => $aktivitas->where('status', 'revisi')->count(),
+        ];
+
+        // Kelompokkan per Rencana Kerja sesuai alur-rekap.md
+        $groupedByRencana = Aktivitas::groupByRencana($aktivitas);
+
+        $groupedByPeserta = [];
+        if (! $selectedMagang) {
+            $byUser = $aktivitas->groupBy('pengguna_id');
+            foreach ($byUser as $userId => $userAktivitas) {
+                $userObj = $userAktivitas->first()->pengguna;
+                $magangObj = $userObj?->magang;
+                $groupedByPeserta[] = [
+                    'magang' => $magangObj,
+                    'user' => $userObj,
+                    'nama_lengkap' => $magangObj->nama_lengkap ?? ($userObj->username ?? 'Peserta'),
+                    'no_induk' => $magangObj->no_induk ?? '-',
+                    'divisi' => $magangObj->divisi->nama_divisi ?? '-',
+                    'instansi' => $magangObj->instansi_pendidikan ?? '-',
+                    'grouped_rencana' => Aktivitas::groupByRencana($userAktivitas),
+                    'total' => $userAktivitas->count(),
+                ];
+            }
+        }
+
+        $divisi = $selectedMagang?->divisi ?? $magangList->first()?->divisi ?? Divisi::first();
+        $pengaturan = Pengaturan::getPengaturan();
+
+        return view('pembimbing.aktivitas.cetak', compact(
+            'pembimbing',
+            'magangList',
+            'selectedMagang',
+            'aktivitas',
+            'groupedByRencana',
+            'groupedByPeserta',
+            'stats',
+            'periodeText',
+            'divisi',
+            'pengaturan'
+        ));
     }
 }

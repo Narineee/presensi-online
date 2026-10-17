@@ -43,67 +43,55 @@
             </tr>
         </table>
 
-        {{-- Tabel Rekapan Aktivitas (10 Kolom: no, unit kerja, pembimbing, pekerjaan, uraian tugas, kegiatan, hari/tgl, progress, status, catatan) --}}
-        <table class="rekap-table" style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
-            <thead>
-                <tr>
-                    <th style="width: 4%;">No</th>
-                    <th style="width: 11%;">Unit Kerja</th>
-                    <th style="width: 11%;">Pembimbing</th>
-                    <th style="width: 12%;">Pekerjaan</th>
-                    <th style="width: 14%;">Uraian Tugas</th>
-                    <th style="width: 16%;">Kegiatan</th>
-                    <th style="width: 11%;">Hari / Tgl</th>
-                    <th style="width: 6%;">Progress</th>
-                    <th style="width: 7%;">Status</th>
-                    <th style="width: 8%;">Catatan</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($aktivitas as $index => $item)
-                    @php
-                        $unitKerja = $user->magang?->getDivisiAt($item->tanggal)?->nama_divisi 
-                            ?? $user->magang?->divisi?->nama_divisi 
-                            ?? ($divisi->nama_divisi ?? '-');
-                        $pembimbingNama = $item->validator?->pembimbing?->nama_lengkap 
-                            ?? $user->magang?->pembimbing?->nama_lengkap 
-                            ?? ($pembimbing->nama_lengkap ?? '-');
-                        if ($item->details && $item->details->isNotEmpty()) {
-                            $pekerjaanJudul = $item->details->pluck('judul_rencana')->join(', ');
-                            $uraianTugas = $item->details->map(fn($d) => $d->judul_rencana)->join(' | ');
-                            $kegiatan = $item->details->map(fn($d) => '• ['.$d->judul_rencana.']: '.$d->progres)->join("\n");
-                        } else {
-                            $pekerjaanJudul = $item->pekerjaan?->nama_pekerjaan 
-                                ?? ($item->pekerjaan?->judul ?? ($item->judul ?? 'Pekerjaan Umum'));
-                            $uraianTugas = $item->pekerjaan?->deskripsi 
-                                ?? ($item->judul ?? '-');
-                            $kegiatan = $item->isi;
-                        }
-                        $statusText = match($item->status) {
-                            'approve', 'disetujui' => 'Disetujui',
-                            'pending', 'menunggu' => 'Menunggu',
-                            default => 'Revisi',
-                        };
-                    @endphp
+        {{-- Tabel Rekapan Aktivitas Dikelompokkan per Rencana Kerja (sesuai PRD alur-rekap.md) --}}
+        @forelse ($groupedByRencana as $gIndex => $group)
+            <div style="margin-bottom: 20px; page-break-inside: avoid;">
+                <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #6366f1; padding: 6px 10px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="font-size: 9.5pt; text-transform: uppercase; color: #1e293b;">
+                            Tabel {{ $gIndex + 1 }}. Rencana Kerja: {{ $group['judul'] }}
+                        </strong>
+                        @if(!empty($group['deskripsi']))
+                            <div style="font-size: 8pt; color: #64748b; margin-top: 1px;">{{ $group['deskripsi'] }}</div>
+                        @endif
+                    </div>
+                    <span style="font-size: 8pt; color: #475569; font-weight: bold;">
+                        {{ count($group['items']) }} Catatan Progres
+                    </span>
+                </div>
+
+                <table class="rekap-table" style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
+                    <thead>
+                        <tr>
+                            <th style="width: 4%;">No</th>
+                            <th style="width: 20%;">Hari / Tanggal</th>
+                            <th style="width: 50%;">Uraian Progres Pekerjaan</th>
+                            <th style="width: 11%;">Status</th>
+                            <th style="width: 15%;">Catatan Pembimbing</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($group['items'] as $index => $item)
+                            <tr>
+                                <td class="c">{{ $index + 1 }}</td>
+                                <td class="c">{{ \Carbon\Carbon::parse($item['tanggal'])->locale('id')->isoFormat('dddd, D MMM Y') }}</td>
+                                <td>{{ $item['progres'] }}</td>
+                                <td class="c">{{ $item['status_label'] }}</td>
+                                <td>{{ $item['catatan'] ?: '-' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @empty
+            <table class="rekap-table" style="width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 16px;">
+                <tbody>
                     <tr>
-                        <td class="c">{{ $index + 1 }}</td>
-                        <td>{{ $unitKerja }}</td>
-                        <td>{{ $pembimbingNama }}</td>
-                        <td>{{ $pekerjaanJudul }}</td>
-                        <td>{{ $uraianTugas }}</td>
-                        <td>{{ $kegiatan }}</td>
-                        <td class="c">{{ \Carbon\Carbon::parse($item->tanggal)->locale('id')->isoFormat('dddd, D MMM Y') }}</td>
-                        <td class="c">{{ $item->progress }}%</td>
-                        <td class="c">{{ $statusText }}</td>
-                        <td>{{ $item->catatan_validasi ?? '-' }}</td>
+                        <td class="c" style="padding: 20px;">Belum ada catatan aktivitas pada periode yang dipilih.</td>
                     </tr>
-                @empty
-                    <tr>
-                        <td colspan="10" class="c" style="padding: 16px;">Belum ada catatan aktivitas pada periode yang dipilih.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        @endforelse
 
         {{-- Ringkasan --}}
         <div class="ringkasan">

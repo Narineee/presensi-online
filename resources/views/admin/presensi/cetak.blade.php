@@ -1,6 +1,6 @@
 @extends('layouts.print')
 
-@section('title', 'Cetak Rekap Presensi')
+@section('title', 'Laporan Presensi Magang')
 
 @section('content')
 <div class="max-w-5xl mx-auto">
@@ -9,51 +9,57 @@
         @include('admin.cetak.partials.kop-surat')
 
         <div class="judul-laporan">
-            <h3>REKAPITULASI PRESENSI KEHADIRAN MAGANG</h3>
-            <p>Periode: {{ $periodeText }}</p>
+            <h3>LAPORAN PRESENSI MAGANG</h3>
+            <p>{{ $periodeSubJudul }}</p>
         </div>
 
         <table class="info-table">
-            <tr><td class="k">Kategori</td><td class="s">:</td><td>Peserta Magang</td></tr>
-            <tr><td class="k">Waktu Cetak</td><td class="s">:</td><td>{{ \Carbon\Carbon::now()->isoFormat('D MMMM Y, HH:mm') }} WITA</td></tr>
+            <tr><td class="k">Cakupan Data</td><td class="s">:</td><td>Seluruh Peserta Magang</td></tr>
+            <tr><td class="k">Waktu Cetak</td><td class="s">:</td><td>{{ \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y, HH:mm') }} WITA</td></tr>
         </table>
 
         <table class="rekap-table">
             <thead>
                 <tr>
-                    <th style="width:5%">No</th>
-                    <th style="width:12%">Tanggal</th>
-                    <th style="width:25%">Nama Peserta &amp; Divisi</th>
-                    <th style="width:9%">Mode</th>
-                    <th style="width:12%">Jam Masuk</th>
-                    <th style="width:12%">Jam Pulang</th>
-                    <th style="width:9%">Status</th>
-                    <th style="width:16%">Keterangan</th>
+                    <th style="width: 4%;">No</th>
+                    <th style="width: 22%;">Nama</th>
+                    <th style="width: 20%;">Pembimbing</th>
+                    <th style="width: 22%;">Periode</th>
+                    <th style="width: 6%;">Hadir</th>
+                    <th style="width: 6%;">Sakit</th>
+                    <th style="width: 6%;">Izin</th>
+                    <th style="width: 6%;">Alfa</th>
+                    <th style="width: 8%;">Tugas Luar</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse ($presensi as $index => $item)
+                @forelse ($rekapList as $index => $item)
                     <tr>
                         <td class="c">{{ $index + 1 }}</td>
-                        <td>{{ \Carbon\Carbon::parse($item->tanggal)->isoFormat('D MMM Y') }}</td>
                         <td>
                             <strong>{{ $item->nama_lengkap }}</strong>
-                            @php
-                                $divisiRow = $item->pengguna?->magang?->getDivisiAt($item->tanggal) ?? $item->pengguna?->magang?->divisi;
-                            @endphp
-                            @if($divisiRow)
-                                <div class="sub">{{ $divisiRow->nama_divisi }}</div>
+                            @if($item->divisi)
+                                <div class="sub">{{ $item->divisi->nama_divisi }}</div>
+                            @elseif($item->no_induk)
+                                <div class="sub">{{ $item->no_induk }}</div>
                             @endif
                         </td>
-                        <td class="c" style="text-transform:uppercase;">{{ $item->mode_kerja }}</td>
-                        <td class="c">{{ $item->jam_masuk ? substr($item->jam_masuk, 0, 5) . ' WITA' : '-' }}</td>
-                        <td class="c">{{ $item->jam_keluar ? substr($item->jam_keluar, 0, 5) . ' WITA' : '-' }}</td>
-                        <td class="c" style="text-transform:capitalize;">{{ $item->status }}</td>
-                        <td>{{ $item->keterangan ?? '-' }}</td>
+                        <td>
+                            <strong>{{ $item->pembimbing_nama }}</strong>
+                            @if($item->pembimbing_nip)
+                                <div class="sub">NIP: {{ $item->pembimbing_nip }}</div>
+                            @endif
+                        </td>
+                        <td class="c">{{ $item->periode_teks }}</td>
+                        <td class="c font-bold">{{ $item->total_hadir }}</td>
+                        <td class="c">{{ $item->total_sakit }}</td>
+                        <td class="c">{{ $item->total_izin }}</td>
+                        <td class="c">{{ $item->total_alpa }}</td>
+                        <td class="c">{{ $item->total_tugas_luar }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="c" style="padding:16px;">Tidak ada data presensi yang sesuai dengan parameter filter yang dipilih.</td>
+                        <td colspan="9" class="c" style="padding: 16px;">Tidak ada data peserta magang yang sesuai dengan parameter filter yang dipilih.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -61,16 +67,12 @@
 
         <div class="ringkasan">
             <strong>Ringkasan:</strong>
-            Total Catatan {{ $stats['total'] }};
-            Total Hadir {{ $stats['hadir'] }};
-            Onsite (Kantor) {{ $stats['onsite'] }};
-            WFH (Remote) {{ $stats['wfh'] }}.
-        </div>
-
-        <div class="catatan-dok">
-            <p>Catatan:</p>
-            <p>1. Rekapitulasi ini dihasilkan secara otomatis dari sistem informasi manajemen presensi magang.</p>
-            <p>2. Validitas kehadiran didasarkan pada verifikasi selfie dan koordinat GPS radius kantor.</p>
+            Total Peserta {{ $stats['total_peserta'] }};
+            Total Hadir {{ $stats['total_hadir'] }};
+            Total Sakit {{ $stats['total_sakit'] }};
+            Total Izin {{ $stats['total_izin'] }};
+            Total Alfa {{ $stats['total_alpa'] }};
+            Total Tugas Luar {{ $stats['total_tugas_luar'] }}.
         </div>
 
         @include('admin.cetak.partials.ttd-kepala')

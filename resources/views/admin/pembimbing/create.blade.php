@@ -81,6 +81,29 @@
                     </div>
 
                     <div class="sm:col-span-2">
+                        <label for="divisi_id" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Unit / Seksi Penempatan Pembimbing <span class="text-rose-500">*</span>
+                        </label>
+                        <select
+                            name="divisi_id"
+                            id="divisi_id"
+                            required
+                            class="w-full px-4 py-2.5 rounded-xl border {{ $errors->has('divisi_id') ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300' }} focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-sm text-slate-800 font-medium bg-white"
+                        >
+                            <option value="">-- Pilih Unit / Subbagian / Seksi --</option>
+                            @foreach ($divisi as $d)
+                                <option value="{{ $d->id }}" {{ old('divisi_id') == $d->id ? 'selected' : '' }}>
+                                    {{ $d->nama_divisi }} {{ $d->parent ? '— (Bidang: ' . $d->parent->nama_divisi . ')' : '— [Bidang / Sekretariat]' }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="text-[11px] text-slate-500 mt-1">Anak magang yang dibimbing oleh pembimbing ini akan otomatis ditempatkan pada unit/seksi ini.</p>
+                        @error('divisi_id')
+                            <p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="sm:col-span-2">
                         <label for="no_hp" class="block text-xs font-semibold text-slate-700 mb-1.5">
                             Nomor WhatsApp / HP (Opsional)
                         </label>

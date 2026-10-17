@@ -145,9 +145,9 @@
             <div>
                 <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
                     <span class="w-6 h-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold">2</span>
-                    <span>Penempatan Divisi & Pembimbing</span>
+                    <span>Penempatan Pembimbing & Unit Kerja</span>
                 </h3>
-                <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="mt-4 space-y-3">
                     <div>
                         <label for="pembimbing_id" class="block text-xs font-semibold text-slate-700 mb-1.5">
                             Pembimbing Lapangan <span class="text-rose-500">*</span>
@@ -158,10 +158,15 @@
                             required
                             class="w-full px-4 py-2.5 rounded-xl border {{ $errors->has('pembimbing_id') ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300' }} focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-sm text-slate-800 font-medium bg-white"
                         >
-                            <option value="">-- Pilih Pembimbing --</option>
+                            <option value="" data-divisi-id="" data-divisi-nama="">-- Pilih Pembimbing --</option>
                             @foreach ($pembimbing as $p)
-                                <option value="{{ $p->id }}" {{ old('pembimbing_id', $magang->pembimbing_id) == $p->id ? 'selected' : '' }}>
-                                    {{ $p->nama_lengkap }} (NIP: {{ $p->nip }})
+                                <option
+                                    value="{{ $p->id }}"
+                                    data-divisi-id="{{ $p->divisi_id ?? '' }}"
+                                    data-divisi-nama="{{ $p->divisi->nama_divisi ?? 'Belum Ditentukan' }}"
+                                    {{ old('pembimbing_id', $magang->pembimbing_id) == $p->id ? 'selected' : '' }}
+                                >
+                                    {{ $p->nama_lengkap }} — Unit: {{ $p->divisi->nama_divisi ?? 'Belum Ditentukan' }} (NIP: {{ $p->nip }})
                                 </option>
                             @endforeach
                         </select>
@@ -170,22 +175,26 @@
                         @enderror
                     </div>
 
-                    <div>
-                        <label for="divisi_id" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                            Divisi / Sub-Bagian (Untuk TTD PDF Pimpinan)
-                        </label>
-                        <select
-                            name="divisi_id"
-                            id="divisi_id"
-                            class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-sm text-slate-800 font-medium bg-white"
-                        >
-                            <option value="">-- Tanpa Divisi Khusus --</option>
-                            @foreach ($divisi as $d)
-                                <option value="{{ $d->id }}" {{ old('divisi_id', $magang->divisi_id) == $d->id ? 'selected' : '' }}>
-                                    {{ $d->nama_divisi }} (Pimpinan: {{ $d->nama_pimpinan ?? '-' }})
-                                </option>
-                            @endforeach
-                        </select>
+                    <!-- Input Tersembunyi Divisi (Otomatis Tersinkron) -->
+                    <input type="hidden" name="divisi_id" id="divisi_id" value="{{ old('divisi_id', $magang->divisi_id) }}">
+
+                    <!-- Card Info Unit Penempatan Otomatis -->
+                    <div id="unit_preview_card" class="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80 text-blue-900 text-xs flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <svg class="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div>
+                                <span class="font-bold">Unit / Seksi Penempatan:</span>
+                                <span id="unit_preview_name" class="font-semibold text-blue-800 ml-1">
+                                    {{ $magang->divisi->nama_divisi ?? ($magang->pembimbing?->divisi->nama_divisi ?? 'Pilih pembimbing untuk penempatan unit otomatis') }}
+                                </span>
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                            Otomatis Terhubung
+                        </span>
                     </div>
                 </div>
             </div>
@@ -322,3 +331,34 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const pembimbingSelect = document.getElementById('pembimbing_id');
+        const divisiInput = document.getElementById('divisi_id');
+        const unitPreviewName = document.getElementById('unit_preview_name');
+
+        function updateUnitPreview() {
+            if (!pembimbingSelect) return;
+            const selectedOption = pembimbingSelect.options[pembimbingSelect.selectedIndex];
+            const divisiId = selectedOption ? selectedOption.getAttribute('data-divisi-id') : '';
+            const divisiNama = selectedOption ? selectedOption.getAttribute('data-divisi-nama') : '';
+
+            if (divisiId && divisiNama) {
+                if (divisiInput) divisiInput.value = divisiId;
+                if (unitPreviewName) unitPreviewName.textContent = divisiNama;
+            } else if (pembimbingSelect.value) {
+                if (unitPreviewName) unitPreviewName.textContent = 'Pembimbing belum memiliki unit kerja';
+            } else {
+                if (divisiInput) divisiInput.value = '';
+                if (unitPreviewName) unitPreviewName.textContent = 'Pilih pembimbing untuk penempatan unit otomatis';
+            }
+        }
+
+        if (pembimbingSelect) {
+            pembimbingSelect.addEventListener('change', updateUnitPreview);
+        }
+    });
+</script>
+@endpush

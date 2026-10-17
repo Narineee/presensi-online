@@ -64,6 +64,11 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // Sinkronisasi status magang menjadi 'selesai' jika periode telah berakhir
+        if ($pengguna->role === 'magang' && $pengguna->magang) {
+            $pengguna->magang->syncStatusKeaktifan();
+        }
+
         // Cek status keaktifan akun pengguna
         if (! $pengguna->is_active) {
             RateLimiter::hit($this->throttleKey());

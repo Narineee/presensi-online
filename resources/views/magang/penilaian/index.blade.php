@@ -70,11 +70,18 @@
             {{-- Summary Card --}}
             <section class="rounded-3xl glass-card p-5 shadow-sm space-y-4">
                 <div class="rounded-2xl glass-subcard p-5 border border-white text-center space-y-2">
-                    <span class="text-[11px] font-black uppercase tracking-wider text-slate-500">NILAI AKHIR MAGANG</span>
+                    <span class="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                        {{ $penilaian->is_akumulasi ? 'NILAI AKHIR MAGANG (AKUMULASI)' : 'NILAI AKHIR MAGANG' }}
+                    </span>
                     <p class="text-4xl font-black text-brand">{{ $penilaian->total_nilai }} <span class="text-sm font-semibold text-slate-400">/ 100</span></p>
                     <div class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800">
                         Predikat: {{ $penilaian->predikat }} ({{ $penilaian->keterangan_predikat }})
                     </div>
+                    @if ($penilaian->is_akumulasi)
+                        <p class="text-[11px] text-purple-700 font-bold mt-1">
+                            Nilai diakumulasikan dari {{ $penilaian->jumlah_pembimbing }} Pembimbing Lapangan
+                        </p>
+                    @endif
                 </div>
 
                 {{-- Identitas Singkat --}}
@@ -92,19 +99,27 @@
                         <span class="font-bold text-slate-900 text-right min-w-0 break-words ml-2">{{ $penilaian->magang->instansi_pendidikan }}</span>
                     </div>
                     <div class="flex items-center justify-between py-1">
-                        <span class="text-slate-500 shrink-0">Pembimbing</span>
-                        <span class="font-bold text-slate-900 text-right min-w-0 break-words ml-2">{{ $penilaian->pembimbing->nama_lengkap ?? '-' }}</span>
+                        <span class="text-slate-500 shrink-0">Pembimbing Lapangan</span>
+                        <span class="font-bold text-slate-900 text-right min-w-0 break-words ml-2">
+                            @if ($penilaian->is_akumulasi)
+                                {{ $penilaian->jumlah_pembimbing }} Pembimbing (Multi-Unit)
+                            @else
+                                {{ $penilaian->pembimbing->nama_lengkap ?? ($magang->pembimbing->nama_lengkap ?? '-') }}
+                            @endif
+                        </span>
                     </div>
                 </div>
 
-                {{-- Rincian Kriteria --}}
+                {{-- Rincian Kriteria Penilaian --}}
                 <div class="rounded-2xl glass-subcard p-4 border border-white space-y-2.5">
-                    <p class="text-xs font-extrabold text-slate-900">Rincian Kriteria Penilaian</p>
+                    <p class="text-xs font-extrabold text-slate-900">
+                        {{ $penilaian->is_akumulasi ? 'Rincian Nilai Akumulasi Kriteria' : 'Rincian Kriteria Penilaian' }}
+                    </p>
                     <div class="space-y-2">
                         @foreach($penilaian->detail as $detail)
                             @php
                                 $bobot = $detail->kriteria->bobot ?? 0;
-                                $terbobot = round(($detail->nilai * $bobot) / 100, 2);
+                                $terbobot = $detail->terbobot ?? round(($detail->nilai * $bobot) / 100, 2);
                             @endphp
                             <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/70 border border-white text-xs">
                                 <div class="min-w-0 flex-1 pr-2">
@@ -120,7 +135,53 @@
                     </div>
                 </div>
 
-                @if($penilaian->catatan)
+                {{-- Riwayat Evaluasi Masing-Masing Pembimbing (Khusus Multi-Pembimbing) --}}
+                @if ($penilaian->is_akumulasi && isset($evaluasiList) && $evaluasiList->count() > 1)
+                    <div class="rounded-2xl glass-subcard p-4 border border-white space-y-3">
+                        <div class="flex items-center justify-between">
+                            <p class="text-xs font-extrabold text-slate-900">Riwayat Nilai per Pembimbing &amp; Unit</p>
+                            <span class="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full">
+                                {{ $evaluasiList->count() }} Evaluasi
+                            </span>
+                        </div>
+
+                        <div class="space-y-2.5">
+                            @foreach($evaluasiList as $ev)
+                                <div class="p-3 rounded-xl bg-white/80 border border-slate-200/80 space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <span class="text-xs font-bold text-slate-900 block">
+                                                {{ $ev->penempatanMagang?->divisi?->nama_divisi ?? ($magang->divisi->nama_divisi ?? 'Unit Kerja') }}
+                                            </span>
+                                            <span class="text-[11px] text-slate-500">
+                                                Pembimbing: <strong>{{ $ev->pembimbing->nama_lengkap ?? '-' }}</strong>
+                                            </span>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="text-sm font-black text-brand">{{ $ev->total_nilai }}</span>
+                                            <span class="text-[10px] font-bold text-emerald-700 block">({{ $ev->predikat }})</span>
+                                        </div>
+                                    </div>
+
+                                    {{-- Kriteria Mini Grid --}}
+                                    <div class="pt-2 border-t border-slate-100 grid grid-cols-2 gap-1.5 text-[11px]">
+                                        @foreach($ev->detail as $evDetail)
+                                            <div class="flex items-center justify-between text-slate-600">
+                                                <span class="truncate mr-1">{{ $evDetail->kriteria?->nama ?? 'Kriteria' }}:</span>
+                                                <span class="font-bold text-slate-800">{{ $evDetail->nilai }}</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <div class="text-[10px] text-slate-400 text-right">
+                                        Dinilai: {{ $ev->created_at ? $ev->created_at->format('d M Y') : '-' }}
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                @if(isset($penilaian->catatan) && $penilaian->catatan)
                     <div class="rounded-2xl glass-subcard p-4 border border-white space-y-1.5 text-xs">
                         <p class="font-extrabold text-slate-900">Catatan Evaluasi Pembimbing</p>
                         <p class="text-slate-600 leading-relaxed bg-white/70 p-3 rounded-xl border border-white whitespace-pre-line">{{ $penilaian->catatan }}</p>

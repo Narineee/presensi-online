@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\HariLibur;
 use App\Models\KriteriaPenilaian;
 use App\Models\Magang;
+use App\Models\PenempatanMagang;
 use App\Models\PengajuanIzin;
 use App\Models\PengajuanTugasLuar;
 use App\Models\Presensi;
@@ -45,12 +46,17 @@ class PresensiScoreService
     }
 
     /**
-     * Menghitung skor objektif presensi untuk seorang peserta magang.
+     * Menghitung skor objektif presensi untuk seorang peserta magang (dapat dibatasi per penempatan divisi).
      */
-    public function calculateScore(Magang $magang): array
+    public function calculateScore(Magang $magang, ?PenempatanMagang $penempatan = null): array
     {
-        $startDate = $magang->tanggal_mulai ? Carbon::parse($magang->tanggal_mulai) : Carbon::parse($magang->created_at);
-        $endDate = $magang->tanggal_selesai ? Carbon::parse($magang->tanggal_selesai) : Carbon::today();
+        if ($penempatan && $penempatan->tanggal_mulai && $penempatan->tanggal_selesai) {
+            $startDate = Carbon::parse($penempatan->tanggal_mulai);
+            $endDate = Carbon::parse($penempatan->tanggal_selesai);
+        } else {
+            $startDate = $magang->tanggal_mulai ? Carbon::parse($magang->tanggal_mulai) : Carbon::parse($magang->created_at);
+            $endDate = $magang->tanggal_selesai ? Carbon::parse($magang->tanggal_selesai) : Carbon::today();
+        }
 
         // Pastikan urutan tanggal valid
         if ($startDate->gt($endDate)) {

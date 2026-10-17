@@ -29,8 +29,8 @@ class MagangController extends Controller
     // Menampilkan form tambah anak magang
     public function create()
     {
-        // Ambil data pembimbing dan divisi untuk pilihan dropdown
-        $pembimbing = Pembimbing::orderBy('nama_lengkap')->get();
+        // Ambil data pembimbing beserta divisi dan list divisi untuk pilihan
+        $pembimbing = Pembimbing::with('divisi')->orderBy('nama_lengkap')->get();
         $divisi = Divisi::orderBy('nama_divisi')->get();
 
         return view('admin.magang.create', compact('pembimbing', 'divisi'));
@@ -81,6 +81,10 @@ class MagangController extends Controller
             $fotoPath = $request->file('foto')->store('foto-magang', 'public');
         }
 
+        // Tentukan divisi penempatan otomatis dari pembimbing
+        $pembimbing = Pembimbing::findOrFail($request->pembimbing_id);
+        $divisiId = $pembimbing->divisi_id ?? $request->divisi_id;
+
         // 1. Buat akun login di tabel pengguna
         $pengguna = Pengguna::create([
             'username' => $request->username,
@@ -92,8 +96,8 @@ class MagangController extends Controller
         // 2. Buat profil magang di tabel magang
         $magang = Magang::create([
             'pengguna_id' => $pengguna->id,
-            'pembimbing_id' => $request->pembimbing_id,
-            'divisi_id' => $request->divisi_id,
+            'pembimbing_id' => $pembimbing->id,
+            'divisi_id' => $divisiId,
             'no_induk' => $request->no_induk,
             'nama_lengkap' => $request->nama_lengkap,
             'jenis_kelamin' => $request->jenis_kelamin,
@@ -106,11 +110,12 @@ class MagangController extends Controller
             'status' => $request->status ?? 'aktif',
         ]);
 
-        // 3. Jika divisi_id diisi oleh admin, catat otomatis sebagai riwayat penempatan awal
-        if ($request->filled('divisi_id')) {
+        // 3. Jika unit/divisi tersedia, catat otomatis sebagai riwayat penempatan awal
+        if ($divisiId) {
             PenempatanMagang::create([
                 'magang_id' => $magang->id,
-                'divisi_id' => $request->divisi_id,
+                'divisi_id' => $divisiId,
+                'pembimbing_id' => $pembimbing->id,
                 'tanggal_mulai' => $request->tanggal_mulai,
                 'tanggal_selesai' => $request->tanggal_selesai,
             ]);
@@ -124,13 +129,18 @@ class MagangController extends Controller
     {
         $magang = Magang::with([
             'pengguna',
-            'pembimbing',
+            'pembimbing.divisi',
             'divisi',
             'penempatanMagang.divisi',
-            'penilaian',
+            'penempatanMagang.pembimbing.divisi',
+            'penilaians.pembimbing',
+            'penilaians.penempatanMagang.divisi',
+            'penilaians.detail.kriteria',
         ])->findOrFail($id);
 
         $divisiList = Divisi::orderBy('nama_divisi')->get();
+        $pembimbingList = Pembimbing::with('divisi')->orderBy('nama_lengkap')->get();
+        $penilaianAkumulasi = $magang->getPenilaianAkumulasi();
 
         // Data presensi peserta
         $presensiQuery = Presensi::where('pengguna_id', $magang->pengguna_id);
@@ -157,6 +167,8 @@ class MagangController extends Controller
         return view('admin.magang.show', compact(
             'magang',
             'divisiList',
+            'pembimbingList',
+            'penilaianAkumulasi',
             'activeTab',
             'presensiStats',
             'presensiList',
@@ -169,7 +181,7 @@ class MagangController extends Controller
     public function edit($id)
     {
         $magang = Magang::with('pengguna')->findOrFail($id);
-        $pembimbing = Pembimbing::orderBy('nama_lengkap')->get();
+        $pembimbing = Pembimbing::with('divisi')->orderBy('nama_lengkap')->get();
         $divisi = Divisi::orderBy('nama_divisi')->get();
 
         return view('admin.magang.edit', compact('magang', 'pembimbing', 'divisi'));
@@ -222,10 +234,14 @@ class MagangController extends Controller
             $fotoPath = $request->file('foto')->store('foto-magang', 'public');
         }
 
+        $pembimbing = Pembimbing::findOrFail($request->pembimbing_id);
+        $divisiId = $pembimbing->divisi_id ?? $request->divisi_id ?? $magang->divisi_id;
+        $isActive = $request->has('is_active');
+
         // 1. Update data profil magang
-        $magang->update([
-            'pembimbing_id' => $request->pembimbing_id,
-            'divisi_id' => $request->divisi_id,
+        $magangData = [
+            'pembimbing_id' => $pembimbing->id,
+            'divisi_id' => $divisiId,
             'no_induk' => $request->no_induk,
             'nama_lengkap' => $request->nama_lengkap,
             'jenis_kelamin' => $request->jenis_kelamin,
@@ -236,12 +252,14 @@ class MagangController extends Controller
             'tanggal_mulai' => $request->tanggal_mulai,
             'tanggal_selesai' => $request->tanggal_selesai,
             'status' => $request->status,
-        ]);
+        ];
+
+        $magang->update($magangData);
 
         // 2. Update akun login di tabel pengguna
         $userData = [
             'username' => $request->username,
-            'is_active' => $request->has('is_active') ? true : false,
+            'is_active' => $isActive,
         ];
 
         if ($request->filled('password')) {
@@ -251,6 +269,31 @@ class MagangController extends Controller
         $magang->pengguna->update($userData);
 
         return redirect()->route('admin.magang.index')->with('success', 'Data magang dan akun login berhasil diperbarui!');
+    }
+
+    /**
+     * Mengubah status aktif/non-aktif akun magang secara cepat oleh Admin.
+     */
+    public function toggleStatus($id)
+    {
+        $magang = Magang::with('pengguna')->findOrFail($id);
+        $pengguna = $magang->pengguna;
+
+        if (! $pengguna) {
+            return back()->with('error', 'Akun login untuk peserta magang ini tidak ditemukan.');
+        }
+
+        if ($pengguna->is_active) {
+            // Nonaktifkan
+            $pengguna->update(['is_active' => false]);
+
+            return back()->with('success', "Akun login {$magang->nama_lengkap} berhasil dinonaktifkan.");
+        }
+
+        // Aktifkan kembali
+        $pengguna->update(['is_active' => true]);
+
+        return back()->with('success', "Akun login {$magang->nama_lengkap} berhasil diaktifkan kembali.");
     }
 
     // Menghapus data anak magang dan akun loginnya

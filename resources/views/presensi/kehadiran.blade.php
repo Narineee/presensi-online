@@ -167,10 +167,66 @@
     <div>
         <h2 class="mb-2 text-base font-extrabold text-slate-900">Alur hari ini</h2>
         @php
+            $isTerlambat = $sudahMasuk && ($todayPresensi->jam_masuk > '08:00:00' || stripos((string) $todayPresensi->keterangan, 'terlambat') !== false);
+            if (! $sudahMasuk) {
+                $subMasuk = 'Belum melakukan presensi';
+            } else {
+                if ($isTerlambat) {
+                    if (preg_match('/Terlambat\s+(\d+)\s+menit/i', (string) $todayPresensi->keterangan, $m)) {
+                        $menitTerlambat = (int) $m[1];
+                    } else {
+                        $tglStr = $todayPresensi->tanggal ? (is_string($todayPresensi->tanggal) ? $todayPresensi->tanggal : $todayPresensi->tanggal->format('Y-m-d')) : date('Y-m-d');
+                        $jamMasuk = \Carbon\Carbon::parse($tglStr.' '.$todayPresensi->jam_masuk);
+                        $batasMasuk = \Carbon\Carbon::parse($tglStr.' 08:00:00');
+                        $menitTerlambat = max(1, (int) ceil($batasMasuk->diffInSeconds($jamMasuk) / 60));
+                    }
+                    $labelMasuk = "Terlambat {$menitTerlambat} menit";
+                } elseif ($todayPresensi->mode_kerja === 'tugas_luar') {
+                    $labelMasuk = 'Tugas Luar';
+                } elseif ($todayPresensi->mode_kerja === 'wfh') {
+                    $labelMasuk = 'WFH';
+                } else {
+                    $labelMasuk = 'Tepat Waktu';
+                }
+                $subMasuk = $jam($todayPresensi->jam_masuk).' ('.$labelMasuk.')';
+            }
+
+            $isPulangAwal = $sudahPulang && ($todayPresensi->jam_keluar < '16:00:00');
+            if ($sudahPulang) {
+                $subPulang = $jam($todayPresensi->jam_keluar);
+                if ($isPulangAwal && $todayPresensi->keterangan) {
+                    $rawKeterangan = (string) $todayPresensi->keterangan;
+                    $alasanPulang = null;
+                    if (preg_match('/\|\s*Pulang:\s*([^|]+)/i', $rawKeterangan, $m)) {
+                        $alasanPulang = trim($m[1]);
+                    } elseif (preg_match('/Pulang:\s*([^|]+)/i', $rawKeterangan, $m)) {
+                        $alasanPulang = trim($m[1]);
+                    } elseif (preg_match('/\b(Sakit|Izin)(?:\s*\([^)]+\))?/i', $rawKeterangan, $m)) {
+                        $alasanPulang = trim($m[0]);
+                    } else {
+                        $cleaned = trim(preg_replace('/\[?Terlambat[^\]|]+\]?\s*\|?\s*/i', '', $rawKeterangan));
+                        if (! empty($cleaned)) {
+                            $alasanPulang = $cleaned;
+                        }
+                    }
+
+                    if ($alasanPulang) {
+                        $labelAlasan = preg_match('/^pulang\s*:/i', $alasanPulang)
+                            ? $alasanPulang
+                            : 'Pulang: '.$alasanPulang;
+                        $subPulang .= ' ('.$labelAlasan.')';
+                    }
+                }
+            } else {
+                $subPulang = $hasAktivitasToday
+                    ? ($timeStatus['is_before_pulang'] ? 'Bisa pulang normal 16.00 atau Sakit/Izin' : 'Waktu presensi pulang dibuka')
+                    : 'Tersedia setelah aktivitas diisi';
+            }
+
             $alur = [
-                ['Presensi masuk', $sudahMasuk ? $jam($todayPresensi->jam_masuk).' - '.($todayPresensi->mode_kerja === 'tugas_luar' ? 'Tugas Luar' : strtoupper($todayPresensi->mode_kerja)) : 'Belum melakukan presensi', $sudahMasuk, false],
+                ['Presensi masuk', $subMasuk, $sudahMasuk, false],
                 ['Aktivitas harian', $hasAktivitasToday ? $countAktivitasToday.' aktivitas tercatat' : 'Belum diisi', $hasAktivitasToday, ! $sudahMasuk],
-                ['Presensi pulang', $sudahPulang ? $jam($todayPresensi->jam_keluar).($todayPresensi->keterangan ? ' ('.$todayPresensi->keterangan.')' : '') : ($hasAktivitasToday ? ($timeStatus['is_before_pulang'] ? 'Bisa pulang normal 16.00 atau Sakit/Izin' : 'Waktu presensi pulang dibuka') : 'Tersedia setelah aktivitas diisi'), $sudahPulang, ! $hasAktivitasToday && ! $sudahPulang],
+                ['Presensi pulang', $subPulang, $sudahPulang, ! $hasAktivitasToday && ! $sudahPulang],
             ];
         @endphp
         <ol class="rounded-3xl glass-card p-5 shadow-xs">

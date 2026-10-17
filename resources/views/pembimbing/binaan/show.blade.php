@@ -38,22 +38,80 @@
     @include('pembimbing.binaan.profil-ringkas', ['magang' => $magang])
 
     {{-- Rekap presensi individual --}}
-    <h2 class="pt-1 text-base font-extrabold">Rekap Presensi Individual</h2>
-    <section class="rounded-3xl border border-brand/40 bg-white p-4">
-        <p class="text-base font-extrabold">{{ $rekap['hari_kerja_berjalan'] }} total hari magang</p>
-        <p class="mt-1 text-xs leading-relaxed text-slate-500">{{ $cakupan }} · Hari kerja yang sudah berjalan, tidak termasuk hari ini. Hadir + Sakit + Izin + Cuti + Alfa = {{ $rekap['hari_kerja_berjalan'] }} hari.</p>
-
-        <dl class="mt-3 grid grid-cols-6 gap-1 rounded-2xl bg-slate-100 px-2 py-3 text-center">
-            @foreach ($stat as [$label, $nilai])
-                <div>
-                    <dt class="text-[11px] text-slate-500">{{ $label }}</dt>
-                    <dd class="text-xl font-extrabold {{ $nilai ? '' : 'text-slate-400' }} {{ $label === 'Alfa' && $nilai ? 'text-rose-700' : '' }}">{{ $nilai }}</dd>
+    <h2 class="pt-1 text-base font-extrabold text-slate-900">Rekap Presensi Individual</h2>
+    <section class="rounded-3xl border border-brand/40 bg-white p-4 shadow-xs divide-y divide-slate-100 space-y-3.5">
+        {{-- 1. Total periode dia magang pada unit tersebut / total hari dibina --}}
+        <div>
+            <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0 flex-1">
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-bold text-brand">
+                        Unit: {{ $rekap['nama_unit'] }}
+                    </span>
+                    <p class="mt-1.5 text-base font-extrabold text-slate-900 leading-snug">
+                        {{ $rekap['durasi_bulan_unit_teks'] }} <span class="text-xs font-semibold text-slate-500">({{ $rekap['total_hari_unit'] }} Hari Kerja)</span>
+                    </p>
+                    <p class="mt-0.5 text-xs text-slate-500 font-medium">
+                        Periode Unit: {{ $rekap['unit_mulai_formatted'] }} – {{ $rekap['unit_selesai_formatted'] }}
+                    </p>
                 </div>
-            @endforeach
-        </dl>
-        <p class="mt-2 text-[11px] text-slate-500">TL = Tugas luar (sudah termasuk Hadir), Alfa = Tanpa keterangan</p>
+                @if ($rekap['is_berbeda_periode_dinas'])
+                    <div class="text-right shrink-0">
+                        <span class="inline-block rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
+                            Dinas: {{ $rekap['durasi_bulan_dinas_teks'] }}
+                        </span>
+                        <p class="mt-0.5 text-[10px] text-slate-400">
+                            {{ $rekap['dinas_mulai_formatted'] }} – {{ $rekap['dinas_selesai_formatted'] }}
+                        </p>
+                    </div>
+                @endif
+            </div>
+        </div>
 
-        <a href="{{ route('pembimbing.binaan.riwayat', $magang->id) }}" class="mt-3 block rounded-2xl border border-brand py-3 text-center text-sm font-extrabold text-brand hover:bg-brand-soft">Buka riwayat presensi harian</a>
+        {{-- 2. Hari keberapa saat ini --}}
+        @php
+            $persenHari = $rekap['total_hari_unit'] > 0
+                ? min(100, max(0, round(($rekap['hari_ke'] / $rekap['total_hari_unit']) * 100)))
+                : 0;
+        @endphp
+        <div class="pt-3">
+            <div class="flex items-center justify-between text-xs mb-1.5">
+                <span class="font-bold text-slate-700">Progres Masa Binaan</span>
+                <span class="font-extrabold text-brand">{{ $rekap['hari_ke_label'] }}</span>
+            </div>
+            <div class="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                <div class="h-full rounded-full bg-brand transition-all duration-300" style="width: {{ $persenHari }}%"></div>
+            </div>
+            <div class="mt-1.5 flex justify-between text-[11px] text-slate-500">
+                <span>Mulai: {{ $fmt($rekap['unit_mulai'], 'D MMM') }}</span>
+                <span>Sisa: {{ $rekap['sisa_hari_kerja'] }} hari kerja</span>
+                <span>Selesai: {{ $fmt($rekap['unit_selesai'], 'D MMM') }}</span>
+            </div>
+        </div>
+
+        {{-- 3. Rekap dia hadir berapa kali --}}
+        <div class="pt-3">
+            <div class="mb-2.5">
+                <p class="text-sm font-extrabold text-slate-900">
+                    Hadir <span class="text-emerald-700">{{ $rekap['total_hadir'] }} kali</span>
+                    <span class="text-xs font-semibold text-slate-500">({{ $rekap['persentase_kehadiran'] }}%)</span>
+                </p>
+                <p class="mt-0.5 text-[11px] leading-relaxed text-slate-500">
+                    {{ $cakupan }} · Hari kerja yang sudah berjalan sampai kemarin: {{ $rekap['hari_kerja_berjalan'] }} hari.
+                </p>
+            </div>
+
+            <dl class="grid grid-cols-6 gap-1 rounded-2xl bg-slate-100 px-2 py-3 text-center">
+                @foreach ($stat as [$label, $nilai])
+                    <div>
+                        <dt class="text-[11px] text-slate-500">{{ $label }}</dt>
+                        <dd class="text-xl font-extrabold {{ $nilai ? '' : 'text-slate-400' }} {{ $label === 'Alfa' && $nilai ? 'text-rose-700' : '' }}">{{ $nilai }}</dd>
+                    </div>
+                @endforeach
+            </dl>
+            <p class="mt-2 text-[11px] text-slate-500">TL = Tugas luar (sudah termasuk Hadir), Alfa = Tanpa keterangan</p>
+
+            <a href="{{ route('pembimbing.binaan.riwayat', $magang->id) }}" class="mt-3 block rounded-2xl border border-brand py-3 text-center text-sm font-extrabold text-brand hover:bg-brand-soft">Buka riwayat presensi harian</a>
+        </div>
     </section>
 
     {{-- Presensi hari ini --}}
@@ -62,7 +120,12 @@
         <span class="inline-block rounded-full px-3 py-1 text-xs font-extrabold {{ $p ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' }}">{{ $badgeHariIni }}</span>
         <dl class="mt-3 grid grid-cols-2 gap-3 text-sm">
             <div><dt class="text-xs text-slate-500">Masuk</dt><dd class="text-lg font-extrabold">{{ $jam($p?->jam_masuk) }}</dd></div>
-            <div><dt class="text-xs text-slate-500">Keluar</dt><dd class="text-lg font-extrabold">{{ $jam($p?->jam_keluar) }}</dd></div>
+            <div>
+                <dt class="text-xs text-slate-500">Keluar</dt>
+                <dd class="text-lg font-extrabold">
+                    {{ $jam($p?->jam_keluar) }}@if (!empty($catatanPulangHariIni)) <span class="text-xs font-semibold text-slate-600">({{ $catatanPulangHariIni }})</span>@endif
+                </dd>
+            </div>
         </dl>
         @if ($p && $lokasiHariIni)
             <p class="mt-3 text-sm">{{ now()->locale('id')->isoFormat('D MMM') }} - {{ $lokasiHariIni }}</p>
@@ -104,7 +167,7 @@
                 @endforeach
             </ul>
         </div>
-    @elseif ($pekerjaanAktif)
+    @elseif ($pekerjaanAktif && ! ($pekerjaanAktif instanceof \Illuminate\Support\Collection))
         <a href="{{ route('pembimbing.rencana.index', ['magang_id' => $magang->id]) }}" class="block rounded-3xl bg-white p-4 ring-1 ring-slate-200 hover:ring-brand/40">
             <p class="text-sm font-extrabold">{{ $pekerjaanAktif->judul }}</p>
             <p class="mt-1 text-xs text-slate-600">Pekerjaan aktif</p>

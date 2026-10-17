@@ -38,7 +38,12 @@
                             @if ($c['terlambat']) <span class="block text-xs font-bold text-rose-700">Terlambat {{ $c['terlambat'] }} menit</span> @endif
                         </dd>
                     </div>
-                    <div><dt class="text-xs text-slate-500">Jam Pulang</dt><dd class="font-extrabold">{{ $c['jam_pulang'] }}</dd></div>
+                    <div>
+                        <dt class="text-xs text-slate-500">Jam Pulang</dt>
+                        <dd class="font-extrabold text-slate-900">
+                            {{ $c['jam_pulang'] }}@if (!empty($c['catatan_pulang'])) <span class="text-xs font-bold text-amber-700">({{ $c['catatan_pulang'] }})</span>@endif
+                        </dd>
+                    </div>
                 </dl>
 
                 <div class="mt-3 flex flex-wrap items-center justify-between gap-2">

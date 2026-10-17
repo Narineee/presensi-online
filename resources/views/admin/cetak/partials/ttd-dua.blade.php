@@ -1,5 +1,8 @@
-{{-- Tanda tangan ganda: Pembimbing Lapangan (kiri) & Pimpinan Divisi (kanan)
+{{-- Tanda tangan ganda: Pembimbing Lapangan (kiri) & Kepala Bidang / Pimpinan Bidang Induk (kanan)
      Dipakai di cetak peserta. Butuh variabel: $user, $pembimbing, $divisi, $pengaturan --}}
+@php
+    $bidangTtd = $divisi?->bidang_induk ?? $divisi;
+@endphp
 <style>
     .ttd-dua { width:100%; margin-top:24px; border-collapse:collapse; page-break-inside:avoid; font-size:10.5pt; }
     .ttd-dua td { width:50%; text-align:center; vertical-align:top; line-height:1.4; padding:0 10px; border:0; }
@@ -18,11 +21,11 @@
         </td>
         <td>
             <div>{{ $pengaturan->kota_surat ?? 'Banjarbaru' }}, {{ \Carbon\Carbon::now()->isoFormat('D MMMM Y') }}</div>
-            <div>{{ $divisi->jabatan_pimpinan ?? 'Kepala Sub-Bagian / Divisi' }}</div>
+            <div>{{ $bidangTtd->jabatan_pimpinan ?? 'Kepala Bidang' }}</div>
             <div class="ruang"></div>
-            <div class="nm">{{ $divisi->nama_pimpinan ?? '( .................................................. )' }}</div>
-            <div>NIP. {{ $divisi->nip_pimpinan ?? '-' }}</div>
-            <div>{{ $divisi->nama_divisi ?? 'Divisi Terkait' }}</div>
+            <div class="nm">{{ $bidangTtd->nama_pimpinan ?? '( .................................................. )' }}</div>
+            <div>NIP. {{ $bidangTtd->nip_pimpinan ?? '-' }}</div>
+            <div>{{ $bidangTtd->nama_divisi ?? ($pengaturan->nama_instansi ?? 'Dinas Terkait') }}</div>
         </td>
     </tr>
 </table>

@@ -345,9 +345,12 @@ class AktivitasController extends Controller
 
         $targetDate = $tanggalMulai ?? ($bulan ? Carbon::parse($bulan.'-01')->toDateString() : Carbon::today()->toDateString());
         $divisi = $user->magang?->getDivisiAt($targetDate) ?? $user->magang?->divisi ?? Divisi::first();
-        $pembimbing = $user->magang?->pembimbing ?? Pembimbing::first();
+        $pembimbing = $user->magang?->getPembimbingAt($targetDate) ?? $user->magang?->pembimbing ?? Pembimbing::first();
         $pengaturan = Pengaturan::getPengaturan();
 
-        return view('aktivitas.cetak', compact('user', 'aktivitas', 'stats', 'periodeText', 'bulan', 'divisi', 'pembimbing', 'pengaturan'));
+        // Mengelompokkan aktivitas berdasarkan Rencana Kerja (sesuai PRD alur-rekap.md)
+        $groupedByRencana = Aktivitas::groupByRencana($aktivitas);
+
+        return view('aktivitas.cetak', compact('user', 'aktivitas', 'groupedByRencana', 'stats', 'periodeText', 'bulan', 'divisi', 'pembimbing', 'pengaturan'));
     }
 }

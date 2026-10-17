@@ -27,30 +27,55 @@
             <!-- Section 1: Data Divisi -->
             <div>
                 <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 pb-3 border-b border-slate-100">
-                    1. Informasi Divisi
+                    1. Informasi Unit Kerja / Divisi
                 </h3>
-                <div class="mt-4">
-                    <label for="nama_divisi" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Nama Divisi / Sub-Bagian <span class="text-rose-500">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        name="nama_divisi"
-                        id="nama_divisi"
-                        value="{{ old('nama_divisi', $divisi->nama_divisi) }}"
-                        required
-                        class="w-full px-4 py-2.5 rounded-xl border {{ $errors->has('nama_divisi') ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300' }} focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-sm text-slate-800 font-medium"
-                    >
-                    @error('nama_divisi')
-                        <p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>
-                    @enderror
+                <div class="mt-4 space-y-4">
+                    <div>
+                        <label for="nama_divisi" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Nama Unit Kerja / Divisi / Seksi <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="nama_divisi"
+                            id="nama_divisi"
+                            value="{{ old('nama_divisi', $divisi->nama_divisi) }}"
+                            placeholder="Contoh: Bidang Aplikasi Informatika atau Seksi Pengembangan Aplikasi"
+                            required
+                            class="w-full px-4 py-2.5 rounded-xl border {{ $errors->has('nama_divisi') ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300' }} focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-sm text-slate-800 font-medium"
+                        >
+                        @error('nama_divisi')
+                            <p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="parent_id" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Bidang Induk <span class="text-slate-400 font-normal">(Pilih jika unit ini merupakan Subbagian atau Seksi)</span>
+                        </label>
+                        <select
+                            name="parent_id"
+                            id="parent_id"
+                            class="w-full px-4 py-2.5 rounded-xl border {{ $errors->has('parent_id') ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300' }} focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-sm text-slate-800 font-medium bg-white"
+                        >
+                            <option value="">-- Unit Tingkat Utama / Bidang Induk / Sekretariat --</option>
+                            @foreach ($bidangList as $bidang)
+                                <option value="{{ $bidang->id }}" {{ old('parent_id', $divisi->parent_id) == $bidang->id ? 'selected' : '' }}>
+                                    {{ $bidang->nama_divisi }} ({{ $bidang->jabatan_pimpinan ?? 'Pimpinan Bidang' }})
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('parent_id')
+                            <p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>
+                        @enderror
+                        <p class="text-[11px] text-slate-500 mt-1">Biarkan kosong jika unit kerja ini merupakan Bidang Utama atau Sekretariat yang berdiri sendiri.</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Section 2: Data Pimpinan Sub-Bagian -->
+            <!-- Section 2: Data Pimpinan Sub-Bagian / Bidang -->
             <div>
                 <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 pb-3 border-b border-slate-100">
-                    2. Data Pimpinan (Untuk Tanda Tangan Laporan PDF)
+                    2. Data Pimpinan (Untuk Tanda Tangan Laporan PDF & Penilaian)
                 </h3>
                 <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="sm:col-span-2">

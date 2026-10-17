@@ -46,12 +46,26 @@
                             <div class="sub">{{ $item->instansi_pendidikan }}</div>
                         </td>
                         <td>
-                            {{ $item->pembimbing->nama_lengkap ?? '-' }}
-                            <div class="sub">NIP: {{ $item->pembimbing->nip ?? '-' }}</div>
+                            @php
+                                $semuaPembimbing = $item->getSemuaPembimbing();
+                            @endphp
+                            @if($semuaPembimbing->isNotEmpty())
+                                {{ $semuaPembimbing->first()->nama_lengkap }}
+                                @if($semuaPembimbing->count() > 1)
+                                    <div class="sub">(+{{ $semuaPembimbing->count() - 1 }} pembimbing)</div>
+                                @else
+                                    <div class="sub">NIP: {{ $semuaPembimbing->first()->nip ?? '-' }}</div>
+                                @endif
+                            @else
+                                -
+                            @endif
                         </td>
-                        <td class="c"><strong>{{ $item->penilaian ? $item->penilaian->total_nilai : '-' }}</strong></td>
-                        <td class="c"><strong>{{ $item->penilaian ? $item->penilaian->predikat : '-' }}</strong></td>
-                        <td class="c">{{ $item->penilaian ? 'Sudah Dinilai' : 'Belum Dinilai' }}</td>
+                        @php
+                            $penilaianRef = $item->penilaian_akumulasi ?? $item->penilaian;
+                        @endphp
+                        <td class="c"><strong>{{ $penilaianRef ? $penilaianRef->total_nilai : '-' }}</strong></td>
+                        <td class="c"><strong>{{ $penilaianRef ? $penilaianRef->predikat : '-' }}</strong></td>
+                        <td class="c">{{ $penilaianRef ? 'Sudah Dinilai' : 'Belum Dinilai' }}</td>
                     </tr>
                 @empty
                     <tr>

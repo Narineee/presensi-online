@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Aktivitas;
 use App\Models\Divisi;
+use App\Models\Magang;
 use App\Models\Pembimbing;
 use App\Models\Pengaturan;
 use Carbon\Carbon;
@@ -17,7 +18,22 @@ class MonitoringAktivitasController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Aktivitas::with(['pengguna.magang', 'pekerjaan', 'validator.pembimbing']);
+        $query = Aktivitas::with([
+            'pengguna.magang.divisi',
+            'pengguna.magang.pembimbing',
+            'pengguna.magang.penempatanMagang.pembimbing',
+            'pekerjaan',
+            'validator.pembimbing',
+            'details.rencanaKerja',
+        ]);
+
+        // Filter peserta magang tertentu
+        if ($request->filled('magang_id')) {
+            $selectedMagang = Magang::find($request->magang_id);
+            if ($selectedMagang && $selectedMagang->pengguna_id) {
+                $query->where('pengguna_id', $selectedMagang->pengguna_id);
+            }
+        }
 
         // Filter rentang tanggal (tanggal_mulai & tanggal_akhir)
         if ($request->filled('tanggal_mulai') && $request->filled('tanggal_akhir')) {
@@ -52,7 +68,9 @@ class MonitoringAktivitasController extends Controller
             'revisi' => Aktivitas::where('status', 'revisi')->count(),
         ];
 
-        return view('admin.aktivitas.index', compact('aktivitas', 'stats'));
+        $magangList = Magang::orderBy('nama_lengkap', 'asc')->get();
+
+        return view('admin.aktivitas.index', compact('aktivitas', 'stats', 'magangList'));
     }
 
     /**
@@ -60,7 +78,22 @@ class MonitoringAktivitasController extends Controller
      */
     public function cetak(Request $request)
     {
-        $query = Aktivitas::with(['pengguna.magang.divisi', 'pekerjaan', 'validator.pembimbing']);
+        $query = Aktivitas::with([
+            'pengguna.magang.divisi',
+            'pengguna.magang.pembimbing',
+            'pengguna.magang.penempatanMagang.pembimbing',
+            'pekerjaan',
+            'validator.pembimbing',
+            'details.rencanaKerja',
+        ]);
+
+        $selectedMagang = null;
+        if ($request->filled('magang_id')) {
+            $selectedMagang = Magang::with(['divisi', 'pembimbing', 'penempatanMagang.pembimbing', 'penempatanMagang.divisi'])->find($request->magang_id);
+            if ($selectedMagang && $selectedMagang->pengguna_id) {
+                $query->where('pengguna_id', $selectedMagang->pengguna_id);
+            }
+        }
 
         $tanggalMulai = $request->input('tanggal_mulai');
         $tanggalAkhir = $request->input('tanggal_akhir');
@@ -109,10 +142,22 @@ class MonitoringAktivitasController extends Controller
             'revisi' => $aktivitas->where('status', 'revisi')->count(),
         ];
 
-        $divisi = Divisi::first();
-        $pembimbing = Pembimbing::first();
+        // Kelompokkan per Rencana Kerja sesuai alur-rekap.md bila memilih peserta spesifik
+        $groupedByRencana = Aktivitas::groupByRencana($aktivitas);
+
+        $divisi = $selectedMagang?->divisi ?? Divisi::first();
+        $pembimbing = $selectedMagang?->getPembimbingAt(now()) ?? $selectedMagang?->pembimbing ?? Pembimbing::first();
         $pengaturan = Pengaturan::getPengaturan();
 
-        return view('admin.aktivitas.cetak', compact('aktivitas', 'stats', 'periodeText', 'divisi', 'pembimbing', 'pengaturan'));
+        return view('admin.aktivitas.cetak', compact(
+            'aktivitas',
+            'stats',
+            'periodeText',
+            'divisi',
+            'pembimbing',
+            'pengaturan',
+            'selectedMagang',
+            'groupedByRencana'
+        ));
     }
 }

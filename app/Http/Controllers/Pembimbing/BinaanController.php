@@ -7,6 +7,7 @@ use App\Models\Aktivitas;
 use App\Models\Divisi;
 use App\Models\HariLibur;
 use App\Models\Magang;
+use App\Models\PenempatanMagang;
 use App\Models\PengajuanIzin;
 use App\Models\Presensi;
 use App\Models\RencanaKerja;
@@ -58,8 +59,12 @@ class BinaanController extends Controller
             ]);
         }
 
-        $query = Magang::where('pembimbing_id', $pembimbing->id)
-            ->with(['divisi', 'pengguna', 'penempatanMagang.divisi']);
+        $query = Magang::where(function ($q) use ($pembimbing) {
+            $q->where('pembimbing_id', $pembimbing->id)
+                ->orWhereHas('penempatanMagang', function ($pq) use ($pembimbing) {
+                    $pq->where('pembimbing_id', $pembimbing->id);
+                });
+        })->with(['divisi', 'pengguna', 'penempatanMagang.divisi', 'penempatanMagang.pembimbing']);
 
         // Pencarian (nama, NIM, atau asal instansi)
         if ($request->filled('q')) {
@@ -153,6 +158,15 @@ class BinaanController extends Controller
             return $magang;
         });
 
+        // Urutkan binaan: yang aktif lebih dahulu, kemudian sesuai abjad nama lengkap (A-Z)
+        $binaanList = $binaanList->sort(function ($a, $b) {
+            if ($a->is_binaan_aktif !== $b->is_binaan_aktif) {
+                return $a->is_binaan_aktif ? -1 : 1;
+            }
+
+            return strcasecmp((string) $a->nama_lengkap, (string) $b->nama_lengkap);
+        })->values();
+
         // Metrik HARI INI (binaan aktif)
         $activeBinaanList = $binaanList->filter(fn ($m) => $m->is_binaan_aktif);
 
@@ -214,8 +228,13 @@ class BinaanController extends Controller
             abort(403, 'Akses tidak diizinkan.');
         }
 
-        $magang = Magang::where('pembimbing_id', $pembimbing->id)
-            ->with(['divisi', 'pengguna', 'penempatanMagang.divisi'])
+        $magang = Magang::where(function ($q) use ($pembimbing) {
+            $q->where('pembimbing_id', $pembimbing->id)
+                ->orWhereHas('penempatanMagang', function ($pq) use ($pembimbing) {
+                    $pq->where('pembimbing_id', $pembimbing->id);
+                });
+        })
+            ->with(['divisi', 'pengguna', 'penempatanMagang.divisi', 'penempatanMagang.pembimbing'])
             ->findOrFail($id);
 
         $allHolidays = $this->getHolidaysLookup();
@@ -244,11 +263,16 @@ class BinaanController extends Controller
             ->orderBy('id', 'desc')
             ->get();
 
+        $pekerjaanAktif = $rencanaAktif;
+
+        $catatanPulangHariIni = $this->extractCatatanPulang($presensiHariIni, $userApprovedIzin);
+
         return view('pembimbing.binaan.show', compact(
             'pembimbing',
             'magang',
             'rekap',
             'presensiHariIni',
+            'catatanPulangHariIni',
             'aktivitasPending',
             'pekerjaanAktif',
             'rencanaAktif'
@@ -263,7 +287,12 @@ class BinaanController extends Controller
         $pembimbing = Auth::user()->pembimbing;
         abort_if(! $pembimbing, 403, 'Akses tidak diizinkan.');
 
-        $magang = Magang::where('pembimbing_id', $pembimbing->id)->findOrFail($id);
+        $magang = Magang::where(function ($q) use ($pembimbing) {
+            $q->where('pembimbing_id', $pembimbing->id)
+                ->orWhereHas('penempatanMagang', function ($pq) use ($pembimbing) {
+                    $pq->where('pembimbing_id', $pembimbing->id);
+                });
+        })->findOrFail($id);
 
         $presensi = Presensi::where('pengguna_id', $magang->pengguna_id)
             ->with('pengajuanTugasLuar')
@@ -285,11 +314,14 @@ class BinaanController extends Controller
                 $terlambat = (int) ceil((strtotime($p->jam_masuk) - strtotime('08:00:00')) / 60);
             }
 
+            $catatanPulang = $this->extractCatatanPulang($p, $izin);
+
             return [
                 'tanggal' => $p->tanggal,
                 'mode' => $isIzin ? $label : ($p->is_tugas_luar ? 'TUGAS LUAR' : strtoupper((string) $p->mode_kerja)),
                 'jam_masuk' => $isIzin ? $label : $jam($p->jam_masuk),
                 'jam_pulang' => $isIzin ? $label : $jam($p->jam_keluar),
+                'catatan_pulang' => $catatanPulang,
                 'terlambat' => $terlambat,
                 'foto_masuk_url' => $p->foto_masuk_url,
                 'foto_keluar_url' => $p->foto_keluar_url,
@@ -300,6 +332,64 @@ class BinaanController extends Controller
         }));
 
         return view('pembimbing.binaan.riwayat', compact('magang', 'presensi'));
+    }
+
+    /**
+     * Mengekstrak alasan/catatan pulang lebih awal (sebelum pukul 16.00).
+     *
+     * @param  Collection<int, PengajuanIzin>|null  $izin
+     */
+    private function extractCatatanPulang(?Presensi $p, ?Collection $izin = null): ?string
+    {
+        if (! $p || ! $p->jam_keluar || $p->jam_keluar >= '16:00:00') {
+            return null;
+        }
+
+        if (in_array($p->status, ['sakit', 'izin', 'cuti'])) {
+            return null;
+        }
+
+        $rawKet = (string) $p->keterangan;
+        $alasan = null;
+
+        if (preg_match('/\|\s*Pulang:\s*([^|]+)/i', $rawKet, $m)) {
+            $alasan = trim($m[1]);
+        } elseif (preg_match('/Pulang:\s*([^|]+)/i', $rawKet, $m)) {
+            $alasan = trim($m[1]);
+        } elseif (preg_match('/\b(Sakit|Izin)(?:\s*\([^)]+\))?/i', $rawKet, $m)) {
+            $alasan = trim($m[0]);
+        } elseif ($izin) {
+            $tgl = $p->tanggal;
+            $izinItem = $izin->first(function ($i) use ($tgl) {
+                if (! $tgl) {
+                    return false;
+                }
+                $tglCarbon = Carbon::parse($tgl)->startOfDay();
+
+                return $tglCarbon->betweenIncluded(
+                    Carbon::parse($i->tanggal_mulai)->startOfDay(),
+                    Carbon::parse($i->tanggal_selesai)->startOfDay()
+                );
+            });
+            if ($izinItem) {
+                $alasan = $izinItem->jenis_izin;
+            }
+        }
+
+        if (! $alasan && ! empty($rawKet)) {
+            $cleaned = trim(preg_replace('/\[?Terlambat[^\]|]+\]?\s*\|?\s*/i', '', $rawKet));
+            if (! empty($cleaned)) {
+                $alasan = $cleaned;
+            }
+        }
+
+        if (! $alasan) {
+            return null;
+        }
+
+        $alasan = preg_replace('/^Pulang:\s*/i', '', $alasan);
+
+        return strtolower(trim($alasan));
     }
 
     /**
@@ -320,6 +410,126 @@ class BinaanController extends Controller
     }
 
     /**
+     * Menghitung estimasi durasi dalam bulan dan teks yang ramah pengguna.
+     *
+     * @return array{0: string, 1: int}
+     */
+    private function calculateDurasiBulan(Carbon $start, Carbon $end): array
+    {
+        $totalDays = $start->diffInDays($end) + 1;
+
+        if ($totalDays < 25) {
+            return [$totalDays.' Hari', 0];
+        }
+
+        $bulan = (int) round($totalDays / 30.4);
+        if ($bulan < 1) {
+            $bulan = 1;
+        }
+
+        return [$bulan.' Bulan', $bulan];
+    }
+
+    /**
+     * Mendapatkan data penempatan unit/divisi peserta binaan yang relevan.
+     * Prioritas:
+     * 1. Penempatan yang aktif pada targetDate (default: hari ini).
+     * 2. Jika tidak ada yang aktif, ambil penempatan pertama/terakhir.
+     * 3. Jika tidak ada record penempatan_magang, gunakan divisi utama dan tanggal_mulai/selesai magang dinas.
+     *
+     * @return array{
+     *     penempatan: ?PenempatanMagang,
+     *     nama_unit: string,
+     *     unit_mulai: Carbon,
+     *     unit_selesai: Carbon,
+     *     durasi_bulan_unit_teks: string,
+     *     durasi_bulan_unit: int,
+     *     dinas_mulai: Carbon,
+     *     dinas_selesai: Carbon,
+     *     durasi_bulan_dinas_teks: string,
+     *     durasi_bulan_dinas: int,
+     *     is_berbeda_periode_dinas: bool
+     * }
+     */
+    private function getUnitPlacement(Magang $magang, ?Carbon $targetDate = null): array
+    {
+        $target = $targetDate ? $targetDate->copy()->startOfDay() : Carbon::today()->startOfDay();
+
+        $penempatan = null;
+        $hasPenempatanRelation = $magang->relationLoaded('penempatanMagang');
+        $penempatans = $hasPenempatanRelation
+            ? $magang->penempatanMagang
+            : $magang->penempatanMagang()->with('divisi')->orderBy('tanggal_mulai', 'asc')->get();
+
+        if ($penempatans->isNotEmpty()) {
+            $penempatan = $penempatans->first(function ($p) use ($target) {
+                $mulai = $p->tanggal_mulai ? Carbon::parse($p->tanggal_mulai)->startOfDay() : null;
+                $selesai = $p->tanggal_selesai ? Carbon::parse($p->tanggal_selesai)->startOfDay() : null;
+
+                return $mulai && $selesai && $target->betweenIncluded($mulai, $selesai);
+            });
+
+            if (! $penempatan) {
+                $sorted = $penempatans->sortBy('tanggal_mulai');
+                $first = $sorted->first();
+                $firstMulai = $first->tanggal_mulai ? Carbon::parse($first->tanggal_mulai)->startOfDay() : null;
+
+                if ($firstMulai && $target->lt($firstMulai)) {
+                    $penempatan = $first;
+                } else {
+                    $penempatan = $sorted->last();
+                }
+            }
+        }
+
+        $namaUnit = $penempatan?->divisi?->nama_divisi
+            ?? $magang->divisi?->nama_divisi
+            ?? 'Unit Terkait';
+
+        $unitStart = $penempatan?->tanggal_mulai
+            ? Carbon::parse($penempatan->tanggal_mulai)->startOfDay()
+            : ($magang->tanggal_mulai ? Carbon::parse($magang->tanggal_mulai)->startOfDay() : Carbon::parse($magang->created_at)->startOfDay());
+
+        $unitEnd = $penempatan?->tanggal_selesai
+            ? Carbon::parse($penempatan->tanggal_selesai)->startOfDay()
+            : ($magang->tanggal_selesai ? Carbon::parse($magang->tanggal_selesai)->startOfDay() : Carbon::today()->startOfDay());
+
+        $dinasStart = $magang->tanggal_mulai
+            ? Carbon::parse($magang->tanggal_mulai)->startOfDay()
+            : $unitStart->copy();
+
+        $dinasEnd = $magang->tanggal_selesai
+            ? Carbon::parse($magang->tanggal_selesai)->startOfDay()
+            : $unitEnd->copy();
+
+        if ($unitStart->gt($unitEnd)) {
+            [$unitStart, $unitEnd] = [$unitEnd->copy(), $unitStart->copy()];
+        }
+        if ($dinasStart->gt($dinasEnd)) {
+            [$dinasStart, $dinasEnd] = [$dinasEnd->copy(), $dinasStart->copy()];
+        }
+
+        [$durasiBulanUnitTeks, $durasiBulanUnit] = $this->calculateDurasiBulan($unitStart, $unitEnd);
+        [$durasiBulanDinasTeks, $durasiBulanDinas] = $this->calculateDurasiBulan($dinasStart, $dinasEnd);
+
+        $isBerbeda = ! $unitStart->equalTo($dinasStart) || ! $unitEnd->equalTo($dinasEnd);
+
+        return [
+            'penempatan' => $penempatan,
+            'nama_unit' => $namaUnit,
+            'unit_mulai' => $unitStart,
+            'unit_selesai' => $unitEnd,
+            'durasi_bulan_unit_teks' => $durasiBulanUnitTeks,
+            'durasi_bulan_unit' => $durasiBulanUnit,
+            'dinas_mulai' => $dinasStart,
+            'dinas_selesai' => $dinasEnd,
+            'durasi_bulan_dinas_teks' => $durasiBulanDinasTeks,
+            'durasi_bulan_dinas' => $durasiBulanDinas,
+            'is_berbeda_periode_dinas' => $isBerbeda,
+        ];
+    }
+
+    /**
      * Menghitung rekap kehadiran hari kerja dari awal periode sampai KEMARIN (hari ini tidak ikut dihitung).
      * Tugas Luar dihitung sebagai Hadir sekaligus dicatat di total_tugas_luar (subset dari hadir).
      * Kategori yang saling lepas: hadir (termasuk TL) + sakit + izin + cuti + alpa = hari_kerja_berjalan.
@@ -334,19 +544,45 @@ class BinaanController extends Controller
         ?Carbon $rangeStart = null,
         ?Carbon $rangeEnd = null
     ): array {
-        $startDate = $magang->tanggal_mulai
-            ? Carbon::parse($magang->tanggal_mulai)->startOfDay()
-            : Carbon::parse($magang->created_at)->startOfDay();
+        $unitInfo = $this->getUnitPlacement($magang, $rangeStart ?? Carbon::today());
 
-        $endDate = $magang->tanggal_selesai
-            ? Carbon::parse($magang->tanggal_selesai)->startOfDay()
-            : Carbon::today()->startOfDay();
+        $unitStart = $unitInfo['unit_mulai']->copy();
+        $unitEnd = $unitInfo['unit_selesai']->copy();
 
-        if ($startDate->gt($endDate)) {
-            [$startDate, $endDate] = [$endDate->copy(), $startDate->copy()];
+        // Total hari kerja resmi pada periode unit (tanpa akhir pekan & tanggal merah)
+        $totalHariUnit = 0;
+        $curUnit = $unitStart->copy();
+        while ($curUnit->lte($unitEnd)) {
+            if (! $curUnit->isWeekend() && ! isset($allHolidays[$curUnit->toDateString()])) {
+                $totalHariUnit++;
+            }
+            $curUnit->addDay();
         }
 
-        // Batasi ke rentang filter (jika ada)
+        // Hitung progres "hari keberapa" saat ini (inklusif hari ini jika hari kerja)
+        $today = Carbon::today()->startOfDay();
+        $hariKe = 0;
+        if ($today->lt($unitStart)) {
+            $hariKe = 0;
+            $hariKeLabel = 'Belum dimulai';
+        } elseif ($today->gt($unitEnd)) {
+            $hariKe = $totalHariUnit;
+            $hariKeLabel = 'Selesai ('.$totalHariUnit.' hari kerja)';
+        } else {
+            $curDay = $unitStart->copy();
+            while ($curDay->lte($today)) {
+                if (! $curDay->isWeekend() && ! isset($allHolidays[$curDay->toDateString()])) {
+                    $hariKe++;
+                }
+                $curDay->addDay();
+            }
+            $hariKeLabel = 'Hari ke-'.$hariKe.' dari '.$totalHariUnit.' hari kerja';
+        }
+
+        // Batasi rentang rekap jika ada filter
+        $startDate = $unitStart->copy();
+        $endDate = $unitEnd->copy();
+
         if ($rangeStart && $rangeStart->gt($startDate)) {
             $startDate = $rangeStart->copy();
         }
@@ -354,18 +590,17 @@ class BinaanController extends Controller
             $endDate = $rangeEnd->copy();
         }
 
-        // Total hari kerja resmi pada cakupan (tanpa akhir pekan & tanggal merah)
-        $totalHariMagang = 0;
-        $current = $startDate->copy();
-        while ($current->lte($endDate)) {
-            if (! $current->isWeekend() && ! isset($allHolidays[$current->toDateString()])) {
-                $totalHariMagang++;
+        // Total hari kerja cakupan filter
+        $totalHariCakupan = 0;
+        $curCakupan = $startDate->copy();
+        while ($curCakupan->lte($endDate)) {
+            if (! $curCakupan->isWeekend() && ! isset($allHolidays[$curCakupan->toDateString()])) {
+                $totalHariCakupan++;
             }
-            $current->addDay();
+            $curCakupan->addDay();
         }
 
-        // Dihitung sampai kemarin saja
-        $today = Carbon::today()->startOfDay();
+        // Presensi harian dihitung sampai kemarin saja (hari ini live di kartu presensi hari ini)
         $effectiveEnd = $endDate->lt($today) ? $endDate->copy() : $today->copy()->subDay();
 
         $hariKerjaBerjalan = 0;
@@ -426,7 +661,6 @@ class BinaanController extends Controller
                         $totalAlpa++;
                     }
                 } else {
-                    // Hari kerja tanpa presensi dan tanpa izin
                     $totalAlpa++;
                 }
 
@@ -439,7 +673,24 @@ class BinaanController extends Controller
             : 0.0;
 
         return [
-            'total_hari_magang' => $totalHariMagang,
+            'nama_unit' => $unitInfo['nama_unit'],
+            'unit_mulai' => $unitStart->toDateString(),
+            'unit_selesai' => $unitEnd->toDateString(),
+            'unit_mulai_formatted' => $unitStart->locale('id')->isoFormat('D MMM Y'),
+            'unit_selesai_formatted' => $unitEnd->locale('id')->isoFormat('D MMM Y'),
+            'durasi_bulan_unit' => $unitInfo['durasi_bulan_unit'],
+            'durasi_bulan_unit_teks' => $unitInfo['durasi_bulan_unit_teks'],
+            'total_hari_unit' => $totalHariUnit,
+            'dinas_mulai' => $unitInfo['dinas_mulai']->toDateString(),
+            'dinas_selesai' => $unitInfo['dinas_selesai']->toDateString(),
+            'dinas_mulai_formatted' => $unitInfo['dinas_mulai']->locale('id')->isoFormat('D MMM Y'),
+            'dinas_selesai_formatted' => $unitInfo['dinas_selesai']->locale('id')->isoFormat('D MMM Y'),
+            'durasi_bulan_dinas' => $unitInfo['durasi_bulan_dinas'],
+            'durasi_bulan_dinas_teks' => $unitInfo['durasi_bulan_dinas_teks'],
+            'is_berbeda_periode_dinas' => $unitInfo['is_berbeda_periode_dinas'],
+            'hari_ke' => $hariKe,
+            'hari_ke_label' => $hariKeLabel,
+            'total_hari_magang' => $totalHariCakupan,
             'hari_kerja_berjalan' => $hariKerjaBerjalan,
             'total_hadir' => $totalHadir,
             'total_sakit' => $totalSakit,
@@ -448,9 +699,9 @@ class BinaanController extends Controller
             'total_tugas_luar' => $totalTugasLuar,
             'total_alpa' => $totalAlpa,
             'persentase_kehadiran' => $persentase,
-            'sisa_hari_kerja' => max(0, $totalHariMagang - $hariKerjaBerjalan),
+            'sisa_hari_kerja' => max(0, $totalHariUnit - $hariKerjaBerjalan),
             'cakupan_mulai' => $startDate->toDateString(),
-            'cakupan_selesai' => $effectiveEnd->toDateString(),
+            'cakupan_selesai' => $effectiveEnd->gte($startDate) ? $effectiveEnd->toDateString() : $startDate->toDateString(),
         ];
     }
 }

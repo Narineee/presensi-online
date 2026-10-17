@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Magang;
 
 use App\Http\Controllers\Controller;
 use App\Models\Pengaturan;
-use App\Models\Penilaian;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,13 +21,15 @@ class SertifikatSayaController extends Controller
             return redirect()->route('presensi.index')->with('error', 'Profil magang tidak ditemukan.');
         }
 
-        $penilaian = Penilaian::where('magang_id', $magang->id)
-            ->with([
-                'magang.divisi',
-                'magang.pengguna',
-                'pembimbing',
-            ])
-            ->first();
+        $magang->load([
+            'divisi',
+            'pengguna',
+            'pembimbing',
+            'penilaians.pembimbing',
+            'penilaians.detail.kriteria',
+        ]);
+
+        $penilaian = $magang->getPenilaianAkumulasi();
 
         $pengaturan = Pengaturan::getPengaturan();
 

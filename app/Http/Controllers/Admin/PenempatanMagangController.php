@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Magang;
+use App\Models\Pembimbing;
 use App\Models\PenempatanMagang;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -19,11 +20,12 @@ class PenempatanMagangController extends Controller
         $magang = Magang::findOrFail($magangId);
 
         $request->validate([
-            'divisi_id' => 'required|exists:divisi,id',
+            'pembimbing_id' => 'nullable|exists:pembimbing,id',
+            'divisi_id' => 'nullable|exists:divisi,id',
             'tanggal_mulai' => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
         ], [
-            'divisi_id.required' => 'Divisi penempatan wajib dipilih.',
+            'pembimbing_id.exists' => 'Pembimbing yang dipilih tidak valid.',
             'divisi_id.exists' => 'Divisi yang dipilih tidak ditemukan dalam sistem.',
             'tanggal_mulai.required' => 'Tanggal mulai penempatan wajib diisi.',
             'tanggal_selesai.required' => 'Tanggal selesai penempatan wajib diisi.',
@@ -32,9 +34,23 @@ class PenempatanMagangController extends Controller
 
         $this->validatePeriodeDanOverlap($request, $magang);
 
+        // Ambil pembimbing terpilih atau default dari peserta
+        $pembimbingId = $request->pembimbing_id ?: $magang->pembimbing_id;
+        $pembimbing = $pembimbingId ? Pembimbing::find($pembimbingId) : null;
+
+        // Divisi otomatis mengikuti divisi pembimbing, atau fallback ke request / data magang
+        $divisiId = $pembimbing?->divisi_id ?? $request->divisi_id ?? $magang->divisi_id;
+
+        if (! $divisiId) {
+            throw ValidationException::withMessages([
+                'pembimbing_id' => 'Pilih pembimbing yang memiliki unit/divisi penempatan.',
+            ]);
+        }
+
         PenempatanMagang::create([
             'magang_id' => $magang->id,
-            'divisi_id' => $request->divisi_id,
+            'divisi_id' => $divisiId,
+            'pembimbing_id' => $pembimbingId,
             'tanggal_mulai' => $request->tanggal_mulai,
             'tanggal_selesai' => $request->tanggal_selesai,
         ]);
@@ -42,7 +58,10 @@ class PenempatanMagangController extends Controller
         // Jika penempatan yang baru ditambahkan aktif hari ini, perbarui juga divisi_id default magang agar konsisten
         $today = Carbon::today()->toDateString();
         if ($request->tanggal_mulai <= $today && $request->tanggal_selesai >= $today) {
-            $magang->update(['divisi_id' => $request->divisi_id]);
+            $magang->update([
+                'divisi_id' => $divisiId,
+                'pembimbing_id' => $pembimbingId,
+            ]);
         }
 
         return redirect()->route('admin.magang.show', ['magang' => $magang->id, 'tab' => 'penempatan'])
@@ -58,11 +77,12 @@ class PenempatanMagangController extends Controller
         $penempatan = PenempatanMagang::where('magang_id', $magang->id)->findOrFail($id);
 
         $request->validate([
-            'divisi_id' => 'required|exists:divisi,id',
+            'pembimbing_id' => 'nullable|exists:pembimbing,id',
+            'divisi_id' => 'nullable|exists:divisi,id',
             'tanggal_mulai' => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
         ], [
-            'divisi_id.required' => 'Divisi penempatan wajib dipilih.',
+            'pembimbing_id.exists' => 'Pembimbing yang dipilih tidak valid.',
             'divisi_id.exists' => 'Divisi yang dipilih tidak ditemukan dalam sistem.',
             'tanggal_mulai.required' => 'Tanggal mulai penempatan wajib diisi.',
             'tanggal_selesai.required' => 'Tanggal selesai penempatan wajib diisi.',
@@ -71,16 +91,30 @@ class PenempatanMagangController extends Controller
 
         $this->validatePeriodeDanOverlap($request, $magang, $penempatan->id);
 
+        $pembimbingId = $request->pembimbing_id ?: ($penempatan->pembimbing_id ?: $magang->pembimbing_id);
+        $pembimbing = $pembimbingId ? Pembimbing::find($pembimbingId) : null;
+        $divisiId = $pembimbing?->divisi_id ?? $request->divisi_id ?? $penempatan->divisi_id ?? $magang->divisi_id;
+
+        if (! $divisiId) {
+            throw ValidationException::withMessages([
+                'pembimbing_id' => 'Pilih pembimbing yang memiliki unit/divisi penempatan.',
+            ]);
+        }
+
         $penempatan->update([
-            'divisi_id' => $request->divisi_id,
+            'divisi_id' => $divisiId,
+            'pembimbing_id' => $pembimbingId,
             'tanggal_mulai' => $request->tanggal_mulai,
             'tanggal_selesai' => $request->tanggal_selesai,
         ]);
 
-        // Sinkronisasi divisi_id default magang jika penempatan ini aktif hari ini
+        // Sinkronisasi divisi_id dan pembimbing_id default magang jika penempatan ini aktif hari ini
         $today = Carbon::today()->toDateString();
         if ($request->tanggal_mulai <= $today && $request->tanggal_selesai >= $today) {
-            $magang->update(['divisi_id' => $request->divisi_id]);
+            $magang->update([
+                'divisi_id' => $divisiId,
+                'pembimbing_id' => $pembimbingId,
+            ]);
         }
 
         return redirect()->route('admin.magang.show', ['magang' => $magang->id, 'tab' => 'penempatan'])
