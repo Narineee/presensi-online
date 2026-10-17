@@ -4,15 +4,19 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Aktivitas;
-use App\Models\Divisi;
 use App\Models\Magang;
 use App\Models\Pembimbing;
 use App\Models\Pengaturan;
+use App\Services\PdfService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class MonitoringAktivitasController extends Controller
 {
+    public function __construct(
+        protected PdfService $pdfService
+    ) {}
+
     /**
      * Menampilkan rekap seluruh log aktivitas harian Magang untuk dipantau oleh Admin.
      */
@@ -74,90 +78,195 @@ class MonitoringAktivitasController extends Controller
     }
 
     /**
-     * Mencetak laporan rekapitulasi aktivitas harian Magang untuk Admin.
+     * Mencetak laporan rekapitulasi aktivitas peserta Magang untuk Admin langsung dalam format PDF A4.
      */
     public function cetak(Request $request)
     {
-        $query = Aktivitas::with([
-            'pengguna.magang.divisi',
-            'pengguna.magang.pembimbing',
-            'pengguna.magang.penempatanMagang.pembimbing',
-            'pekerjaan',
-            'validator.pembimbing',
-            'details.rencanaKerja',
-        ]);
+        $today = Carbon::today();
+        $bulanParam = $request->input('bulan');
+        $tanggalMulaiParam = $request->input('tanggal_mulai');
+        $tanggalAkhirParam = $request->input('tanggal_akhir');
+        $singleTanggalParam = $request->input('tanggal');
 
-        $selectedMagang = null;
-        if ($request->filled('magang_id')) {
-            $selectedMagang = Magang::with(['divisi', 'pembimbing', 'penempatanMagang.pembimbing', 'penempatanMagang.divisi'])->find($request->magang_id);
-            if ($selectedMagang && $selectedMagang->pengguna_id) {
-                $query->where('pengguna_id', $selectedMagang->pengguna_id);
-            }
-        }
+        $hasSpecificDateFilter = $request->filled('tanggal_mulai') || $request->filled('tanggal_akhir') || $request->filled('tanggal') || $request->filled('bulan');
 
-        $tanggalMulai = $request->input('tanggal_mulai');
-        $tanggalAkhir = $request->input('tanggal_akhir');
-        $singleTanggal = $request->input('tanggal');
-        $bulan = $request->input('bulan');
-
-        if ($tanggalMulai && $tanggalAkhir) {
-            $query->whereBetween('tanggal', [$tanggalMulai, $tanggalAkhir]);
-            $periodeText = Carbon::parse($tanggalMulai)->isoFormat('D MMMM Y').' s/d '.Carbon::parse($tanggalAkhir)->isoFormat('D MMMM Y');
-        } elseif ($tanggalMulai) {
-            $query->where('tanggal', '>=', $tanggalMulai);
-            $periodeText = 'Mulai '.Carbon::parse($tanggalMulai)->isoFormat('D MMMM Y');
-        } elseif ($tanggalAkhir) {
-            $query->where('tanggal', '<=', $tanggalAkhir);
-            $periodeText = 'Sampai '.Carbon::parse($tanggalAkhir)->isoFormat('D MMMM Y');
-        } elseif ($singleTanggal) {
-            $query->whereDate('tanggal', $singleTanggal);
-            $periodeText = Carbon::parse($singleTanggal)->isoFormat('D MMMM Y');
-        } elseif ($bulan) {
-            $query->whereYear('tanggal', substr($bulan, 0, 4))
-                ->whereMonth('tanggal', substr($bulan, 5, 2));
-            $periodeText = Carbon::createFromFormat('Y-m', $bulan)->isoFormat('MMMM Y');
+        if ($tanggalMulaiParam && $tanggalAkhirParam) {
+            $startDate = Carbon::parse($tanggalMulaiParam)->startOfDay();
+            $endDate = Carbon::parse($tanggalAkhirParam)->endOfDay();
+            $periodeSubJudul = 'Dari Tanggal '.$startDate->locale('id')->isoFormat('D MMMM Y').' Sampai Tanggal '.$endDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeAwalText = $startDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeAkhirText = $endDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeText = $startDate->isoFormat('D MMMM Y').' s/d '.$endDate->isoFormat('D MMMM Y');
+        } elseif ($tanggalMulaiParam) {
+            $startDate = Carbon::parse($tanggalMulaiParam)->startOfDay();
+            $endDate = $today->copy()->endOfDay();
+            $periodeSubJudul = 'Dari Tanggal '.$startDate->locale('id')->isoFormat('D MMMM Y').' Sampai Tanggal '.$endDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeAwalText = $startDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeAkhirText = $endDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeText = 'Mulai '.$startDate->isoFormat('D MMMM Y');
+        } elseif ($tanggalAkhirParam) {
+            $startDate = Carbon::parse($tanggalAkhirParam)->startOfMonth()->startOfDay();
+            $endDate = Carbon::parse($tanggalAkhirParam)->endOfDay();
+            $periodeSubJudul = 'Sampai Tanggal '.$endDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeAwalText = $startDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeAkhirText = $endDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeText = 'Sampai '.$endDate->isoFormat('D MMMM Y');
+        } elseif ($singleTanggalParam) {
+            $startDate = Carbon::parse($singleTanggalParam)->startOfDay();
+            $endDate = Carbon::parse($singleTanggalParam)->endOfDay();
+            $periodeSubJudul = 'Tanggal '.$startDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeAwalText = $startDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeAkhirText = $endDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeText = $startDate->isoFormat('D MMMM Y');
+        } elseif ($bulanParam && preg_match('/^\d{4}-\d{2}$/', $bulanParam)) {
+            $startDate = Carbon::createFromFormat('Y-m-d', $bulanParam.'-01')->startOfDay();
+            $endDate = $startDate->copy()->endOfMonth()->endOfDay();
+            $periodeSubJudul = 'Bulan '.$startDate->locale('id')->isoFormat('MMMM Y');
+            $periodeAwalText = $startDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeAkhirText = $endDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeText = $startDate->isoFormat('MMMM Y');
         } else {
             // Default bulan berjalan
-            $query->whereYear('tanggal', Carbon::today()->year)
-                ->whereMonth('tanggal', Carbon::today()->month);
-            $periodeText = Carbon::today()->isoFormat('MMMM Y');
+            $startDate = $today->copy()->startOfMonth()->startOfDay();
+            $endDate = $today->copy()->endOfMonth()->endOfDay();
+            $periodeSubJudul = 'Bulan '.$startDate->locale('id')->isoFormat('MMMM Y');
+            $periodeAwalText = $startDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeAkhirText = $endDate->locale('id')->isoFormat('D MMMM Y');
+            $periodeText = $today->isoFormat('MMMM Y');
         }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
+        $statusFilter = $request->input('status');
+        $searchFilter = $request->input('search');
 
-        if ($request->filled('search')) {
-            $query->where('isi', 'like', '%'.$request->search.'%');
-        }
-
-        $aktivitas = $query->orderBy('tanggal', 'asc')
-            ->orderBy('id', 'asc')
-            ->get();
-
-        $stats = [
-            'total' => $aktivitas->count(),
-            'approve' => $aktivitas->where('status', 'approve')->count(),
-            'pending' => $aktivitas->where('status', 'pending')->count(),
-            'revisi' => $aktivitas->where('status', 'revisi')->count(),
-        ];
-
-        // Kelompokkan per Rencana Kerja sesuai alur-rekap.md bila memilih peserta spesifik
-        $groupedByRencana = Aktivitas::groupByRencana($aktivitas);
-
-        $divisi = $selectedMagang?->divisi ?? Divisi::first();
-        $pembimbing = $selectedMagang?->getPembimbingAt(now()) ?? $selectedMagang?->pembimbing ?? Pembimbing::first();
-        $pengaturan = Pengaturan::getPengaturan();
-
-        return view('admin.aktivitas.cetak', compact(
-            'aktivitas',
-            'stats',
-            'periodeText',
+        // Query peserta magang (seluruh peserta magang, atau spesifik jika difilter)
+        $magangQuery = Magang::with([
             'divisi',
             'pembimbing',
+            'penempatanMagang.pembimbing',
+            'penempatanMagang.divisi',
+            'rencanaKerja' => function ($q) {
+                $q->orderBy('id', 'asc');
+            },
+            'pengguna.aktivitas' => function ($q) use ($hasSpecificDateFilter, $startDate, $endDate, $statusFilter, $searchFilter) {
+                if ($hasSpecificDateFilter) {
+                    $q->whereBetween('tanggal', [$startDate->toDateString(), $endDate->toDateString()]);
+                }
+
+                if ($statusFilter) {
+                    $q->where('status', $statusFilter);
+                }
+
+                if ($searchFilter) {
+                    $q->where('isi', 'like', '%'.$searchFilter.'%');
+                }
+
+                $q->with(['details.rencanaKerja', 'pekerjaan']);
+            },
+        ]);
+
+        if ($request->filled('magang_id')) {
+            $magangQuery->where('id', $request->magang_id);
+        }
+
+        if ($request->filled('divisi_id')) {
+            $magangQuery->where('divisi_id', $request->divisi_id);
+        }
+
+        $magangList = $magangQuery->orderBy('nama_lengkap', 'asc')->get();
+
+        $rekapList = $magangList->map(function ($magang) use ($endDate) {
+            $userAktivitas = $magang->pengguna ? $magang->pengguna->aktivitas : collect();
+
+            // Pembimbing aktif pada tanggal terkait
+            $pembimbingAktif = $magang->getPembimbingAt($endDate) ?? $magang->pembimbing;
+            $pembimbingNama = $pembimbingAktif ? $pembimbingAktif->nama_lengkap : '-';
+            $pembimbingNip = $pembimbingAktif?->nip;
+
+            // Periode magang peserta
+            if ($magang->tanggal_mulai && $magang->tanggal_selesai) {
+                $periodeMagangTeks = Carbon::parse($magang->tanggal_mulai)->locale('id')->isoFormat('D MMM Y')
+                    .' - '
+                    .Carbon::parse($magang->tanggal_selesai)->locale('id')->isoFormat('D MMM Y');
+            } elseif ($magang->tanggal_mulai) {
+                $periodeMagangTeks = 'Mulai '.Carbon::parse($magang->tanggal_mulai)->locale('id')->isoFormat('D MMM Y');
+            } else {
+                $periodeMagangTeks = '-';
+            }
+
+            // Rencana kerja peserta diurutkan (1 s.d. N)
+            $rencanaKerjaList = $magang->rencanaKerja->pluck('judul')->filter()->values()->all();
+
+            // Fallback: jika belum ada di tabel rencana_kerja, ambil dari detail aktivitas
+            if (empty($rencanaKerjaList) && $userAktivitas->isNotEmpty()) {
+                $rencanaKerjaList = $userAktivitas->flatMap(function ($akt) {
+                    return $akt->details ? $akt->details->pluck('judul_rencana') : collect();
+                })->filter()->unique()->values()->all();
+            }
+
+            // Fallback kedua: pekerjaan (jika sistem warisan)
+            if (empty($rencanaKerjaList) && $userAktivitas->isNotEmpty()) {
+                $rencanaKerjaList = $userAktivitas->pluck('pekerjaan.judul')->filter()->unique()->values()->all();
+            }
+
+            // Progres akhir (mengambil nilai progres maksimal berupa persenan, semisal max 90 maka 90%)
+            $maxProgress = $userAktivitas->isNotEmpty() ? (int) $userAktivitas->max('progress') : 0;
+            $progresTeks = $maxProgress.'%';
+
+            return (object) [
+                'id' => $magang->id,
+                'nama_lengkap' => $magang->nama_lengkap,
+                'no_induk' => $magang->no_induk,
+                'divisi' => $magang->divisi,
+                'pembimbing_nama' => $pembimbingNama,
+                'pembimbing_nip' => $pembimbingNip,
+                'periode_teks' => $periodeMagangTeks,
+                'rencana_kerja_list' => $rencanaKerjaList,
+                'max_progress' => $maxProgress,
+                'progres_akhir' => $progresTeks,
+                'total_aktivitas' => $userAktivitas->count(),
+            ];
+        });
+
+        $totalAktivitasAll = $rekapList->sum('total_aktivitas');
+        $avgProgress = $rekapList->isNotEmpty() ? round($rekapList->avg('max_progress'), 1) : 0;
+        $maxProgressAll = $rekapList->isNotEmpty() ? $rekapList->max('max_progress') : 0;
+
+        $stats = [
+            'total_peserta' => $rekapList->count(),
+            'rata_rata_progres' => $avgProgress.'%',
+            'progres_tertinggi' => $maxProgressAll.'%',
+            'total_aktivitas' => $totalAktivitasAll,
+        ];
+
+        $pengaturan = Pengaturan::getPengaturan();
+
+        $logoPath = public_path('storage/images/logo-kalsel.png');
+        if (! file_exists($logoPath)) {
+            $logoPath = storage_path('app/public/images/logo-kalsel.png');
+        }
+        $logoBase64 = file_exists($logoPath)
+            ? 'data:image/png;base64,'.base64_encode(file_get_contents($logoPath))
+            : null;
+
+        $viewData = compact(
+            'rekapList',
+            'stats',
+            'periodeSubJudul',
+            'periodeAwalText',
+            'periodeAkhirText',
+            'periodeText',
             'pengaturan',
-            'selectedMagang',
-            'groupedByRencana'
-        ));
+            'logoBase64'
+        );
+
+        if ($request->input('format') === 'html') {
+            return view('admin.aktivitas.cetak', $viewData);
+        }
+
+        $cleanAwal = str_replace([' ', '/', '\\'], '-', $periodeAwalText);
+        $cleanAkhir = str_replace([' ', '/', '\\'], '-', $periodeAkhirText);
+        $filename = 'Laporan-Aktivitas-Magang-'.$cleanAwal.'-sd-'.$cleanAkhir.'.pdf';
+
+        return $this->pdfService->renderView('admin.aktivitas.cetak', $viewData, $filename, 'P');
     }
 }

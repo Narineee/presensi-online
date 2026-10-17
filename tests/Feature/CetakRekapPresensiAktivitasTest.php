@@ -13,6 +13,7 @@ use App\Models\Pengaturan;
 use App\Models\Pengguna;
 use App\Models\Penilaian;
 use App\Models\Presensi;
+use App\Models\RencanaKerja;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -100,8 +101,18 @@ class CetakRekapPresensiAktivitasTest extends TestCase
             'keterangan' => 'Tepat waktu',
         ]);
 
+        // Test default response returns direct PDF file
+        $pdfResponse = $this->actingAs($admin)->get(route('admin.presensi.cetak', [
+            'bulan' => Carbon::today()->format('Y-m'),
+        ]));
+        $pdfResponse->assertStatus(200);
+        $pdfResponse->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+
+        // Test HTML template rendering
         $response = $this->actingAs($admin)->get(route('admin.presensi.cetak', [
             'bulan' => Carbon::today()->format('Y-m'),
+            'format' => 'html',
         ]));
 
         $response->assertStatus(200);
@@ -123,33 +134,79 @@ class CetakRekapPresensiAktivitasTest extends TestCase
     public function test_admin_can_access_aktivitas_cetak_page(): void
     {
         $admin = $this->createAdminUser();
-        $magang = $this->createMagangUser();
+        $magangUser = $this->createMagangUser();
+        $magangModel = $magangUser->magang;
         $today = Carbon::today()->toDateString();
 
+        // Buat beberapa rencana kerja untuk memverifikasi urutan 1-N
+        RencanaKerja::create([
+            'magang_id' => $magangModel->id,
+            'judul' => 'Analisis Kebutuhan Sistem',
+            'status' => 'aktif',
+        ]);
+        RencanaKerja::create([
+            'magang_id' => $magangModel->id,
+            'judul' => 'Desain Basis Data dan Antarmuka',
+            'status' => 'aktif',
+        ]);
+        RencanaKerja::create([
+            'magang_id' => $magangModel->id,
+            'judul' => 'Pengembangan Modul Laporan',
+            'status' => 'aktif',
+        ]);
+
+        // Buat aktivitas dengan progres maksimal 90
         Aktivitas::create([
-            'pengguna_id' => $magang->id,
+            'pengguna_id' => $magangUser->id,
             'tanggal' => $today,
             'isi' => 'Mengembangkan modul cetak presensi dan aktivitas',
-            'progress' => 100,
+            'progress' => 90,
             'status' => 'approve',
             'catatan_validasi' => 'Pekerjaan sangat baik',
         ]);
 
-        $response = $this->actingAs($admin)->get(route('admin.aktivitas.cetak', [
+        // 1. Uji default request menghasilkan PDF stream langsung
+        $pdfResponse = $this->actingAs($admin)->get(route('admin.aktivitas.cetak', [
             'bulan' => Carbon::today()->format('Y-m'),
         ]));
 
+        $pdfResponse->assertStatus(200);
+        $pdfResponse->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringContainsString('Laporan-Aktivitas-Magang-', (string) $pdfResponse->headers->get('Content-Disposition'));
+
+        // 2. Uji HTML view dengan format=html
+        $response = $this->actingAs($admin)->get(route('admin.aktivitas.cetak', [
+            'bulan' => Carbon::today()->format('Y-m'),
+            'format' => 'html',
+        ]));
+
         $response->assertStatus(200);
-        $response->assertSee('REKAPITULASI LOG AKTIVITAS HARIAN');
+        $response->assertSee('LAPORAN AKTIVITAS MAGANG');
+        $response->assertSee('No');
+        $response->assertSee('Nama');
+        $response->assertSee('Pembimbing');
+        $response->assertSee('Periode');
+        $response->assertSee('Rencana Kerja');
+        $response->assertSee('Progres');
+        $response->assertSeeInOrder(['<th style="width: 20%;">Nama</th>', '<th style="width: 20%;">Pembimbing</th>'], false);
+
+        // Verifikasi nama peserta & pembimbing
         $response->assertSee('Ahmad Magang');
-        $response->assertSee('Mengembangkan modul cetak presensi dan aktivitas');
-        $response->assertSee('Pekerjaan sangat baik');
+        $response->assertSee('Dr. Pembimbing, M.Kom');
+
+        // Verifikasi rencana kerja berurutan 1-N
+        $response->assertSee('1. Analisis Kebutuhan Sistem');
+        $response->assertSee('2. Desain Basis Data dan Antarmuka');
+        $response->assertSee('3. Pengembangan Modul Laporan');
+
+        // Verifikasi progres akhir dalam format persentase (90%)
+        $response->assertSee('90%');
+
+        // Verifikasi tanda tangan kepala dinas
         $pengaturan = Pengaturan::getPengaturan();
         $response->assertSee($pengaturan->nama_kepala_dinas);
         $response->assertSee($pengaturan->jabatan_kepala_dinas);
         $response->assertSee($pengaturan->nip_kepala_dinas);
-        $response->assertDontSee('Mengetahui & Mengesahkan,');
-        $response->assertDontSee('Kepala Sub-Bagian');
     }
 
     public function test_magang_can_access_personal_presensi_cetak(): void
@@ -268,23 +325,24 @@ class CetakRekapPresensiAktivitasTest extends TestCase
     {
         $admin = $this->createAdminUser();
 
-        // 1. Presensi Cetak
+        // 1. Presensi Cetak (returns direct PDF file via mPDF)
         $resPresensi = $this->actingAs($admin)->get(route('admin.presensi.cetak'));
         $resPresensi->assertStatus(200);
-        $resPresensi->assertSee('print-sheet');
-        $resPresensi->assertSee('window.print()');
-        $resPresensi->assertDontSee('id="admin-sidebar"', false);
-        $resPresensi->assertDontSee('Kembali ke Monitoring Presensi');
-        $resPresensi->assertDontSee('action="'.route('admin.presensi.cetak').'"', false);
+        $resPresensi->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $resPresensi->getContent());
 
-        // 2. Aktivitas Cetak
+        // 2. Aktivitas Cetak (returns direct PDF file via mPDF)
         $resAktivitas = $this->actingAs($admin)->get(route('admin.aktivitas.cetak'));
         $resAktivitas->assertStatus(200);
-        $resAktivitas->assertSee('print-sheet');
-        $resAktivitas->assertSee('window.print()');
-        $resAktivitas->assertDontSee('id="admin-sidebar"', false);
-        $resAktivitas->assertDontSee('Kembali ke Monitoring Aktivitas');
-        $resAktivitas->assertDontSee('action="'.route('admin.aktivitas.cetak').'"', false);
+        $resAktivitas->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $resAktivitas->getContent());
+
+        // HTML version
+        $resAktivitasHtml = $this->actingAs($admin)->get(route('admin.aktivitas.cetak', ['format' => 'html']));
+        $resAktivitasHtml->assertStatus(200);
+        $resAktivitasHtml->assertDontSee('id="admin-sidebar"', false);
+        $resAktivitasHtml->assertDontSee('Kembali ke Monitoring Aktivitas');
+        $resAktivitasHtml->assertDontSee('action="'.route('admin.aktivitas.cetak').'"', false);
     }
 
     public function test_monitoring_cetak_buttons_open_in_new_tab_and_forward_filters(): void
@@ -323,7 +381,7 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         ]);
 
         // 1. Presensi Cetak
-        $resPresensi = $this->actingAs($admin)->get(route('admin.presensi.cetak'));
+        $resPresensi = $this->actingAs($admin)->get(route('admin.presensi.cetak', ['format' => 'html']));
         $resPresensi->assertStatus(200);
         $resPresensi->assertSee('Dr. H. Bambang Hermanto, M.M.');
         $resPresensi->assertSee('196805201994031005');
@@ -333,7 +391,7 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         $resPresensi->assertDontSee('Pembimbing Lapangan');
 
         // 2. Aktivitas Cetak
-        $resAktivitas = $this->actingAs($admin)->get(route('admin.aktivitas.cetak'));
+        $resAktivitas = $this->actingAs($admin)->get(route('admin.aktivitas.cetak', ['format' => 'html']));
         $resAktivitas->assertStatus(200);
         $resAktivitas->assertSee('Dr. H. Bambang Hermanto, M.M.');
         $resAktivitas->assertSee('196805201994031005');
@@ -385,17 +443,92 @@ class CetakRekapPresensiAktivitasTest extends TestCase
     {
         $admin = $this->createAdminUser();
         $magangUser = $this->createMagangUser();
+        $magang = $magangUser->magang;
+        $pembimbing = $magang->pembimbing;
         $pengaturan = Pengaturan::getPengaturan();
 
-        $response = $this->actingAs($admin)->get(route('admin.penilaian.cetak'));
+        // Buat kriteria penilaian
+        $kriteria1 = KriteriaPenilaian::create([
+            'nama' => 'Presensi',
+            'bobot' => 50,
+            'is_presensi' => true,
+        ]);
+        $kriteria2 = KriteriaPenilaian::create([
+            'nama' => 'Sikap',
+            'bobot' => 50,
+            'is_presensi' => false,
+        ]);
+
+        // Buat penilaian magang dengan skor Presensi=90, Sikap=80
+        $penilaian = Penilaian::create([
+            'magang_id' => $magang->id,
+            'pembimbing_id' => $pembimbing->id,
+            'total_nilai' => 85,
+        ]);
+
+        DetailPenilaian::create([
+            'penilaian_id' => $penilaian->id,
+            'kriteria_id' => $kriteria1->id,
+            'nilai' => 90,
+        ]);
+        DetailPenilaian::create([
+            'penilaian_id' => $penilaian->id,
+            'kriteria_id' => $kriteria2->id,
+            'nilai' => 80,
+        ]);
+
+        // 1. Uji default request menghasilkan PDF stream langsung via mPDF
+        $pdfResponse = $this->actingAs($admin)->get(route('admin.penilaian.cetak'));
+        $pdfResponse->assertStatus(200);
+        $pdfResponse->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+        $this->assertStringContainsString('Laporan-Rekapitulasi-Penilaian-Magang', (string) $pdfResponse->headers->get('Content-Disposition'));
+
+        // 2. Uji HTML view template dengan format=html
+        $response = $this->actingAs($admin)->get(route('admin.penilaian.cetak', ['format' => 'html']));
 
         $response->assertStatus(200);
-        $response->assertSee('REKAPITULASI PENILAIAN AKHIR MAGANG');
-        $response->assertSee('Lembar Cetak Dokumen');
-        $response->assertSee('Cetak / Simpan PDF');
+        $response->assertSee('LAPORAN REKAPITULASI PENILAIAN MAGANG');
+        $response->assertSee('No');
+        $response->assertSee('Nama');
+        $response->assertSee('Kriteria Penilaian');
+        $response->assertSee('Nilai Akhir');
+        $response->assertSee('Predikat');
+
+        // Verifikasi urutan kolom di header tabel multi-level
+        $response->assertSeeInOrder([
+            '<th rowspan="2" style="width: 5%;">No</th>',
+            '<th rowspan="2" style="width: 27%;">Nama</th>',
+            '<th colspan="2">Kriteria Penilaian</th>',
+            '<th rowspan="2" style="width: 12%;">Nilai Akhir</th>',
+            '<th rowspan="2" style="width: 14%;">Predikat</th>',
+        ], false);
+
+        // Verifikasi sub-kolom kriteria A dan B
+        $response->assertSee('>A</th>', false);
+        $response->assertSee('>B</th>', false);
+
+        // Verifikasi nama peserta
+        $response->assertSee('Ahmad Magang');
+
+        // Verifikasi nilai sub-kolom kriteria (90 untuk A, 80 untuk B)
+        $response->assertSee('90');
+        $response->assertSee('80');
+
+        // Verifikasi nilai akhir dan predikat
+        $response->assertSee('85');
+        $response->assertSee('B');
+        $response->assertSee('Baik');
+
+        // Verifikasi keterangan kriteria di bawah tabel (A = Presensi, B = Sikap)
+        $response->assertSee('Keterangan:');
+        $response->assertSee('A = Presensi (50%)');
+        $response->assertSee('B = Sikap (50%)');
+
+        // Verifikasi tanda tangan kepala dinas
         $response->assertSee($pengaturan->nama_kepala_dinas);
-        $response->assertDontSee('sidebar-scroll');
-        $response->assertDontSee('toggleAdminSidebar');
+        $response->assertSee($pengaturan->jabatan_kepala_dinas);
+        $response->assertSee($pengaturan->nip_kepala_dinas);
     }
 
     public function test_admin_presensi_cetak_laporan_presensi_magang_rekap_seluruh_peserta_dengan_kolom_lengkap(): void
@@ -519,9 +652,20 @@ class CetakRekapPresensiAktivitasTest extends TestCase
             'status_approval' => 'disetujui',
         ]);
 
+        // 1. Verifikasi response default langsung berupa stream PDF (.pdf) ukuran A4
+        $pdfResponse = $this->actingAs($admin)->get(route('admin.presensi.cetak', [
+            'tanggal_mulai' => '2026-09-01',
+            'tanggal_akhir' => '2026-09-30',
+        ]));
+        $pdfResponse->assertStatus(200);
+        $pdfResponse->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+
+        // 2. Verifikasi konten dokumen melalui format HTML
         $response = $this->actingAs($admin)->get(route('admin.presensi.cetak', [
             'tanggal_mulai' => '2026-09-01',
             'tanggal_akhir' => '2026-09-30',
+            'format' => 'html',
         ]));
 
         $response->assertStatus(200);

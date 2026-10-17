@@ -10,11 +10,17 @@ use App\Models\PengajuanIzin;
 use App\Models\PengajuanTugasLuar;
 use App\Models\Pengaturan;
 use App\Models\Presensi;
+use App\Services\PdfService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class MonitoringPresensiController extends Controller
 {
+    public function __construct(private ?PdfService $pdfService = null)
+    {
+        $this->pdfService = $pdfService ?? new PdfService;
+    }
+
     /**
      * Menampilkan seluruh rekap presensi Magang untuk dipantau oleh Admin.
      */
@@ -320,14 +326,33 @@ class MonitoringPresensiController extends Controller
 
         $pengaturan = Pengaturan::getPengaturan();
 
-        return view('admin.presensi.cetak', compact(
+        $logoPath = public_path('storage/images/logo-kalsel.png');
+        if (! file_exists($logoPath)) {
+            $logoPath = storage_path('app/public/images/logo-kalsel.png');
+        }
+        $logoBase64 = file_exists($logoPath)
+            ? 'data:image/png;base64,'.base64_encode(file_get_contents($logoPath))
+            : null;
+
+        $viewData = compact(
             'rekapList',
             'stats',
             'periodeSubJudul',
             'periodeAwalText',
             'periodeAkhirText',
             'periodeText',
-            'pengaturan'
-        ));
+            'pengaturan',
+            'logoBase64'
+        );
+
+        if ($request->input('format') === 'html') {
+            return view('admin.presensi.cetak', $viewData);
+        }
+
+        $cleanAwal = str_replace([' ', '/', '\\'], '-', $periodeAwalText);
+        $cleanAkhir = str_replace([' ', '/', '\\'], '-', $periodeAkhirText);
+        $filename = 'Laporan-Presensi-Magang-'.$cleanAwal.'-sd-'.$cleanAkhir.'.pdf';
+
+        return $this->pdfService->renderView('admin.presensi.cetak', $viewData, $filename, 'P');
     }
 }

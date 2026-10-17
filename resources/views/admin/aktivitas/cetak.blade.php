@@ -1,205 +1,281 @@
-@extends('layouts.print')
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Laporan Aktivitas Magang</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            color: #000000;
+            font-size: 9pt;
+            line-height: 1.35;
+            background: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+        .kop-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-bottom: 2.5px solid #000000;
+        }
+        .kop-table td {
+            vertical-align: middle;
+            padding-bottom: 5px;
+            border: none;
+        }
+        .kop-logo {
+            width: 75px;
+            text-align: center;
+        }
+        .kop-text {
+            text-align: center;
+            line-height: 1.3;
+        }
+        .kop-text .l1 {
+            font-size: 11pt;
+            text-transform: uppercase;
+        }
+        .kop-text .l2 {
+            font-size: 13pt;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .kop-text .l3 {
+            font-size: 8pt;
+            color: #222222;
+        }
+        .kop-spacer {
+            border-bottom: 1px solid #000000;
+            margin-top: 2px;
+            margin-bottom: 12px;
+        }
+        .judul-laporan {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .judul-laporan h3 {
+            font-size: 12pt;
+            font-weight: bold;
+            text-decoration: underline;
+            text-transform: uppercase;
+            margin: 0 0 3px 0;
+        }
+        .judul-laporan p {
+            font-size: 9.5pt;
+            margin: 0;
+            color: #111827;
+        }
+        .info-table {
+            width: 100%;
+            font-size: 8.5pt;
+            margin-bottom: 10px;
+            border-collapse: collapse;
+        }
+        .info-table td {
+            padding: 1.5px 0;
+            vertical-align: top;
+            border: none;
+        }
+        .info-table td.k {
+            width: 95px;
+        }
+        .info-table td.s {
+            width: 12px;
+        }
+        .rekap-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 8.5pt;
+        }
+        .rekap-table th, .rekap-table td {
+            border: 1px solid #000000;
+            padding: 6px 5px;
+            vertical-align: top;
+            word-wrap: break-word;
+        }
+        .rekap-table th {
+            background-color: #f1f5f9;
+            text-align: center;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 8.5pt;
+            vertical-align: middle;
+        }
+        .rekap-table td.c {
+            text-align: center;
+        }
+        .rekap-table .sub {
+            font-size: 7.5pt;
+            color: #4b5563;
+            margin-top: 2px;
+        }
+        .rekap-table tr {
+            page-break-inside: avoid;
+        }
+        .rekap-table thead {
+            display: table-header-group;
+        }
+        .rencana-item {
+            margin-bottom: 3px;
+            text-align: left;
+            line-height: 1.3;
+        }
+        .ringkasan {
+            font-size: 8.5pt;
+            margin: 10px 0 6px 0;
+            padding: 5px 8px;
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+        }
+        .ttd-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: none;
+            margin-top: 18px;
+            page-break-inside: avoid;
+        }
+        .ttd-table td {
+            border: none;
+            vertical-align: top;
+        }
+        .ttd-box {
+            text-align: center;
+            font-size: 9pt;
+            line-height: 1.35;
+        }
+        .ttd-space {
+            height: 55px;
+        }
+        .ttd-nama {
+            font-weight: bold;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
 
-@section('title', 'Cetak Rekap Aktivitas Harian')
+    <!-- Kop Surat -->
+    <table class="kop-table">
+        <tr>
+            <td class="kop-logo">
+                @if(!empty($logoBase64))
+                    <img src="{{ $logoBase64 }}" width="65" alt="Logo Kalsel">
+                @endif
+            </td>
+            <td class="kop-text">
+                <div class="l1">Pemerintah Provinsi Kalimantan Selatan</div>
+                <div class="l2">{{ $pengaturan->nama_instansi ?? 'Dinas Komunikasi dan Informatika' }}</div>
+                <div class="l3">{{ $pengaturan->alamat_instansi ?? 'Jl. Dharma Praja II No. 2 Banjarbaru, Kalimantan Selatan' }}</div>
+                <div class="l3">(Kawasan Perkantoran Pemerintah Provinsi Kalimantan Selatan)</div>
+                <div class="l3">Telepon 0511-6749844; Pos-el <i>diskominfo@kalselprov.go.id</i></div>
+                <div class="l3">Laman <i>diskominfo.kalselprov.go.id;</i> instagram <i>@diskominfokalselprov</i></div>
+            </td>
+            <td class="kop-logo"></td>
+        </tr>
+    </table>
+    <div class="kop-spacer"></div>
 
-@section('content')
-<div class="max-w-5xl mx-auto">
-    <div class="print-sheet bg-white p-8 sm:p-12 border border-slate-300">
-
-        @include('admin.cetak.partials.kop-surat')
-
-        <div class="judul-laporan">
-            <h3>REKAPITULASI LOG AKTIVITAS HARIAN</h3>
-            <p>Periode: {{ $periodeText }}</p>
-        </div>
-
-        <table class="info-table">
-            @if($selectedMagang)
-                <tr>
-                    <td class="k">Peserta Magang</td>
-                    <td class="s">:</td>
-                    <td><strong>{{ $selectedMagang->nama_lengkap }}</strong> (NIS/NIM: {{ $selectedMagang->no_induk ?? '-' }})</td>
-                </tr>
-                <tr>
-                    <td class="k">Divisi &amp; Instansi</td>
-                    <td class="s">:</td>
-                    <td>{{ $selectedMagang->divisi->nama_divisi ?? '-' }} &bull; {{ $selectedMagang->instansi_pendidikan }}</td>
-                </tr>
-                <tr>
-                    <td class="k">Pembimbing Lapangan</td>
-                    <td class="s">:</td>
-                    @php
-                        $pembimbingAktif = $selectedMagang->getPembimbingAt(now()) ?? $selectedMagang->pembimbing;
-                    @endphp
-                    <td>{{ $pembimbingAktif ? $pembimbingAktif->nama_lengkap . ' (NIP: ' . ($pembimbingAktif->nip ?? '-') . ')' : '-' }}</td>
-                </tr>
-            @else
-                <tr>
-                    <td class="k">Cakupan Peserta</td>
-                    <td class="s">:</td>
-                    <td>Seluruh Peserta Magang</td>
-                </tr>
-            @endif
-            <tr>
-                <td class="k">Status Filter</td>
-                <td class="s">:</td>
-                <td>{{ request('status') ? ucfirst(request('status')) : 'Semua Status' }}</td>
-            </tr>
-            <tr>
-                <td class="k">Waktu Cetak</td>
-                <td class="s">:</td>
-                <td>{{ \Carbon\Carbon::now()->isoFormat('D MMMM Y, HH:mm') }} WITA</td>
-            </tr>
-        </table>
-
-        @if($selectedMagang)
-            {{-- Tampilan Rekap Per Peserta (Dikelompokkan per Rencana Kerja sesuai PRD) --}}
-            @forelse ($groupedByRencana as $gIndex => $group)
-                <div style="margin-bottom: 22px; page-break-inside: avoid;">
-                    <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #2563eb; padding: 6px 10px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong style="font-size: 9.5pt; text-transform: uppercase; color: #1e293b;">
-                                Tabel {{ $gIndex + 1 }}. Rencana Kerja: {{ $group['judul'] }}
-                            </strong>
-                            @if(!empty($group['deskripsi']))
-                                <div style="font-size: 8pt; color: #64748b; margin-top: 1px;">{{ $group['deskripsi'] }}</div>
-                            @endif
-                        </div>
-                        <span style="font-size: 8pt; color: #475569; font-weight: bold;">
-                            {{ count($group['items']) }} Catatan Progres
-                        </span>
-                    </div>
-
-                    <table class="rekap-table" style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
-                        <thead>
-                            <tr>
-                                <th style="width: 4%;">No</th>
-                                <th style="width: 18%;">Hari / Tanggal</th>
-                                <th style="width: 50%;">Uraian Progres Pekerjaan</th>
-                                <th style="width: 12%;">Status</th>
-                                <th style="width: 16%;">Catatan Pembimbing</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($group['items'] as $index => $item)
-                                <tr>
-                                    <td class="c">{{ $index + 1 }}</td>
-                                    <td class="c">{{ \Carbon\Carbon::parse($item['tanggal'])->locale('id')->isoFormat('dddd, D MMM Y') }}</td>
-                                    <td>{{ $item['progres'] }}</td>
-                                    <td class="c">{{ $item['status_label'] }}</td>
-                                    <td>{{ $item['catatan'] ?: '-' }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @empty
-                <table class="rekap-table" style="width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 16px;">
-                    <tbody>
-                        <tr>
-                            <td class="c" style="padding: 20px;">Tidak ada catatan aktivitas peserta magang untuk parameter filter yang dipilih.</td>
-                        </tr>
-                    </tbody>
-                </table>
-            @endforelse
-        @else
-            {{-- Tampilan Rekap Kolektif Seluruh Peserta Magang (dengan Pembimbing Lapangan pada tanggal terkait) --}}
-            <table class="rekap-table">
-                <thead>
-                    <tr>
-                        <th style="width:4%">No</th>
-                        <th style="width:11%">Tanggal</th>
-                        <th style="width:18%">Nama Peserta &amp; Divisi</th>
-                        <th style="width:18%">Pembimbing Lapangan</th>
-                        <th style="width:14%">Pekerjaan / Rencana</th>
-                        <th style="width:23%">Uraian Tugas / Progres Harian</th>
-                        <th style="width:6%">Progres</th>
-                        <th style="width:6%">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($aktivitas as $index => $item)
-                        <tr>
-                            <td class="c">{{ $index + 1 }}</td>
-                            <td>{{ \Carbon\Carbon::parse($item->tanggal)->isoFormat('D MMM Y') }}</td>
-                            <td>
-                                <strong>{{ $item->nama_lengkap }}</strong>
-                                @php
-                                    $divisiRow = $item->pengguna?->magang?->getDivisiAt($item->tanggal) ?? $item->pengguna?->magang?->divisi;
-                                    $pembimbingRow = $item->pengguna?->magang?->getPembimbingAt($item->tanggal);
-                                @endphp
-                                @if($divisiRow)
-                                    <div class="sub">{{ $divisiRow->nama_divisi }}</div>
-                                @endif
-                            </td>
-                            <td>
-                                @if($pembimbingRow)
-                                    <strong>{{ $pembimbingRow->nama_lengkap }}</strong>
-                                    <div class="sub">NIP: {{ $pembimbingRow->nip ?? '-' }}</div>
-                                @else
-                                    <span style="color: #94a3b8;">-</span>
-                                @endif
-                            </td>
-                            <td>
-                                @if ($item->details && $item->details->isNotEmpty())
-                                    <strong>{{ $item->details->pluck('judul_rencana')->join(', ') }}</strong>
-                                    <div class="sub">(Rencana Kerja)</div>
-                                @else
-                                    <strong>{{ $item->pekerjaan?->judul ?? ($item->judul ?? 'Pekerjaan Umum') }}</strong>
-                                    <div class="sub">({{ ($item->pekerjaan && $item->pekerjaan->isRutin()) ? 'Rutin' : 'Proyek' }})</div>
-                                @endif
-                            </td>
-                            <td>
-                                @if ($item->details && $item->details->isNotEmpty())
-                                    @foreach($item->details as $d)
-                                        <div style="margin-bottom: 2px;">• <strong>{{ $d->judul_rencana }}:</strong> {{ $d->progres }}</div>
-                                    @endforeach
-                                @else
-                                    {{ $item->isi }}
-                                @endif
-                                @if($item->catatan_validasi)
-                                    <div class="sub" style="margin-top: 4px; font-style: italic;">Catatan: {{ $item->catatan_validasi }}</div>
-                                @endif
-                            </td>
-                            <td class="c">
-                                @if($item->pekerjaan && $item->pekerjaan->isRutin())
-                                    -
-                                @else
-                                    {{ $item->progress }}%
-                                @endif
-                            </td>
-                            <td class="c">
-                                @if($item->status === 'approve') Disetujui
-                                @elseif($item->status === 'pending') Menunggu
-                                @else Revisi
-                                @endif
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="8" class="c" style="padding:16px;">Tidak ada catatan aktivitas yang sesuai dengan parameter filter yang dipilih.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        @endif
-
-        <div class="ringkasan">
-            <strong>Ringkasan Aktivitas:</strong>
-            Total Catatan {{ $stats['total'] }};
-            Disetujui {{ $stats['approve'] }};
-            Menunggu Review {{ $stats['pending'] }};
-            Perlu Revisi {{ $stats['revisi'] }}.
-        </div>
-
-        <div class="catatan-dok">
-            <p>Catatan:</p>
-            <p>1. Log aktivitas ini merupakan bukti sah pelaksanaan tugas peserta magang.</p>
-            <p>2. Pembimbing Lapangan yang tertera adalah pembimbing yang berwenang membina peserta pada tanggal penugasan terkait.</p>
-        </div>
-
-        @include('admin.cetak.partials.ttd-kepala')
-
+    <!-- Judul & Periode -->
+    <div class="judul-laporan">
+        <h3>LAPORAN AKTIVITAS MAGANG</h3>
+        <p>{{ $periodeSubJudul }}</p>
     </div>
-</div>
-@endsection
+
+    <!-- Info Laporan -->
+    <table class="info-table">
+        <tr>
+            <td class="k">Cakupan Data</td>
+            <td class="s">:</td>
+            <td>Seluruh Peserta Magang</td>
+        </tr>
+        <tr>
+            <td class="k">Waktu Cetak</td>
+            <td class="s">:</td>
+            <td>{{ \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y, HH:mm') }} WITA</td>
+        </tr>
+    </table>
+
+    <!-- Tabel Rekap Aktivitas (6 Kolom: No, Nama, Pembimbing, Periode, Rencana Kerja, Progres) -->
+    <table class="rekap-table">
+        <thead>
+            <tr>
+                <th style="width: 5%;">No</th>
+                <th style="width: 20%;">Nama</th>
+                <th style="width: 20%;">Pembimbing</th>
+                <th style="width: 18%;">Periode</th>
+                <th style="width: 27%;">Rencana Kerja</th>
+                <th style="width: 10%;">Progres</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($rekapList as $index => $item)
+                <tr>
+                    <td class="c">{{ $index + 1 }}</td>
+                    <td>
+                        <strong>{{ $item->nama_lengkap }}</strong>
+                        @if($item->divisi)
+                            <div class="sub">{{ $item->divisi->nama_divisi }}</div>
+                        @elseif($item->no_induk)
+                            <div class="sub">NIS/NIM: {{ $item->no_induk }}</div>
+                        @endif
+                    </td>
+                    <td>
+                        <strong>{{ $item->pembimbing_nama }}</strong>
+                        @if($item->pembimbing_nip)
+                            <div class="sub">NIP: {{ $item->pembimbing_nip }}</div>
+                        @endif
+                    </td>
+                    <td class="c">{{ $item->periode_teks }}</td>
+                    <td>
+                        @if(!empty($item->rencana_kerja_list) && count($item->rencana_kerja_list) > 0)
+                            @foreach ($item->rencana_kerja_list as $rkIndex => $rkJudul)
+                                <div class="rencana-item">{{ $rkIndex + 1 }}. {{ $rkJudul }}</div>
+                            @endforeach
+                        @else
+                            <div class="c" style="color: #64748b;">-</div>
+                        @endif
+                    </td>
+                    <td class="c" style="font-weight: bold; font-size: 9.5pt;">
+                        {{ $item->progres_akhir }}
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="6" class="c" style="padding: 16px;">Tidak ada data peserta magang yang sesuai dengan parameter filter yang dipilih.</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <!-- Ringkasan -->
+    <div class="ringkasan">
+        <strong>Ringkasan:</strong>
+        Total Peserta {{ $stats['total_peserta'] }};
+        Rata-rata Progres {{ $stats['rata_rata_progres'] }};
+        Progres Tertinggi {{ $stats['progres_tertinggi'] }};
+        Total Catatan Aktivitas {{ $stats['total_aktivitas'] }}.
+    </div>
+
+    <!-- Tanda Tangan Kepala Dinas -->
+    <table class="ttd-table">
+        <tr>
+            <td style="width: 58%;"></td>
+            <td style="width: 42%;">
+                <div class="ttd-box">
+                    <div>{{ $pengaturan->kota_surat ?? 'Banjarbaru' }}, {{ \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}</div>
+                    <div>{{ $pengaturan->jabatan_kepala_dinas ?? 'Kepala Dinas' }}</div>
+                    <div>{{ $pengaturan->nama_instansi ?? 'Dinas Komunikasi dan Informatika' }}</div>
+                    <div class="ttd-space"></div>
+                    <div class="ttd-nama">{{ $pengaturan->nama_kepala_dinas ?? '( .................................................. )' }}</div>
+                    @if(!empty($pengaturan->pangkat_golongan))
+                        <div>{{ $pengaturan->pangkat_golongan }}</div>
+                    @endif
+                    <div>NIP. {{ $pengaturan->nip_kepala_dinas ?? '-' }}</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

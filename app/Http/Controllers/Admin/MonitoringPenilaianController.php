@@ -4,16 +4,21 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Divisi;
+use App\Models\KriteriaPenilaian;
 use App\Models\Magang;
 use App\Models\Pembimbing;
 use App\Models\Pengaturan;
 use App\Models\Penilaian;
+use App\Services\PdfService;
 use App\Services\PresensiScoreService;
 use Illuminate\Http\Request;
 
 class MonitoringPenilaianController extends Controller
 {
-    public function __construct(private PresensiScoreService $presensiScoreService) {}
+    public function __construct(
+        private PresensiScoreService $presensiScoreService,
+        private PdfService $pdfService
+    ) {}
 
     /**
      * Menampilkan rekapitulasi penilaian seluruh anak magang.
@@ -94,7 +99,7 @@ class MonitoringPenilaianController extends Controller
     }
 
     /**
-     * Cetak rekapitulasi penilaian seluruh anak magang (tampilan cetak khusus kertas).
+     * Cetak rekapitulasi penilaian seluruh anak magang langsung dalam format PDF A4.
      */
     public function cetak(Request $request)
     {
@@ -143,20 +148,117 @@ class MonitoringPenilaianController extends Controller
         }
 
         $magangList = $query->orderBy('nama_lengkap', 'asc')->get();
-        foreach ($magangList as $m) {
-            $m->penilaian_akumulasi = $m->getPenilaianAkumulasi();
+
+        // Ambil seluruh kriteria penilaian dan petakan ke huruf A, B, C, dst.
+        $kriteriaList = KriteriaPenilaian::orderBy('id', 'asc')->get();
+        $letters = range('A', 'Z');
+        $kriteriaMap = [];
+        $kriteriaLegends = [];
+
+        foreach ($kriteriaList as $index => $k) {
+            $code = $letters[$index] ?? ('K'.($index + 1));
+            $kriteriaMap[$k->id] = $code;
+            $kriteriaLegends[] = [
+                'code' => $code,
+                'nama' => $k->nama,
+                'bobot' => $k->bobot,
+                'label' => $code.' = '.$k->nama.($k->bobot ? ' ('.$k->bobot.'%)' : ''),
+            ];
         }
+
+        $rekapList = $magangList->map(function ($magang) use ($kriteriaList, $kriteriaMap) {
+            $penilaian = $magang->getPenilaianAkumulasi();
+            $kriteriaText = '-';
+            $nilaiAkhir = '-';
+            $predikat = '-';
+            $keteranganPredikat = '';
+            $isDinilai = false;
+            $skorAngka = null;
+
+            $nilaiPerKriteria = [];
+            foreach ($kriteriaList as $k) {
+                $nilaiPerKriteria[$k->id] = '-';
+            }
+
+            if ($penilaian) {
+                $isDinilai = true;
+                $skorAngka = $penilaian->nilai_akhir ?? $penilaian->total_nilai;
+                $detailKeyed = collect($penilaian->detail)->keyBy('kriteria_id');
+                $kriteriaParts = [];
+
+                foreach ($kriteriaList as $k) {
+                    $code = $kriteriaMap[$k->id];
+                    $dt = $detailKeyed->get($k->id);
+                    if ($dt && $dt->nilai !== null) {
+                        $val = is_numeric($dt->nilai) ? (int) round($dt->nilai) : $dt->nilai;
+                        $kriteriaParts[] = "{$code} = {$val}";
+                        $nilaiPerKriteria[$k->id] = $val;
+                    } else {
+                        $kriteriaParts[] = "{$code} = -";
+                        $nilaiPerKriteria[$k->id] = '-';
+                    }
+                }
+
+                $kriteriaText = implode(', ', $kriteriaParts);
+                $nilaiAkhir = is_numeric($skorAngka) ? round($skorAngka, 1) : ($skorAngka ?? '-');
+                $predikat = $penilaian->predikat ?? '-';
+                $keteranganPredikat = $penilaian->keterangan_predikat ?? '';
+            }
+
+            return (object) [
+                'id' => $magang->id,
+                'nama_lengkap' => $magang->nama_lengkap,
+                'no_induk' => $magang->no_induk,
+                'divisi' => $magang->divisi,
+                'kriteria_teks' => $kriteriaText,
+                'nilai_per_kriteria' => $nilaiPerKriteria,
+                'nilai_akhir' => $nilaiAkhir,
+                'predikat' => $predikat,
+                'keterangan_predikat' => $keteranganPredikat,
+                'is_dinilai' => $isDinilai,
+                'skor_angka' => $skorAngka,
+            ];
+        });
 
         $pengaturan = Pengaturan::getPengaturan();
 
+        $logoPath = public_path('storage/images/logo-kalsel.png');
+        if (! file_exists($logoPath)) {
+            $logoPath = storage_path('app/public/images/logo-kalsel.png');
+        }
+        $logoBase64 = file_exists($logoPath)
+            ? 'data:image/png;base64,'.base64_encode(file_get_contents($logoPath))
+            : null;
+
+        $sudahCount = $rekapList->where('is_dinilai', true)->count();
+        $belumCount = $rekapList->where('is_dinilai', false)->count();
+        $nilaiCollection = $rekapList->filter(fn ($item) => $item->is_dinilai && is_numeric($item->skor_angka))->pluck('skor_angka');
+        $avgNilai = $nilaiCollection->isNotEmpty() ? round($nilaiCollection->avg(), 1) : 0;
+
         $stats = [
-            'total' => $magangList->count(),
-            'sudah' => $magangList->filter(fn ($m) => $m->penilaians->isNotEmpty())->count(),
-            'belum' => $magangList->filter(fn ($m) => $m->penilaians->isEmpty())->count(),
-            'rata_rata' => $magangList->filter(fn ($m) => $m->penilaian_akumulasi !== null)->avg(fn ($m) => $m->penilaian_akumulasi->total_nilai) ?? 0,
+            'total' => $rekapList->count(),
+            'sudah' => $sudahCount,
+            'belum' => $belumCount,
+            'rata_rata' => $avgNilai,
         ];
 
-        return view('admin.penilaian.cetak', compact('magangList', 'pengaturan', 'stats'));
+        $viewData = compact(
+            'rekapList',
+            'kriteriaList',
+            'kriteriaMap',
+            'kriteriaLegends',
+            'pengaturan',
+            'stats',
+            'logoBase64'
+        );
+
+        if ($request->input('format') === 'html') {
+            return view('admin.penilaian.cetak', $viewData);
+        }
+
+        $filename = 'Laporan-Rekapitulasi-Penilaian-Magang.pdf';
+
+        return $this->pdfService->renderView('admin.penilaian.cetak', $viewData, $filename, 'P');
     }
 
     /**
