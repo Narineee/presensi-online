@@ -380,7 +380,11 @@ class PulangSebelum16Test extends TestCase
         $riwayatResponse->assertSee('Catatan:');
         $riwayatResponse->assertSee('Sakit');
 
-        $cetakResponse = $this->actingAs($internUser)->get(route('presensi.cetak'));
+        $pdfResponse = $this->actingAs($internUser)->get(route('presensi.cetak'));
+        $pdfResponse->assertStatus(200);
+        $pdfResponse->assertHeader('content-type', 'application/pdf');
+
+        $cetakResponse = $this->actingAs($internUser)->get(route('presensi.cetak', ['format' => 'html']));
         $cetakResponse->assertStatus(200);
         $cetakResponse->assertSee('Sakit');
     }

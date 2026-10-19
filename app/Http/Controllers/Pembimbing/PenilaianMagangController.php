@@ -4,17 +4,22 @@ namespace App\Http\Controllers\Pembimbing;
 
 use App\Http\Controllers\Controller;
 use App\Models\DetailPenilaian;
+use App\Models\Divisi;
 use App\Models\KriteriaPenilaian;
 use App\Models\Magang;
 use App\Models\Pengaturan;
 use App\Models\Penilaian;
+use App\Services\PdfService;
 use App\Services\PresensiScoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class PenilaianMagangController extends Controller
 {
-    public function __construct(private PresensiScoreService $presensiScoreService) {}
+    public function __construct(
+        private PresensiScoreService $presensiScoreService,
+        private PdfService $pdfService
+    ) {}
 
     /**
      * Menampilkan daftar anak magang binaan dan status penilaian akhirnya.
@@ -176,15 +181,63 @@ class PenilaianMagangController extends Controller
             });
         }
 
-        // Filter peserta magang tertentu jika dipilih
-        $selectedMagang = null;
-        if ($request->filled('magang_id')) {
-            $selectedMagang = Magang::find($request->magang_id);
-            if ($selectedMagang) {
-                $query->where('id', $selectedMagang->id);
+        $pengaturan = Pengaturan::getPengaturan();
+
+        // 1. Cek jika cetak per peserta magang (via penilaian_id atau magang_id)
+        $penilaian = null;
+        if ($request->filled('penilaian_id')) {
+            $penilaian = Penilaian::where('id', $request->penilaian_id)
+                ->where('pembimbing_id', $pembimbing->id)
+                ->with([
+                    'magang.divisi',
+                    'penempatanMagang.divisi',
+                    'pembimbing',
+                    'detail.kriteria',
+                ])
+                ->first();
+        } elseif ($request->filled('magang_id')) {
+            $magang = Magang::where('id', $request->magang_id)
+                ->where(function ($q) use ($pembimbing) {
+                    $q->where('pembimbing_id', $pembimbing->id)
+                        ->orWhereHas('penempatanMagang', function ($pq) use ($pembimbing) {
+                            $pq->where('pembimbing_id', $pembimbing->id);
+                        });
+                })
+                ->with([
+                    'divisi',
+                    'penempatanMagang.divisi',
+                    'penilaians' => fn ($q) => $q->where('pembimbing_id', $pembimbing->id)->with('detail.kriteria', 'pembimbing', 'penempatanMagang.divisi'),
+                ])
+                ->first();
+
+            if ($magang) {
+                $penilaian = $magang->penilaians->first();
             }
         }
 
+        if ($penilaian) {
+            $isSingle = true;
+            $magang = $penilaian->magang;
+            $divisi = $penilaian->penempatanMagang?->divisi ?? $magang->divisi ?? Divisi::first();
+
+            $viewData = compact('isSingle', 'penilaian', 'magang', 'pembimbing', 'divisi', 'pengaturan');
+
+            if ($request->input('format') === 'html') {
+                return view('pembimbing.penilaian.cetak', $viewData);
+            }
+
+            $cleanNama = str_replace([' ', '/', '\\'], '-', $magang->nama_lengkap ?? 'Peserta');
+            $filename = 'Laporan-Penilaian-Akhir-Magang-'.$cleanNama.'.pdf';
+
+            return $this->pdfService->renderView('pembimbing.penilaian.cetak', $viewData, $filename, 'P');
+        }
+
+        if ($request->filled('magang_id') || $request->filled('penilaian_id')) {
+            return redirect()->route('pembimbing.penilaian.index')->with('error', 'Penilaian akhir belum diisi untuk peserta magang tersebut.');
+        }
+
+        // 2. Cetak rekapitulasi seluruh peserta magang binaan
+        $isSingle = false;
         $magangList = $query->orderBy('nama_lengkap', 'asc')->get();
         foreach ($magangList as $m) {
             $m->penilaian_saya = $m->penilaians->where('pembimbing_id', $pembimbing->id)->first();
@@ -192,7 +245,6 @@ class PenilaianMagangController extends Controller
         }
 
         $kriteriaList = KriteriaPenilaian::orderBy('id', 'asc')->get();
-        $pengaturan = Pengaturan::getPengaturan();
 
         $stats = [
             'total' => $magangList->count(),
@@ -201,7 +253,15 @@ class PenilaianMagangController extends Controller
             'rata_rata' => $magangList->filter(fn ($m) => $m->penilaian_akumulasi !== null)->avg(fn ($m) => $m->penilaian_akumulasi->total_nilai) ?? 0,
         ];
 
-        return view('pembimbing.penilaian.cetak', compact('magangList', 'pengaturan', 'stats', 'pembimbing', 'kriteriaList', 'selectedMagang'));
+        $viewData = compact('isSingle', 'magangList', 'pengaturan', 'stats', 'pembimbing', 'kriteriaList');
+
+        if ($request->input('format') === 'html') {
+            return view('pembimbing.penilaian.cetak', $viewData);
+        }
+
+        $filename = 'Laporan-Penilaian-Akhir-Magang-Binaan.pdf';
+
+        return $this->pdfService->renderView('pembimbing.penilaian.cetak', $viewData, $filename, 'P');
     }
 
     /**
@@ -421,8 +481,10 @@ class PenilaianMagangController extends Controller
 
         $penilaianAkumulasi = $penilaian->magang->getPenilaianAkumulasi();
         $presensiScore = $this->presensiScoreService->calculateScore($penilaian->magang, $penilaian->penempatanMagang);
+        $pengaturan = Pengaturan::getPengaturan();
+        $divisi = $penilaian->penempatanMagang?->divisi ?? $penilaian->magang->divisi ?? Divisi::first();
 
-        return view('pembimbing.penilaian.show', compact('penilaian', 'penilaianAkumulasi', 'presensiScore'));
+        return view('pembimbing.penilaian.show', compact('penilaian', 'penilaianAkumulasi', 'presensiScore', 'pengaturan', 'divisi', 'pembimbing'));
     }
 
     /**

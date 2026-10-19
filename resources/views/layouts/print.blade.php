@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+    @if(!($isPdf ?? false))
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -34,6 +35,7 @@
             }
         }
     </script>
+    @endif
 
     <style>
         /* Pengaturan Dasar & Standar Font */
@@ -124,10 +126,12 @@
                 overflow-x: clip !important;
             }
 
+            @if(!($isPdf ?? false))
             @page {
                 size: A4 portrait;
                 margin: 12mm 10mm 12mm 10mm;
             }
+            @endif
 
             table {
                 page-break-inside: auto;
@@ -155,12 +159,32 @@
             tfoot {
                 display: table-footer-group;
             }
+        @if($isPdf ?? false)
+            html, body {
+                background-color: #ffffff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            main, .max-w-5xl, .max-w-4xl, .print-sheet {
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                border: none !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+        @endif
         }
     </style>
     @yield('styles')
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen">
 
+    @if(!($isPdf ?? false))
     <!-- Top Action Bar Khusus Pratinjau Lembar Cetak (Tidak ikut tercetak) -->
     <div class="no-print sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 shadow-xs">
         <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -196,6 +220,7 @@
             </div>
         </div>
     </div>
+    @endif
 
     <!-- Area Lembar Kertas Cetak -->
     <main class="py-6 sm:py-8 px-2 sm:px-4">

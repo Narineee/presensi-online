@@ -1,6 +1,6 @@
 @extends('layouts.print')
 
-@section('title', 'Cetak Lembar Rekapitulasi Aktivitas Harian')
+@section('title', 'Laporan Aktivitas Harian Magang')
 
 @section('content')
 <div class="w-full flex justify-center">
@@ -8,94 +8,172 @@
 
         @include('admin.cetak.partials.kop-surat')
 
-        {{-- Tanggal Surat Dibuat (di bagian bawah kop surat) --}}
-        <div style="text-align: right; font-size: 10pt; margin-top: 6px; margin-bottom: 12px;">
-            {{ $pengaturan->kota_surat ?? 'Banjarbaru' }}, {{ \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}
-        </div>
-
         {{-- Judul Laporan & Periode Filter --}}
-        <div class="judul-laporan" style="text-align: center; margin-bottom: 14px;">
-            <h3 style="font-size: 12pt; font-weight: bold; text-decoration: underline; text-transform: uppercase; margin: 0;">LEMBAR REKAPITULASI AKTIVITAS HARIAN</h3>
-            <p style="font-size: 10pt; font-weight: bold; margin: 4px 0 0; text-transform: uppercase;">PERIODE : {{ $periodeText }}</p>
+        <div class="judul-laporan">
+            <h3>LAPORAN AKTIVITAS HARIAN MAGANG</h3>
+            <p>Periode: {{ $periodeText }}</p>
         </div>
 
         {{-- Identitas Peserta Magang (Nama, No Induk, Jurusan, Pendidikan Asal) --}}
-        <table class="info-table" style="font-size: 10pt; margin-bottom: 14px; border-collapse: collapse; width: 100%;">
+        <table class="info-table" style="width: 100%; margin-bottom: 14px;">
+            <colgroup>
+                <col style="width: 185px;">
+                <col style="width: 15px;">
+                <col>
+            </colgroup>
             <tr>
-                <td class="k" style="width: 140px; padding: 2px 0;">Nama</td>
-                <td class="s" style="width: 14px; padding: 2px 0;">:</td>
-                <td style="padding: 2px 0;"><strong>{{ $user->magang?->nama_lengkap ?? $user->username }}</strong></td>
+                <td class="k" style="width: 185px; white-space: nowrap;">Nama</td>
+                <td class="s" style="width: 15px; text-align: center;">:</td>
+                <td><strong>{{ $user->magang?->nama_lengkap ?? $user->username }}</strong></td>
             </tr>
             <tr>
-                <td class="k" style="padding: 2px 0;">No. Induk</td>
-                <td class="s" style="padding: 2px 0;">:</td>
-                <td style="padding: 2px 0;">{{ $user->magang?->no_induk ?? '-' }}</td>
+                <td class="k" style="white-space: nowrap;">No. Induk</td>
+                <td class="s" style="text-align: center;">:</td>
+                <td>{{ $user->magang?->no_induk ?? '-' }}</td>
             </tr>
             <tr>
-                <td class="k" style="padding: 2px 0;">Jurusan</td>
-                <td class="s" style="padding: 2px 0;">:</td>
-                <td style="padding: 2px 0;">{{ $user->magang?->jurusan ?? '-' }}</td>
+                <td class="k" style="white-space: nowrap;">Jurusan</td>
+                <td class="s" style="text-align: center;">:</td>
+                <td>{{ $user->magang?->jurusan ?? '-' }}</td>
             </tr>
             <tr>
-                <td class="k" style="padding: 2px 0;">Pendidikan Asal</td>
-                <td class="s" style="padding: 2px 0;">:</td>
-                <td style="padding: 2px 0;">{{ $user->magang?->instansi_pendidikan ?? '-' }}</td>
+                <td class="k" style="white-space: nowrap;">Pendidikan Asal</td>
+                <td class="s" style="text-align: center;">:</td>
+                <td>{{ $user->magang?->instansi_pendidikan ?? '-' }}</td>
+            </tr>
+            <tr>
+                <td class="k" style="white-space: nowrap;">Periode Magang</td>
+                <td class="s" style="text-align: center;">:</td>
+                <td>
+                    @if($user->magang?->tanggal_mulai && $user->magang?->tanggal_selesai)
+                        {{ \Carbon\Carbon::parse($user->magang->tanggal_mulai)->locale('id')->isoFormat('D MMMM Y') }} sampai {{ \Carbon\Carbon::parse($user->magang->tanggal_selesai)->locale('id')->isoFormat('D MMMM Y') }}
+                    @else
+                        -
+                    @endif
+                </td>
             </tr>
         </table>
 
-        {{-- Tabel Rekapan Aktivitas Dikelompokkan per Rencana Kerja (sesuai PRD alur-rekap.md) --}}
-        @forelse ($groupedByRencana as $gIndex => $group)
-            <div style="margin-bottom: 20px; page-break-inside: avoid;">
-                <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #6366f1; padding: 6px 10px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <strong style="font-size: 9.5pt; text-transform: uppercase; color: #1e293b;">
-                            Tabel {{ $gIndex + 1 }}. Rencana Kerja: {{ $group['judul'] }}
-                        </strong>
-                        @if(!empty($group['deskripsi']))
-                            <div style="font-size: 8pt; color: #64748b; margin-top: 1px;">{{ $group['deskripsi'] }}</div>
-                        @endif
-                    </div>
-                    <span style="font-size: 8pt; color: #475569; font-weight: bold;">
-                        {{ count($group['items']) }} Catatan Progres
-                    </span>
-                </div>
+        {{-- Tabel Rekapitulasi Aktivitas Harian (No, Unit Penempatan, Pembimbing, Rencana Kerja, Hari/Tanggal, Progres) --}}
+        <table class="rekap-table">
+            <thead>
+                <tr>
+                    <th style="width: 4%;">No</th>
+                    <th style="width: 18%;">Unit Penempatan</th>
+                    <th style="width: 18%;">Pembimbing</th>
+                    <th style="width: 22%;">Rencana Kerja</th>
+                    <th style="width: 16%;">Hari / Tanggal</th>
+                    <th style="width: 22%;">Progres</th>
+                </tr>
+            </thead>
+            <tbody>
+                @php $noUrut = 1; @endphp
+                @forelse ($penempatanList as $penempatan)
+                    @php $firstRowPenempatan = true; @endphp
+                    @forelse ($penempatan['rencana_kerja_list'] as $rk)
+                        @php
+                            $firstRowRk = true;
+                            $items = $rk['items'] ?? [];
+                            $itemCount = count($items);
+                        @endphp
+                        @if ($itemCount > 0)
+                            @foreach ($items as $item)
+                                <tr>
+                                    <td class="c">{{ $noUrut++ }}</td>
 
-                <table class="rekap-table" style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
-                    <thead>
-                        <tr>
-                            <th style="width: 4%;">No</th>
-                            <th style="width: 20%;">Hari / Tanggal</th>
-                            <th style="width: 50%;">Uraian Progres Pekerjaan</th>
-                            <th style="width: 11%;">Status</th>
-                            <th style="width: 15%;">Catatan Pembimbing</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($group['items'] as $index => $item)
+                                    @if ($firstRowPenempatan)
+                                        <td rowspan="{{ $penempatan['total_rowspan'] }}">
+                                            <strong>{{ $penempatan['divisi_nama'] }}</strong>
+                                        </td>
+                                        <td rowspan="{{ $penempatan['total_rowspan'] }}">
+                                            <strong>{{ $penempatan['pembimbing_nama'] }}</strong>
+                                            @if(!empty($penempatan['pembimbing_nip']) && $penempatan['pembimbing_nip'] !== '-')
+                                                <div class="sub">NIP. {{ $penempatan['pembimbing_nip'] }}</div>
+                                            @endif
+                                        </td>
+                                        @php $firstRowPenempatan = false; @endphp
+                                    @endif
+
+                                    @if ($firstRowRk)
+                                        <td rowspan="{{ $itemCount }}">
+                                            <strong>{{ $rk['judul'] }}</strong>
+                                            @if(!empty($rk['deskripsi']))
+                                                <div class="sub">{{ $rk['deskripsi'] }}</div>
+                                            @endif
+                                        </td>
+                                        @php $firstRowRk = false; @endphp
+                                    @endif
+
+                                    <td class="c">
+                                        {{ \Carbon\Carbon::parse($item['tanggal'])->locale('id')->isoFormat('dddd, D MMM Y') }}
+                                    </td>
+                                    <td>
+                                        <div style="white-space: pre-line;">{{ $item['progres'] }}</div>
+                                        @if(($item['status'] ?? '') === 'revisi')
+                                            <div style="font-size: 7.5pt; color: #dc2626; margin-top: 2px;">
+                                                <em>(Perlu Revisi{{ !empty($item['catatan']) ? ': '.$item['catatan'] : '' }})</em>
+                                            </div>
+                                        @elseif(($item['status'] ?? '') === 'pending')
+                                            <div style="font-size: 7.5pt; color: #d97706; margin-top: 2px;">
+                                                <em>(Menunggu Validasi)</em>
+                                            </div>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        @else
                             <tr>
-                                <td class="c">{{ $index + 1 }}</td>
-                                <td class="c">{{ \Carbon\Carbon::parse($item['tanggal'])->locale('id')->isoFormat('dddd, D MMM Y') }}</td>
-                                <td>{{ $item['progres'] }}</td>
-                                <td class="c">{{ $item['status_label'] }}</td>
-                                <td>{{ $item['catatan'] ?: '-' }}</td>
+                                <td class="c">{{ $noUrut++ }}</td>
+
+                                @if ($firstRowPenempatan)
+                                    <td rowspan="{{ $penempatan['total_rowspan'] }}">
+                                        <strong>{{ $penempatan['divisi_nama'] }}</strong>
+                                    </td>
+                                    <td rowspan="{{ $penempatan['total_rowspan'] }}">
+                                        <strong>{{ $penempatan['pembimbing_nama'] }}</strong>
+                                        @if(!empty($penempatan['pembimbing_nip']) && $penempatan['pembimbing_nip'] !== '-')
+                                            <div class="sub">NIP. {{ $penempatan['pembimbing_nip'] }}</div>
+                                        @endif
+                                    </td>
+                                    @php $firstRowPenempatan = false; @endphp
+                                @endif
+
+                                <td>
+                                    <strong>{{ $rk['judul'] }}</strong>
+                                    @if(!empty($rk['deskripsi']))
+                                        <div class="sub">{{ $rk['deskripsi'] }}</div>
+                                    @endif
+                                </td>
+                                <td class="c" style="color: #64748b;">-</td>
+                                <td style="color: #64748b;">Belum ada catatan progres</td>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @empty
-            <table class="rekap-table" style="width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 16px;">
-                <tbody>
+                        @endif
+                    @empty
+                        <tr>
+                            <td class="c">{{ $noUrut++ }}</td>
+                            <td><strong>{{ $penempatan['divisi_nama'] }}</strong></td>
+                            <td>
+                                <strong>{{ $penempatan['pembimbing_nama'] }}</strong>
+                                @if(!empty($penempatan['pembimbing_nip']) && $penempatan['pembimbing_nip'] !== '-')
+                                    <div class="sub">NIP. {{ $penempatan['pembimbing_nip'] }}</div>
+                                @endif
+                            </td>
+                            <td class="c" style="color: #64748b;">-</td>
+                            <td class="c" style="color: #64748b;">-</td>
+                            <td style="color: #64748b;">Belum ada rencana kerja / progres</td>
+                        </tr>
+                    @endforelse
+                @empty
                     <tr>
-                        <td class="c" style="padding: 20px;">Belum ada catatan aktivitas pada periode yang dipilih.</td>
+                        <td colspan="6" class="c" style="padding: 16px;">Belum ada catatan aktivitas pada periode yang dipilih.</td>
                     </tr>
-                </tbody>
-            </table>
-        @endforelse
+                @endforelse
+            </tbody>
+        </table>
 
         {{-- Ringkasan --}}
         <div class="ringkasan">
-            <strong>Ringkasan:</strong>
+            <strong>Ringkasan Aktivitas:</strong>
             Total Catatan {{ $stats['total'] ?? $aktivitas->count() }};
             Disetujui {{ $stats['approve'] ?? $aktivitas->where('status', 'approve')->count() }};
             Menunggu Review {{ $stats['pending'] ?? $aktivitas->where('status', 'pending')->count() }};

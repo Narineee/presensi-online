@@ -1,72 +1,75 @@
-@extends('layouts.pembimbing')
+@extends('layouts.pembimbing-mobile')
 
-@section('title', 'Input Penilaian Akhir Magang')
+@section('title', 'Input Penilaian - ' . $magang->nama_lengkap)
 
 @section('content')
-<div class="max-w-4xl mx-auto space-y-6">
+@php
+    $in = 'w-full rounded-2xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25 transition';
+@endphp
 
-    <!-- Breadcrumb & Nav -->
-    <div class="flex items-center gap-2 text-xs text-slate-500">
-        <a href="{{ route('pembimbing.penilaian.index') }}" class="hover:text-purple-600 transition flex items-center gap-1">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-            </svg>
-            Kembali ke Daftar Penilaian
-        </a>
-        <span>/</span>
-        <span class="text-slate-800 font-semibold">Formulir Penilaian</span>
+<!-- Header Sticky -->
+<header class="sticky-top-nav -mx-4 mb-4 flex items-center gap-3 border-b border-slate-200/80 bg-white/90 px-4 pb-3 pt-3 backdrop-blur-xl lg:mx-0 lg:rounded-2xl lg:border">
+    <a href="{{ route('pembimbing.penilaian.index') }}" class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-xs hover:bg-slate-50 transition" aria-label="Kembali">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+    </a>
+    <div class="min-w-0 flex-1">
+        <h1 class="text-lg font-extrabold leading-tight text-slate-900 truncate">Input Penilaian Magang</h1>
+        <p class="text-xs text-slate-500 font-medium truncate">{{ $magang->nama_lengkap }} ({{ $magang->no_induk ?? '-' }})</p>
     </div>
+</header>
 
-    <!-- Header & Info Peserta -->
-    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between pb-6 border-b border-slate-100">
-            <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-purple-100 text-purple-700 font-black text-lg flex items-center justify-center overflow-hidden border border-purple-200 shrink-0">
-                    @if($magang->foto)
-                        <img src="{{ asset('storage/' . $magang->foto) }}" alt="{{ $magang->nama_lengkap }}" class="w-full h-full object-cover">
-                    @else
-                        {{ strtoupper(substr($magang->nama_lengkap, 0, 2)) }}
-                    @endif
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold text-slate-900">{{ $magang->nama_lengkap }}</h1>
-                    <p class="text-xs text-slate-400 mt-0.5">NIS/NIM: {{ $magang->no_induk }} &bull; {{ $magang->instansi_pendidikan }}</p>
-                </div>
-            </div>
+@include('layouts.partials.mobile-alerts')
 
-            <div class="text-left sm:text-right">
-                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Unit Penempatan yang Dinilai</div>
-                <div class="text-sm font-bold text-purple-700">{{ $penempatan?->divisi?->nama_divisi ?? ($magang->divisi->nama_divisi ?? '-') }}</div>
-                @if ($penempatan)
-                    <div class="text-[11px] text-slate-400 mt-0.5 font-medium">
-                        Periode: {{ $penempatan->tanggal_mulai?->format('d M Y') }} s/d {{ $penempatan->tanggal_selesai?->format('d M Y') }}
-                    </div>
+<div class="space-y-4">
+
+    <!-- Card Profil Peserta Magang -->
+    <div class="rounded-3xl bg-white p-4 ring-1 ring-slate-200 shadow-xs">
+        <div class="flex items-center gap-3">
+            <div class="h-12 w-12 shrink-0 rounded-full border border-slate-300 bg-brand-soft text-brand flex items-center justify-center font-black text-sm overflow-hidden">
+                @if($magang->pengguna && $magang->pengguna->foto_url)
+                    <img src="{{ $magang->pengguna->foto_url }}" alt="{{ $magang->nama_lengkap }}" class="h-full w-full object-cover">
+                @elseif($magang->foto)
+                    <img src="{{ asset('storage/' . $magang->foto) }}" alt="{{ $magang->nama_lengkap }}" class="h-full w-full object-cover">
+                @else
+                    {{ strtoupper(substr($magang->nama_lengkap, 0, 2)) }}
                 @endif
             </div>
+            <div class="min-w-0 flex-1">
+                <h2 class="text-base font-extrabold text-slate-900 truncate">{{ $magang->nama_lengkap }}</h2>
+                <p class="text-xs text-slate-500 truncate">{{ $magang->no_induk ? 'NIS/NIM: ' . $magang->no_induk . ' • ' : '' }}{{ $magang->instansi_pendidikan ?? '-' }}</p>
+            </div>
+            <span class="rounded-full px-2.5 py-0.5 text-xs font-extrabold {{ $magang->status === 'aktif' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' }}">
+                {{ ucfirst($magang->status) }}
+            </span>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 text-xs">
+        <dl class="mt-3.5 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3 text-xs">
             <div>
-                <span class="text-slate-400 block">Jurusan</span>
-                <span class="font-semibold text-slate-700">{{ $magang->jurusan ?? '-' }}</span>
+                <dt class="text-slate-500">Jurusan</dt>
+                <dd class="font-bold text-slate-800 truncate">{{ $magang->jurusan ?? '-' }}</dd>
             </div>
             <div>
-                <span class="text-slate-400 block">Periode Mulai</span>
-                <span class="font-semibold text-slate-700">{{ $magang->tanggal_mulai ? $magang->tanggal_mulai->format('d M Y') : '-' }}</span>
+                <dt class="text-slate-500">Periode Magang</dt>
+                <dd class="font-bold text-slate-800 truncate">
+                    {{ $magang->tanggal_mulai ? $magang->tanggal_mulai->format('d/m/Y') : '-' }} - {{ $magang->tanggal_selesai ? $magang->tanggal_selesai->format('d/m/Y') : '-' }}
+                </dd>
             </div>
-            <div>
-                <span class="text-slate-400 block">Periode Selesai</span>
-                <span class="font-semibold text-slate-700">{{ $magang->tanggal_selesai ? $magang->tanggal_selesai->format('d M Y') : '-' }}</span>
+        </dl>
+
+        @if($penempatan)
+            <div class="mt-3 rounded-2xl bg-brand-soft p-3 text-xs border border-blue-200/60">
+                <span class="font-extrabold text-brand block">Unit Penempatan Dinilai: {{ $penempatan->divisi?->nama_divisi ?? ($magang->divisi->nama_divisi ?? '-') }}</span>
+                <span class="text-slate-600 font-medium text-[11px]">
+                    Periode: {{ $penempatan->tanggal_mulai?->format('d M Y') }} s/d {{ $penempatan->tanggal_selesai?->format('d M Y') }}
+                </span>
             </div>
-            <div>
-                <span class="text-slate-400 block">Status Saat Ini</span>
-                <span class="font-semibold text-slate-700 capitalize">{{ $magang->status }}</span>
-            </div>
-        </div>
+        @endif
     </div>
 
     <!-- Form Penilaian -->
-    <form action="{{ route('pembimbing.penilaian.store') }}" method="POST" id="formPenilaian" class="space-y-6">
+    <form action="{{ route('pembimbing.penilaian.store') }}" method="POST" id="formPenilaian" class="space-y-4">
         @csrf
         <input type="hidden" name="magang_id" value="{{ $magang->id }}">
         @if(isset($penempatan) && $penempatan)
@@ -74,353 +77,264 @@
         @endif
 
         <!-- Live Score Summary Card -->
-        <div class="bg-gradient-to-br from-slate-900 via-purple-950 to-indigo-950 rounded-3xl p-6 sm:p-7 text-white shadow-xl border border-purple-800/40 relative overflow-hidden">
-            <!-- Background Glow Effect -->
-            <div class="absolute -right-16 -top-16 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="absolute -left-16 -bottom-16 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="rounded-3xl bg-brand p-5 text-white shadow-md shadow-brand/20 relative overflow-hidden">
+            <div class="flex items-center justify-between gap-2 border-b border-white/15 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="flex h-2 w-2 rounded-full bg-blue-300 animate-pulse"></span>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-white/90">Kalkulasi Nilai Akhir</span>
+                </div>
+                <span class="text-[11px] font-medium text-blue-200">Total Bobot: {{ $kriteriaList->sum('bobot') }}%</span>
+            </div>
 
-            <div class="relative z-10 space-y-6">
-                <!-- Header Card & Main Score -->
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pb-5 border-b border-white/10">
-                    <div>
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/30 text-[11px] font-bold uppercase tracking-wider mb-2">
-                            <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
-                            Live Realtime Calculation
-                        </div>
-                        <h3 class="text-xl font-extrabold text-white tracking-tight">Kalkulasi Nilai Akhir Magang</h3>
-                        <p class="text-xs text-purple-200/80 mt-1 max-w-lg">
-                            Nilai akhir dihitung secara otomatis dan transparan berdasarkan akumulasi nilai berbobot dari seluruh kriteria di bawah ini.
-                        </p>
+            <div class="mt-4 flex items-center justify-between gap-4">
+                <div>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-white/70 block">Skor Akhir</span>
+                    <div class="flex items-baseline gap-1 mt-0.5">
+                        <span id="liveTotalScore" class="text-4xl sm:text-5xl font-black tracking-tight text-white">0</span>
+                        <span class="text-xs font-semibold text-white/70">/ 100</span>
                     </div>
-
-                    <!-- Main Score Highlight Badges -->
-                    <div class="flex items-center gap-5 bg-white/10 p-4 rounded-2xl border border-white/15 backdrop-blur-md shrink-0 w-full sm:w-auto justify-center">
-                        <div class="text-center px-2">
-                            <span class="text-[10px] uppercase tracking-wider text-purple-200 font-bold block">Skor Akhir</span>
-                            <div class="flex items-baseline justify-center gap-1">
-                                <span id="liveTotalScore" class="text-4xl sm:text-5xl font-black text-white tracking-tight">0</span>
-                                <span class="text-xs text-purple-300 font-semibold">/100</span>
-                            </div>
-                            <span class="text-[10px] text-purple-300/80 block mt-0.5 font-mono">Presisi: <span id="liveRawScore" class="font-bold text-purple-200">0.00</span></span>
-                        </div>
-                        <div class="h-12 w-px bg-white/20"></div>
-                        <div class="text-center px-2">
-                            <span class="text-[10px] uppercase tracking-wider text-purple-200 font-bold block">Predikat Mutu</span>
-                            <span id="livePredikatLetter" class="text-4xl sm:text-5xl font-black text-amber-300 tracking-tight block">-</span>
-                            <span id="livePredikatLabel" class="text-[11px] text-purple-200 font-semibold block mt-0.5 max-w-[130px] truncate">-</span>
-                        </div>
-                    </div>
+                    <span class="text-[10px] text-white/60 block mt-0.5 font-mono">Presisi: <span id="liveRawScore" class="font-semibold text-white/90">0.00</span></span>
                 </div>
 
-                <!-- Visual Meteran / Scale Predikat Nilai -->
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between text-xs font-semibold text-purple-200">
-                        <span class="flex items-center gap-1.5">
-                            <span>📊 Skala Predikat Nilai:</span>
-                        </span>
-                        <span class="text-[11px] text-purple-300 font-mono">
-                            Capaian Saat Ini: <b id="liveScorePercentText" class="text-white">0%</b>
-                        </span>
-                    </div>
+                <div class="h-12 w-px bg-white/20"></div>
 
-                    <!-- Interactive Segmented Bar -->
-                    <div class="grid grid-cols-10 h-3.5 rounded-full overflow-hidden border border-white/20 text-[9px] font-bold text-center">
-                        <!-- E: 0-59 (6 cols = 60%) -->
-                        <div class="col-span-6 bg-rose-500/50 flex items-center justify-center text-rose-200 border-r border-slate-900/50" title="E (Tidak Baik): 0 - 59">
-                            Tidak Baik (&lt;60)
-                        </div>
-                        <!-- D: 60-69 (1 col = 10%) -->
-                        <div class="col-span-1 bg-orange-500/50 flex items-center justify-center text-orange-200 border-r border-slate-900/50" title="D (Kurang Baik): 60 - 69">
-                            D
-                        </div>
-                        <!-- C: 70-79 (1 col = 10%) -->
-                        <div class="col-span-1 bg-amber-500/50 flex items-center justify-center text-amber-200 border-r border-slate-900/50" title="C (Cukup Baik): 70 - 79">
-                            C
-                        </div>
-                        <!-- B: 80-89 (1 col = 10%) -->
-                        <div class="col-span-1 bg-blue-500/50 flex items-center justify-center text-blue-200 border-r border-slate-900/50" title="B (Baik): 80 - 89">
-                            B
-                        </div>
-                        <!-- A: 90-100 (1 col = 10%) -->
-                        <div class="col-span-1 bg-emerald-500/60 flex items-center justify-center text-emerald-200" title="A (Sangat Baik): 90 - 100">
-                            A (&ge;90)
-                        </div>
-                    </div>
+                <div class="text-right">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-white/70 block">Predikat Mutu</span>
+                    <span id="livePredikatLetter" class="text-4xl sm:text-5xl font-black text-amber-300 tracking-tight block">-</span>
+                    <span id="livePredikatLabel" class="text-xs font-bold text-white/90 block mt-0.5 max-w-[130px] truncate">-</span>
+                </div>
+            </div>
 
-                    <!-- Active Progress Fill Bar -->
-                    <div class="h-2 bg-slate-800/80 rounded-full overflow-hidden border border-white/10">
-                        <div id="liveScoreProgressBar" class="h-full bg-gradient-to-r from-purple-400 via-indigo-300 to-emerald-400 transition-all duration-300 rounded-full" style="width: 0%"></div>
-                    </div>
-
-                    <!-- Range Marker Labels -->
-                    <div class="flex justify-between text-[10px] text-purple-300/70 font-mono font-medium pt-0.5">
-                        <span>0 pt (E)</span>
-                        <span>60 pt (D)</span>
-                        <span>70 pt (C)</span>
-                        <span>80 pt (B)</span>
-                        <span>90 pt (A)</span>
-                        <span>100 pt</span>
-                    </div>
+            <!-- Segmented Scale / Meteran Nilai -->
+            <div class="mt-4 space-y-1.5 pt-3 border-t border-white/15">
+                <div class="flex items-center justify-between text-[11px] text-white/80 font-medium">
+                    <span>Skala Predikat</span>
+                    <span class="font-mono">Capaian: <b id="liveScorePercentText" class="text-white">0%</b></span>
+                </div>
+                <div class="h-2 w-full overflow-hidden rounded-full bg-black/25">
+                    <div id="liveScoreProgressBar" class="h-full rounded-full bg-gradient-to-r from-brand-light via-indigo-400 to-amber-300 transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between text-[10px] text-white/60 font-medium pt-0.5">
+                    <span>&lt;60 (E)</span>
+                    <span>60-69 (D)</span>
+                    <span>70-79 (C)</span>
+                    <span>80-89 (B)</span>
+                    <span>&ge;90 (A)</span>
                 </div>
             </div>
         </div>
 
         <!-- Daftar Kriteria Penilaian -->
-        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-            <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
-                <div>
-                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                        <span>📝</span> Form Pengisian Skor Kriteria
-                    </h2>
-                    <p class="text-xs text-slate-500 mt-0.5">Geser slider atau ketikkan angka (0 - 100). Kontribusi poin ke nilai akhir akan langsung terkalkulasi secara realtime.</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold px-3 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
-                        Total Bobot: {{ $kriteriaList->sum('bobot') }}%
-                    </span>
-                </div>
+        <div class="space-y-3">
+            <div class="flex items-center justify-between">
+                <h2 class="text-base font-extrabold text-slate-900">Form Skor Kriteria</h2>
+                <span class="text-xs font-bold text-slate-500">{{ count($kriteriaList) }} Kriteria</span>
             </div>
 
-            <div class="p-6 divide-y divide-slate-100 space-y-6">
-                @foreach($kriteriaList as $index => $kriteria)
-                    @php
-                        $isPresensi = $kriteria->is_presensi || ($presensiScore['kriteria_presensi'] && $kriteria->id === $presensiScore['kriteria_presensi']->id);
-                        $initVal = $isPresensi ? $presensiScore['nilai_angka'] : old('nilai.' . $kriteria->id, 80);
-                        $initContrib = round(($initVal * $kriteria->bobot) / 100, 2);
-                    @endphp
-                    <div class="pt-6 first:pt-0">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            @foreach($kriteriaList as $index => $kriteria)
+                @php
+                    $isPresensi = $kriteria->is_presensi || ($presensiScore['kriteria_presensi'] && $kriteria->id === $presensiScore['kriteria_presensi']->id);
+                    $initVal = $isPresensi ? $presensiScore['nilai_angka'] : old('nilai.' . $kriteria->id, 80);
+                    $initContrib = round(($initVal * $kriteria->bobot) / 100, 2);
+                @endphp
+
+                <div class="rounded-2xl border border-slate-300 bg-white p-4 shadow-xs space-y-3">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-2">
-                                <label for="kriteria_{{ $kriteria->id }}" class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                    <span class="w-6 h-6 rounded-full {{ $isPresensi ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700' }} text-xs font-black flex items-center justify-center">
-                                        {{ $loop->iteration }}
-                                    </span>
+                                <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full {{ $isPresensi ? 'bg-blue-100 text-brand' : 'bg-brand-soft text-brand' }} text-xs font-black">
+                                    {{ $loop->iteration }}
+                                </span>
+                                <label for="input_{{ $kriteria->id }}" class="text-sm font-extrabold text-slate-900 truncate">
                                     {{ $kriteria->nama }}
                                 </label>
-                                @if($isPresensi)
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                        <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                            @if($isPresensi)
+                                <div class="mt-1">
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-bold text-brand border border-blue-200">
+                                        <svg class="w-3 h-3 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                         Objektif (Presensi Otomatis)
                                     </span>
-                                @endif
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
-                                    Bobot: <b>{{ $kriteria->bobot }}%</b>
-                                </span>
-                                <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 shadow-xs">
-                                    <span>Kontribusi:</span>
-                                    <span id="contrib_{{ $kriteria->id }}" class="font-mono font-black">+{{ number_format($initContrib, 2) }}</span>
-                                    <span class="text-[11px] text-emerald-600/80 font-normal">/ {{ $kriteria->bobot }} pt</span>
-                                </span>
-                            </div>
+                                </div>
+                            @endif
                         </div>
 
-                        @if($isPresensi)
-                            <!-- Card Rincian Objektif Presensi Digital -->
-                            <div class="mb-4 bg-gradient-to-br from-emerald-50/80 via-teal-50/50 to-slate-50 p-4 rounded-2xl border border-emerald-200/90 space-y-3">
-                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/60 pb-2.5">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                                            ⏱️
-                                        </div>
-                                        <div>
-                                            <h4 class="text-xs font-bold text-slate-800">Kalkulasi Menit Kerja Presensi Digital</h4>
-                                            <p class="text-[11px] text-slate-500">Nilai dihitung sistem secara otomatis & objektif dari rekaman presensi.</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-[11px] font-bold px-2.5 py-1 rounded-lg {{ $presensiScore['badge_class'] }} border">
-                                            Skor: {{ $presensiScore['skor_presensi'] }}% ({{ $presensiScore['predikat'] }})
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                                    <div class="bg-white/80 p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                                        <span class="text-slate-400 block text-[10px] uppercase font-semibold">Target Jam Kerja</span>
-                                        <span class="font-mono font-bold text-slate-800">{{ number_format($presensiScore['target_menit']) }} Menit</span>
-                                        <span class="text-[10px] text-slate-400 block">({{ $presensiScore['target_hari'] }} hari kerja &times; 480m)</span>
-                                    </div>
-                                    <div class="bg-white/80 p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                                        <span class="text-slate-400 block text-[10px] uppercase font-semibold">Total Realisasi</span>
-                                        <span class="font-mono font-bold text-emerald-700">{{ number_format($presensiScore['total_menit_realisasi']) }} Menit</span>
-                                        <span class="text-[10px] text-emerald-600 block">Capaian: {{ $presensiScore['skor_presensi'] }}%</span>
-                                    </div>
-                                    <div class="bg-white/80 p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                                        <span class="text-slate-400 block text-[10px] uppercase font-semibold">Hadir Penuh / Izin</span>
-                                        <span class="font-mono font-bold text-slate-700">{{ $presensiScore['total_hari_hadir'] }} Hadir &bull; {{ $presensiScore['total_hari_izin'] }} Izin</span>
-                                        <span class="text-[10px] text-blue-600 block">Izin resmi disetujui (480m)</span>
-                                    </div>
-                                    <div class="bg-white/80 p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                                        <span class="text-slate-400 block text-[10px] uppercase font-semibold">Lupa Checkout / Telat</span>
-                                        <span class="font-mono font-bold text-amber-700">{{ $presensiScore['total_hari_lupa_checkout'] }} Lupa (50%)</span>
-                                        <span class="text-[10px] text-rose-500 block">-{{ $presensiScore['menit_terlambat_potong'] }}m ({{ $presensiScore['total_hari_terlambat'] }}x telat)</span>
-                                    </div>
-                                </div>
-
-                                <!-- Collapsible Log Harian -->
-                                <details class="text-xs group">
-                                    <summary class="cursor-pointer font-semibold text-emerald-800 hover:text-emerald-900 select-none flex items-center gap-1.5 pt-1">
-                                        <svg class="w-3.5 h-3.5 transition-transform group-open:rotate-90 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
-                                        <span>Lihat Rincian Log Harian ({{ count($presensiScore['rincian_harian']) }} catatan)</span>
-                                    </summary>
-                                    <div class="mt-2.5 max-h-48 overflow-y-auto border border-emerald-200/80 rounded-xl bg-white shadow-inner">
-                                        <table class="w-full text-left text-[11px]">
-                                            <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 sticky top-0 font-bold">
-                                                <tr>
-                                                    <th class="px-3 py-1.5">Tanggal</th>
-                                                    <th class="px-2 py-1.5">Hari</th>
-                                                    <th class="px-2 py-1.5 text-center">Masuk</th>
-                                                    <th class="px-2 py-1.5 text-center">Keluar</th>
-                                                    <th class="px-2 py-1.5 text-center">Menit</th>
-                                                    <th class="px-3 py-1.5">Keterangan</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="divide-y divide-slate-100">
-                                                @forelse($presensiScore['rincian_harian'] as $rincian)
-                                                    <tr class="hover:bg-slate-50">
-                                                        <td class="px-3 py-1 font-mono text-slate-600">{{ \Carbon\Carbon::parse($rincian['tanggal'])->format('d/m/Y') }}</td>
-                                                        <td class="px-2 py-1 text-slate-600">{{ $rincian['hari'] }}</td>
-                                                        <td class="px-2 py-1 text-center font-mono font-medium">{{ $rincian['jam_masuk'] }}</td>
-                                                        <td class="px-2 py-1 text-center font-mono font-medium">{{ $rincian['jam_keluar'] }}</td>
-                                                        <td class="px-2 py-1 text-center font-mono font-bold {{ $rincian['menit'] > 0 ? 'text-emerald-700' : 'text-slate-400' }}">
-                                                            {{ $rincian['menit'] }}m
-                                                        </td>
-                                                        <td class="px-3 py-1 text-slate-600 truncate max-w-[200px]" title="{{ $rincian['keterangan'] }}">
-                                                            {{ $rincian['keterangan'] }}
-                                                        </td>
-                                                    </tr>
-                                                @empty
-                                                    <tr>
-                                                        <td colspan="6" class="px-3 py-3 text-center text-slate-400">Belum ada riwayat presensi.</td>
-                                                    </tr>
-                                                @endforelse
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </details>
-                            </div>
-                        @endif
-
-                        <!-- Input Nilai & Slider -->
-                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-center">
-                            <div class="sm:col-span-3 space-y-1.5">
-                                <input type="range" min="0" max="100" step="1" 
-                                    id="slider_{{ $kriteria->id }}" 
-                                    value="{{ $initVal }}" 
-                                    {{ $isPresensi ? 'disabled' : '' }}
-                                    class="w-full h-2.5 {{ $isPresensi ? 'bg-emerald-200 cursor-not-allowed opacity-60 accent-emerald-600' : 'bg-slate-200 cursor-pointer accent-purple-600' }} rounded-lg appearance-none"
-                                    oninput="syncScore({{ $kriteria->id }}, this.value)">
-                                <div class="flex justify-between text-[10px] text-slate-400 font-medium">
-                                    <span>0 (Tidak Baik)</span>
-                                    <span>60 (Kurang Baik)</span>
-                                    <span>70 (Cukup Baik)</span>
-                                    <span>80 (Baik)</span>
-                                    <span>90+ (Sangat Baik)</span>
-                                    <span>100</span>
-                                </div>
-                                <div class="text-[11px] text-slate-500 font-mono pt-0.5">
-                                    Formula: Skor (<span id="formula_score_{{ $kriteria->id }}" class="font-bold text-slate-700">{{ $initVal }}</span>) &times; Bobot ({{ $kriteria->bobot }}%) = <b id="formula_result_{{ $kriteria->id }}" class="text-emerald-700">+{{ number_format($initContrib, 2) }} poin</b>
-                                </div>
-                            </div>
-                            <div class="sm:col-span-1">
-                                <div class="relative">
-                                    <input type="number" 
-                                        name="nilai[{{ $kriteria->id }}]" 
-                                        id="input_{{ $kriteria->id }}" 
-                                        value="{{ $initVal }}" 
-                                        min="0" max="100" required 
-                                        {{ $isPresensi ? 'readonly' : '' }}
-                                        data-id="{{ $kriteria->id }}"
-                                        data-bobot="{{ $kriteria->bobot }}"
-                                        class="score-input w-full text-center py-2.5 px-3 text-lg font-black rounded-xl border {{ $isPresensi ? 'border-emerald-300 text-emerald-800 bg-emerald-50/70 cursor-not-allowed shadow-inner' : 'border-slate-200 text-slate-800 bg-slate-50/50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-purple-500 focus:border-transparent' }} transition shadow-xs"
-                                        oninput="syncSlider({{ $kriteria->id }}, this.value); calculateTotal();">
-                                </div>
-                                @if($isPresensi)
-                                    <p class="text-[11px] text-emerald-700 font-semibold flex items-center justify-center gap-1 mt-1">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
-                                        <span>Terkunci Objektif</span>
-                                    </p>
-                                @endif
-                                @error('nilai.' . $kriteria->id)
-                                    <p class="text-rose-500 text-[11px] mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
+                        <div class="shrink-0 text-right space-y-0.5">
+                            <span class="inline-block rounded-lg bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700">
+                                Bobot: {{ $kriteria->bobot }}%
+                            </span>
+                            <p class="text-[11px] font-bold text-brand">
+                                Kontribusi: <span id="contrib_{{ $kriteria->id }}">+{{ number_format($initContrib, 2) }}</span> pt
+                            </p>
                         </div>
                     </div>
-                @endforeach
-            </div>
+
+                    @if($isPresensi)
+                        <!-- Card Rincian Objektif Presensi Digital -->
+                        <div class="rounded-xl bg-brand-soft p-3 text-xs border border-blue-200/70 space-y-2.5">
+                            <div class="flex items-center justify-between border-b border-blue-200/50 pb-2">
+                                <div class="flex items-center gap-1.5 font-bold text-slate-800">
+                                    <span>⏱️</span>
+                                    <span>Kalkulasi Menit Presensi Digital</span>
+                                </div>
+                                <span class="rounded-md {{ $presensiScore['badge_class'] }} px-2 py-0.5 text-[11px] font-extrabold border">
+                                    {{ $presensiScore['skor_presensi'] }}% ({{ $presensiScore['predikat'] }})
+                                </span>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 text-[11px]">
+                                <div class="bg-white/80 p-2 rounded-lg border border-blue-100">
+                                    <span class="text-slate-500 block text-[10px]">Target Menit</span>
+                                    <span class="font-bold text-slate-800">{{ number_format($presensiScore['target_menit']) }} m</span>
+                                    <span class="text-[9px] text-slate-400 block">({{ $presensiScore['target_hari'] }} hari kerja)</span>
+                                </div>
+                                <div class="bg-white/80 p-2 rounded-lg border border-blue-100">
+                                    <span class="text-slate-500 block text-[10px]">Realisasi</span>
+                                    <span class="font-bold text-brand">{{ number_format($presensiScore['total_menit_realisasi']) }} m</span>
+                                    <span class="text-[9px] text-brand-light block font-semibold">Capaian: {{ $presensiScore['skor_presensi'] }}%</span>
+                                </div>
+                                <div class="bg-white/80 p-2 rounded-lg border border-blue-100">
+                                    <span class="text-slate-500 block text-[10px]">Hadir / Izin</span>
+                                    <span class="font-bold text-slate-800">{{ $presensiScore['total_hari_hadir'] }} Hadir • {{ $presensiScore['total_hari_izin'] }} Izin</span>
+                                </div>
+                                <div class="bg-white/80 p-2 rounded-lg border border-blue-100">
+                                    <span class="text-slate-500 block text-[10px]">Lupa CO / Telat</span>
+                                    <span class="font-bold text-amber-800">{{ $presensiScore['total_hari_lupa_checkout'] }} Lupa • {{ $presensiScore['total_hari_terlambat'] }} Telat</span>
+                                </div>
+                            </div>
+
+                            <!-- Collapsible Rincian Log Harian -->
+                            <details class="text-[11px] group">
+                                <summary class="cursor-pointer font-bold text-brand hover:underline select-none flex items-center gap-1 pt-1">
+                                    <svg class="w-3.5 h-3.5 transition-transform group-open:rotate-90 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                                    <span>Lihat Rincian Log Presensi ({{ count($presensiScore['rincian_harian']) }} data)</span>
+                                </summary>
+                                <div class="mt-2 max-h-40 overflow-y-auto rounded-lg border border-blue-200 bg-white">
+                                    <table class="w-full text-left text-[10px]">
+                                        <thead class="bg-slate-50 border-b border-slate-200 sticky top-0 font-bold text-slate-600">
+                                            <tr>
+                                                <th class="px-2 py-1">Tgl</th>
+                                                <th class="px-1 py-1 text-center">In</th>
+                                                <th class="px-1 py-1 text-center">Out</th>
+                                                <th class="px-1 py-1 text-center">Mnt</th>
+                                                <th class="px-2 py-1">Ket</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-100">
+                                            @forelse($presensiScore['rincian_harian'] as $rincian)
+                                                <tr>
+                                                    <td class="px-2 py-1 font-mono">{{ \Carbon\Carbon::parse($rincian['tanggal'])->format('d/m') }}</td>
+                                                    <td class="px-1 py-1 text-center font-mono">{{ $rincian['jam_masuk'] }}</td>
+                                                    <td class="px-1 py-1 text-center font-mono">{{ $rincian['jam_keluar'] }}</td>
+                                                    <td class="px-1 py-1 text-center font-mono font-bold {{ $rincian['menit'] > 0 ? 'text-brand' : 'text-slate-400' }}">{{ $rincian['menit'] }}m</td>
+                                                    <td class="px-2 py-1 truncate max-w-[120px]">{{ $rincian['keterangan'] }}</td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="5" class="p-2 text-center text-slate-400">Tidak ada riwayat.</td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </details>
+                        </div>
+                    @endif
+
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-center">
+                        <div class="sm:col-span-3 space-y-1.5">
+                            <input type="range" min="0" max="100" step="1" 
+                                id="slider_{{ $kriteria->id }}" 
+                                value="{{ $initVal }}" 
+                                {{ $isPresensi ? 'disabled' : '' }}
+                                class="w-full h-2 {{ $isPresensi ? 'bg-blue-200 cursor-not-allowed opacity-60 accent-brand' : 'bg-slate-200 cursor-pointer accent-brand' }} rounded-lg appearance-none"
+                                oninput="syncScore({{ $kriteria->id }}, this.value)">
+                            <div class="flex justify-between text-[10px] text-slate-400 font-medium">
+                                <span>0 (E)</span>
+                                <span>60 (D)</span>
+                                <span>70 (C)</span>
+                                <span>80 (B)</span>
+                                <span>90+ (A)</span>
+                                <span>100</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500 font-mono">
+                                Skor (<span id="formula_score_{{ $kriteria->id }}" class="font-bold text-slate-700">{{ $initVal }}</span>) &times; {{ $kriteria->bobot }}% = <b id="formula_result_{{ $kriteria->id }}" class="text-brand">+{{ number_format($initContrib, 2) }} poin</b>
+                            </div>
+                        </div>
+
+                        <div class="sm:col-span-1">
+                            <div class="relative">
+                                <input type="number" 
+                                    name="nilai[{{ $kriteria->id }}]" 
+                                    id="input_{{ $kriteria->id }}" 
+                                    value="{{ $initVal }}" 
+                                    min="0" max="100" required 
+                                    {{ $isPresensi ? 'readonly' : '' }}
+                                    data-id="{{ $kriteria->id }}"
+                                    data-bobot="{{ $kriteria->bobot }}"
+                                    class="score-input w-full rounded-xl border {{ $isPresensi ? 'border-blue-300 bg-brand-soft text-brand' : 'border-slate-300 bg-white text-slate-800 focus:border-brand focus:ring-2 focus:ring-brand/25' }} py-2 text-center text-lg font-black shadow-xs transition"
+                                    oninput="syncSlider({{ $kriteria->id }}, this.value); calculateTotal();">
+                            </div>
+                            @if($isPresensi)
+                                <p class="text-[10px] text-brand font-bold text-center mt-1">
+                                    Terkunci (Sistem)
+                                </p>
+                            @endif
+                            @error('nilai.' . $kriteria->id)
+                                <p class="text-rose-500 text-[11px] mt-1 text-center">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+            @endforeach
         </div>
 
         <!-- Rincian & Tabel Transparansi Kalkulasi Nilai Akhir -->
-        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-            <div class="p-5 border-b border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                    <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-                        <span class="p-1 rounded-lg bg-purple-100 text-purple-700 text-base">🧮</span>
-                        Rincian & Transparansi Kalkulasi Nilai Akhir
-                    </h3>
-                    <p class="text-xs text-slate-500 mt-0.5">
-                        Tabel ini memperlihatkan akumulasi matematis dari setiap kriteria terhadap perolehan nilai akhir peserta magang.
-                    </p>
-                </div>
-                <div class="text-xs bg-purple-50 text-purple-800 font-semibold px-3 py-1.5 rounded-xl border border-purple-200 shrink-0">
-                    Rumus: <span class="font-mono font-bold">Nilai Akhir = &Sigma; (Skor &times; Bobot%)</span>
-                </div>
+        <div class="rounded-2xl border border-slate-300 bg-white overflow-hidden shadow-xs">
+            <div class="p-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Transparansi Kalkulasi</h3>
+                <span class="text-[11px] font-bold text-brand">Rumus: &Sigma; (Skor &times; Bobot%)</span>
             </div>
-
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs text-slate-600">
-                    <thead class="bg-slate-50 border-b border-slate-200/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <table class="w-full text-left text-xs text-slate-700">
+                    <thead class="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-600">
                         <tr>
-                            <th class="px-5 py-3.5">No</th>
-                            <th class="px-5 py-3.5">Kriteria Evaluasi</th>
-                            <th class="px-5 py-3.5 text-center">Skor Input (0-100)</th>
-                            <th class="px-5 py-3.5 text-center">Bobot Kriteria</th>
-                            <th class="px-5 py-3.5 text-center">Perhitungan Terbobot</th>
-                            <th class="px-5 py-3.5 text-right">Poin Kontribusi</th>
+                            <th class="px-3 py-2">Kriteria</th>
+                            <th class="px-2 py-2 text-center">Skor</th>
+                            <th class="px-2 py-2 text-center">Bobot</th>
+                            <th class="px-3 py-2 text-right">Poin</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         @foreach($kriteriaList as $k)
-                            <tr class="hover:bg-purple-50/20 transition">
-                                <td class="px-5 py-3 font-bold text-slate-400">{{ $loop->iteration }}</td>
-                                <td class="px-5 py-3 font-bold text-slate-800">{{ $k->nama }}</td>
-                                <td class="px-5 py-3 text-center font-mono font-bold text-purple-700 text-sm">
+                            <tr>
+                                <td class="px-3 py-2 font-medium text-slate-800 truncate max-w-[150px]">{{ $k->nama }}</td>
+                                <td class="px-2 py-2 text-center font-mono font-bold text-slate-800">
                                     <span id="table_score_{{ $k->id }}">80</span>
                                 </td>
-                                <td class="px-5 py-3 text-center font-semibold text-slate-600">
-                                    {{ $k->bobot }}%
+                                <td class="px-2 py-2 text-center text-slate-500">{{ $k->bobot }}%</td>
+                                <td class="px-3 py-2 text-right font-mono font-bold text-brand">
+                                    +<span id="table_contrib_{{ $k->id }}">0.00</span>
                                 </td>
-                                <td class="px-5 py-3 text-center font-mono text-[11px] text-slate-500">
-                                    <span id="table_calc_{{ $k->id }}">80 &times; {{ $k->bobot }}%</span>
-                                </td>
-                                <td class="px-5 py-3 text-right font-mono font-bold text-emerald-600 text-sm">
-                                    +<span id="table_contrib_{{ $k->id }}">0.00</span> pt
-                                </td>
+                                <span id="table_calc_{{ $k->id }}" class="hidden"></span>
                             </tr>
                         @endforeach
                     </tbody>
-                    <tfoot class="bg-slate-50/90 border-t-2 border-purple-200 text-xs font-bold text-slate-800">
+                    <tfoot class="bg-slate-50 border-t border-slate-200 font-bold text-xs">
                         <tr>
-                            <td colspan="3" class="px-5 py-3.5 text-slate-700">Total Akumulasi Poin Terbobot:</td>
-                            <td class="px-5 py-3.5 text-center text-purple-700 font-black">{{ $kriteriaList->sum('bobot') }}%</td>
-                            <td class="px-5 py-3.5 text-center text-slate-500 font-mono text-[11px]">(Presisi Desimal)</td>
-                            <td class="px-5 py-3.5 text-right font-mono text-base font-black text-purple-900">
+                            <td colspan="2" class="px-3 py-2.5 text-slate-800">Total Akumulasi:</td>
+                            <td class="px-2 py-2.5 text-center text-slate-600">{{ $kriteriaList->sum('bobot') }}%</td>
+                            <td class="px-3 py-2.5 text-right font-mono font-black text-brand text-sm">
                                 <span id="tableTotalScore">0.00</span> pt
                             </td>
                         </tr>
-                        <tr class="bg-purple-100/70 border-t border-purple-200">
-                            <td colspan="4" class="px-5 py-3.5 text-purple-950 font-black text-sm">
-                                Nilai Akhir Magang (Dibulatkan) & Predikat:
-                            </td>
-                            <td colspan="2" class="px-5 py-3.5 text-right">
-                                <div class="inline-flex items-center gap-2">
-                                    <span class="text-xs font-semibold text-purple-700">Nilai Akhir:</span>
-                                    <span id="tableFinalScore" class="text-2xl font-black text-purple-950 font-mono">0</span>
-                                    <span class="text-xs text-purple-500">/ 100</span>
-                                    <span id="tablePredikatBadge" class="px-3 py-1 rounded-xl bg-purple-700 text-white font-black text-xs ml-1 shadow-xs">
+                        <tr class="bg-brand-soft/60 border-t border-indigo-100">
+                            <td colspan="2" class="px-3 py-2.5 text-brand font-extrabold">Nilai Akhir &amp; Predikat:</td>
+                            <td colspan="2" class="px-3 py-2.5 text-right">
+                                <div class="inline-flex items-center gap-1.5">
+                                    <span id="tableFinalScore" class="font-mono font-black text-slate-900 text-base">0</span>
+                                    <span class="text-[11px] text-slate-500">/100</span>
+                                    <span id="tablePredikatBadge" class="rounded-lg bg-brand px-2 py-0.5 text-xs font-bold text-white shadow-2xs">
                                         Predikat: -
                                     </span>
                                 </div>
@@ -432,51 +346,51 @@
         </div>
 
         <!-- Opsi Status Magang & Konfirmasi -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
-            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Status Masa Magang</h3>
+        <div class="rounded-2xl border border-slate-300 bg-white p-4 shadow-xs">
             <label class="flex items-start gap-3 cursor-pointer select-none">
-                <input type="checkbox" name="status_magang" value="selesai" checked class="mt-0.5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 w-4 h-4">
+                <input type="checkbox" name="status_magang" value="selesai" checked class="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand">
                 <div>
-                    <span class="text-xs font-bold text-slate-800">Tandai masa magang peserta sebagai "Selesai"</span>
-                    <p class="text-[11px] text-slate-500 mt-0.5">Mencentang opsi ini akan secara otomatis memperbarui status magang anak binaan menjadi telah menyelesaikan program magang.</p>
+                    <span class="text-xs font-extrabold text-slate-900">Tandai masa magang peserta sebagai "Selesai"</span>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Otomatis mengubah status magang peserta menjadi telah selesai program magang.</p>
                 </div>
             </label>
         </div>
 
-        <!-- Card Konfirmasi & Ringkasan Nilai Akhir Bawah -->
-        <div class="bg-slate-900 text-white p-5 sm:p-6 rounded-2xl shadow-lg border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-5">
-            <div class="flex items-center gap-4 w-full sm:w-auto">
-                <div class="w-14 h-14 rounded-2xl bg-purple-500/20 border border-purple-400/30 text-purple-300 flex items-center justify-center font-black text-3xl shrink-0 shadow-inner">
-                    <span id="bottomPredikatLetter">-</span>
-                </div>
+        <!-- Card Konfirmasi & Tombol Simpan Bawah -->
+        <div class="rounded-2xl bg-slate-900 text-white p-4 shadow-md space-y-3">
+            <div class="flex items-center justify-between gap-3">
                 <div>
-                    <div class="text-xs text-purple-300 font-semibold uppercase tracking-wider">Ringkasan Nilai Akhir Siap Disimpan:</div>
-                    <div class="flex items-center gap-2.5 mt-0.5">
-                        <span class="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight"><span id="bottomTotalScore">0</span> <span class="text-sm font-normal text-slate-400">/ 100</span></span>
-                        <span class="text-slate-500">&bull;</span>
-                        <span id="bottomPredikatLabel" class="text-xs sm:text-sm font-bold text-amber-300">-</span>
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Ringkasan Nilai</span>
+                    <div class="flex items-baseline gap-1 mt-0.5">
+                        <span id="bottomTotalScore" class="text-2xl font-black text-white font-mono">0</span>
+                        <span class="text-xs text-slate-400">/ 100</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Predikat Mutu</span>
+                    <div class="flex items-center gap-1.5 justify-end mt-0.5">
+                        <span id="bottomPredikatLetter" class="text-2xl font-black text-amber-300">-</span>
+                        <span id="bottomPredikatLabel" class="text-xs font-bold text-slate-200">(-)</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Tombol Aksi -->
-            <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-                <a href="{{ route('pembimbing.penilaian.index') }}" class="px-5 py-2.5 rounded-xl border border-slate-700 text-xs font-semibold text-slate-300 hover:bg-slate-800 transition text-center">
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                <a href="{{ route('pembimbing.penilaian.index') }}" class="rounded-xl border border-slate-700 bg-slate-800 py-2.5 text-center text-xs font-bold text-slate-300 hover:bg-slate-700 transition">
                     Batal
                 </a>
-                <button type="submit" class="flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 transition cursor-pointer flex items-center justify-center gap-2">
+                <button type="submit" class="rounded-xl bg-brand hover:bg-brand-dark py-2.5 text-center text-xs font-extrabold text-white shadow-xs transition active:scale-[.99] flex items-center justify-center gap-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                    <span>Simpan Penilaian Akhir</span>
+                    <span>Simpan Nilai</span>
                 </button>
             </div>
         </div>
 
     </form>
-
 </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
     function syncScore(id, val) {
         document.getElementById('input_' + id).value = val;
@@ -555,7 +469,7 @@
 
         // Predikat
         let letter = 'E';
-        let label = 'Tidak Baik (&lt; 60)';
+        let label = 'Tidak Baik (< 60)';
         let badgeBg = 'bg-rose-600 text-white';
         let letterColor = 'text-rose-400';
 
@@ -567,8 +481,8 @@
         } else if (finalScore >= 80) {
             letter = 'B';
             label = 'Baik';
-            badgeBg = 'bg-blue-600 text-white';
-            letterColor = 'text-blue-400';
+            badgeBg = 'bg-teal-600 text-white';
+            letterColor = 'text-teal-400';
         } else if (finalScore >= 70) {
             letter = 'C';
             label = 'Cukup Baik';
@@ -584,7 +498,6 @@
         const liveLetterEl = document.getElementById('livePredikatLetter');
         if (liveLetterEl) {
             liveLetterEl.innerText = letter;
-            liveLetterEl.className = 'text-4xl sm:text-5xl font-black tracking-tight block ' + letterColor;
         }
 
         const liveLabelEl = document.getElementById('livePredikatLabel');
@@ -592,15 +505,15 @@
 
         const tableBadgeEl = document.getElementById('tablePredikatBadge');
         if (tableBadgeEl) {
-            tableBadgeEl.className = 'px-3 py-1 rounded-xl font-black text-xs ml-1 shadow-xs ' + badgeBg;
-            tableBadgeEl.innerText = 'Predikat ' + letter + ' (' + label.replace('&lt;', '<') + ')';
+            tableBadgeEl.className = 'rounded-lg px-2 py-0.5 text-xs font-bold shadow-2xs ' + badgeBg;
+            tableBadgeEl.innerText = 'Predikat ' + letter + ' (' + label + ')';
         }
 
         const bottomLetterEl = document.getElementById('bottomPredikatLetter');
         if (bottomLetterEl) bottomLetterEl.innerText = letter;
 
         const bottomLabelEl = document.getElementById('bottomPredikatLabel');
-        if (bottomLabelEl) bottomLabelEl.innerHTML = label;
+        if (bottomLabelEl) bottomLabelEl.innerHTML = '(' + label + ')';
     }
 
     // Inisialisasi perhitungan saat halaman selesai dimuat
@@ -608,4 +521,4 @@
         calculateTotal();
     });
 </script>
-@endsection
+@endpush

@@ -24,9 +24,9 @@
                 <span class="text-lg text-slate-400" aria-hidden="true">›</span>
             </a>
         @else
-            <a href="{{ $url }}" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {{ $on ? 'bg-brand-soft text-brand' : 'text-slate-600 hover:bg-slate-50' }}">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ $icon }}"/></svg>
-                {{ $label }}
+            <a href="{{ $url }}" class="flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-bold transition {{ $on ? 'bg-brand text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50' }}">
+                <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ $icon }}"/></svg>
+                <span class="truncate">{{ $label }}</span>
             </a>
         @endif
     </li>

@@ -1,26 +1,25 @@
 {{-- resources/views/admin/cetak/partials/kop-surat.blade.php
-     Kop resmi mengikuti Surat_Persetujuan_PKL.docx
+     Kop resmi mengikuti format views/admin/presensi/cetak.blade.php
      Logo di: storage/app/public/images/logo-kalsel.png (butuh php artisan storage:link) --}}
 <style>
     .print-sheet { font-family: Arial, Helvetica, sans-serif; color:#000; background:#fff; }
-    .kop-table { width:100%; border-collapse:collapse; border-bottom:3px solid #000; padding-bottom:6px; }
-    .kop-table td { vertical-align:middle; padding:0 0 6px 0; border:0; }
-    .kop-logo { width:80px; text-align:center; }
-    .kop-logo img { width:70px; height:auto; }
-    .kop-text { text-align:center; line-height:1.35; }
-    .kop-text .l1 { font-size:13pt; text-transform:uppercase; }
-    .kop-text .l2 { font-size:15pt; font-weight:bold; text-transform:uppercase; }
-    .kop-text .l3 { font-size:9pt; }
-    .kop-spacer { border-bottom:1px solid #000; margin-top:2px; margin-bottom:14px; }
+    .kop-table { width:100%; border-collapse:collapse; border-bottom:2.5px solid #000; padding-bottom:5px; font-family: Arial, Helvetica, sans-serif; }
+    .kop-table td { vertical-align:middle; padding:0 0 5px 0; border:0; }
+    .kop-logo { width:75px; text-align:center; }
+    .kop-text { text-align:center; line-height:1.3; }
+    .kop-text .l1 { font-size:11pt; text-transform:uppercase; }
+    .kop-text .l2 { font-size:13pt; font-weight:bold; text-transform:uppercase; }
+    .kop-text .l3 { font-size:8pt; color:#222222; }
+    .kop-spacer { border-bottom:1px solid #000; margin-top:2px; margin-bottom:12px; }
 
     .judul-laporan { text-align:center; margin-bottom:12px; }
     .judul-laporan h3 { font-size:12pt; font-weight:bold; text-decoration:underline; text-transform:uppercase; margin:0; }
     .judul-laporan p { font-size:10pt; margin:3px 0 0; }
 
-    .info-table { font-size:10pt; margin-bottom:10px; border-collapse:collapse; }
-    .info-table td { padding:1px 0; vertical-align:top; border:0; }
-    .info-table td.k { width:120px; }
-    .info-table td.s { width:14px; }
+    .info-table { width:100%; font-size:10pt; margin-bottom:12px; border-collapse:collapse; }
+    .info-table td { padding:3.5px 0; vertical-align:middle; border:0; line-height:1.45; }
+    .info-table td.k { width:185px; white-space:nowrap; }
+    .info-table td.s { width:15px; text-align:center; white-space:nowrap; }
 
     .rekap-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:9.5pt; }
     .rekap-table th, .rekap-table td { border:1px solid #000; padding:4px 5px; vertical-align:top; word-wrap:break-word; }
@@ -40,17 +39,23 @@
     .ttd-space { height:70px; }
     .ttd-nama { font-weight:bold; text-decoration:underline; }
 
+    @if(!($isPdf ?? false))
     @media print {
         @page { size: A4 portrait; margin: 12mm 10mm 12mm 10mm; }
         body { background:#fff !important; }
         .print-sheet { border:0 !important; box-shadow:0 !important; padding:0 !important; border-radius:0 !important; }
     }
+    @endif
 </style>
 
 <table class="kop-table">
     <tr>
         <td class="kop-logo">
-            <img src="{{ asset('storage/images/logo-kalsel.png') }}" alt="Logo Provinsi Kalimantan Selatan">
+            @if(!empty($logoBase64))
+                <img src="{{ $logoBase64 }}" width="65" alt="Logo Kalsel">
+            @else
+                <img src="{{ asset('storage/images/logo-kalsel.png') }}" width="65" alt="Logo Kalsel">
+            @endif
         </td>
         <td class="kop-text">
             <div class="l1">Pemerintah Provinsi Kalimantan Selatan</div>

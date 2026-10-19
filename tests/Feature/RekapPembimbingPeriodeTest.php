@@ -134,10 +134,12 @@ class RekapPembimbingPeriodeTest extends TestCase
         $responseACetak = $this->actingAs($userA)->get(route('pembimbing.presensi.cetak', [
             'tanggal_mulai' => '2026-03-01',
             'tanggal_akhir' => '2026-03-31',
+            'format' => 'html',
         ]));
         $responseACetak->assertOk();
-        $responseACetak->assertSee('10 Mar 2026');
-        $responseACetak->assertDontSee('20 Mar 2026');
+        $responseACetak->assertSee('LAPORAN PRESENSI MAGANG');
+        $responseACetak->assertSee('1 Mar 2026 - 15 Mar 2026');
+        $responseACetak->assertDontSee('16 Mar 2026 - 31 Mar 2026');
 
         // Mentor B index & cetak: hanya boleh melihat presensiB, tidak boleh melihat presensiA
         $responseB = $this->actingAs($userB)->get(route('pembimbing.presensi.index'));
@@ -148,10 +150,12 @@ class RekapPembimbingPeriodeTest extends TestCase
         $responseBCetak = $this->actingAs($userB)->get(route('pembimbing.presensi.cetak', [
             'tanggal_mulai' => '2026-03-01',
             'tanggal_akhir' => '2026-03-31',
+            'format' => 'html',
         ]));
         $responseBCetak->assertOk();
-        $responseBCetak->assertSee('20 Mar 2026');
-        $responseBCetak->assertDontSee('10 Mar 2026');
+        $responseBCetak->assertSee('LAPORAN PRESENSI MAGANG');
+        $responseBCetak->assertSee('16 Mar 2026 - 31 Mar 2026');
+        $responseBCetak->assertDontSee('1 Mar 2026 - 15 Mar 2026');
     }
 
     public function test_pembimbing_rekap_aktivitas_only_includes_dates_within_placement_period(): void
@@ -232,6 +236,7 @@ class RekapPembimbingPeriodeTest extends TestCase
             'tanggal_mulai' => '2026-03-01',
             'tanggal_akhir' => '2026-03-31',
             'magang_id' => $intern->id,
+            'format' => 'html',
         ]));
         $responseACetak->assertOk();
         $responseACetak->assertSee('Pembuatan Modul Auth');
@@ -254,6 +259,7 @@ class RekapPembimbingPeriodeTest extends TestCase
             'tanggal_mulai' => '2026-03-01',
             'tanggal_akhir' => '2026-03-31',
             'magang_id' => $intern->id,
+            'format' => 'html',
         ]));
         $responseBCetak->assertOk();
         $responseBCetak->assertSee('Penyusunan SOP Karyawan');
@@ -297,7 +303,7 @@ class RekapPembimbingPeriodeTest extends TestCase
             'nilai' => 86,
         ]);
 
-        $response = $this->actingAs($userMentor)->get(route('pembimbing.penilaian.cetak'));
+        $response = $this->actingAs($userMentor)->get(route('pembimbing.penilaian.cetak', ['format' => 'html']));
         $response->assertOk();
         // Kolom A & B
         $response->assertSee('A');
@@ -380,6 +386,7 @@ class RekapPembimbingPeriodeTest extends TestCase
         $respPresensi = $this->actingAs($admin)->get(route('admin.presensi.cetak', [
             'tanggal_mulai' => '2026-03-01',
             'tanggal_akhir' => '2026-03-31',
+            'format' => 'html',
         ]));
         $respPresensi->assertOk();
         $respPresensi->assertSee('Ahmad Pembina');
@@ -389,6 +396,7 @@ class RekapPembimbingPeriodeTest extends TestCase
         $respAktivitas = $this->actingAs($admin)->get(route('admin.aktivitas.cetak', [
             'tanggal_mulai' => '2026-03-01',
             'tanggal_akhir' => '2026-03-31',
+            'format' => 'html',
         ]));
         $respAktivitas->assertOk();
         $respAktivitas->assertSee('Ahmad Pembina');

@@ -6,12 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\Aktivitas;
 use App\Models\Divisi;
 use App\Models\Pengaturan;
+use App\Services\PdfService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AktivitasValidasiController extends Controller
 {
+    public function __construct(
+        private PdfService $pdfService
+    ) {}
+
     /**
      * Mendapatkan daftar ID akun pengguna magang yang dibimbing oleh pembimbing yang sedang login.
      */
@@ -245,38 +250,101 @@ class AktivitasValidasiController extends Controller
         $groupedByRencana = Aktivitas::groupByRencana($aktivitas);
 
         $groupedByPeserta = [];
-        if (! $selectedMagang) {
+        $rekapPeserta = [];
+
+        if ($selectedMagang) {
+            $userObj = $selectedMagang->pengguna;
+            $userAktivitas = $aktivitas;
+            $rkList = Aktivitas::groupByRencana($userAktivitas);
+
+            usort($rkList, function ($a, $b) {
+                return ($a['id'] ?? 999999) <=> ($b['id'] ?? 999999);
+            });
+
+            $totalRowspan = 0;
+            foreach ($rkList as &$rk) {
+                $rk['rowspan'] = max(1, count($rk['items']));
+                $totalRowspan += $rk['rowspan'];
+            }
+            unset($rk);
+
+            if (! empty($rkList)) {
+                $rekapPeserta[] = [
+                    'magang' => $selectedMagang,
+                    'user' => $userObj,
+                    'nama_lengkap' => $selectedMagang->nama_lengkap ?? ($userObj?->username ?? 'Peserta'),
+                    'no_induk' => $selectedMagang->no_induk ?? '-',
+                    'divisi' => $selectedMagang->divisi->nama_divisi ?? '-',
+                    'instansi' => $selectedMagang->instansi_pendidikan ?? '-',
+                    'rencana_kerja_list' => $rkList,
+                    'total_rowspan' => max(1, $totalRowspan),
+                    'total' => $userAktivitas->count(),
+                ];
+            }
+        } else {
             $byUser = $aktivitas->groupBy('pengguna_id');
             foreach ($byUser as $userId => $userAktivitas) {
                 $userObj = $userAktivitas->first()->pengguna;
                 $magangObj = $userObj?->magang;
-                $groupedByPeserta[] = [
+                $rkList = Aktivitas::groupByRencana($userAktivitas);
+
+                usort($rkList, function ($a, $b) {
+                    return ($a['id'] ?? 999999) <=> ($b['id'] ?? 999999);
+                });
+
+                $totalRowspan = 0;
+                foreach ($rkList as &$rk) {
+                    $rk['rowspan'] = max(1, count($rk['items']));
+                    $totalRowspan += $rk['rowspan'];
+                }
+                unset($rk);
+
+                $pesertaData = [
                     'magang' => $magangObj,
                     'user' => $userObj,
                     'nama_lengkap' => $magangObj->nama_lengkap ?? ($userObj->username ?? 'Peserta'),
                     'no_induk' => $magangObj->no_induk ?? '-',
                     'divisi' => $magangObj->divisi->nama_divisi ?? '-',
                     'instansi' => $magangObj->instansi_pendidikan ?? '-',
-                    'grouped_rencana' => Aktivitas::groupByRencana($userAktivitas),
+                    'grouped_rencana' => $rkList,
+                    'rencana_kerja_list' => $rkList,
+                    'total_rowspan' => max(1, $totalRowspan),
                     'total' => $userAktivitas->count(),
                 ];
+
+                $groupedByPeserta[] = $pesertaData;
+                $rekapPeserta[] = $pesertaData;
             }
+
+            usort($rekapPeserta, function ($a, $b) {
+                return strcasecmp((string) $a['nama_lengkap'], (string) $b['nama_lengkap']);
+            });
         }
 
         $divisi = $selectedMagang?->divisi ?? $magangList->first()?->divisi ?? Divisi::first();
         $pengaturan = Pengaturan::getPengaturan();
 
-        return view('pembimbing.aktivitas.cetak', compact(
+        $viewData = compact(
             'pembimbing',
             'magangList',
             'selectedMagang',
             'aktivitas',
             'groupedByRencana',
             'groupedByPeserta',
+            'rekapPeserta',
             'stats',
             'periodeText',
             'divisi',
             'pengaturan'
-        ));
+        );
+
+        if ($request->input('format') === 'html') {
+            return view('pembimbing.aktivitas.cetak', $viewData);
+        }
+
+        $cleanPeriode = str_replace([' ', '/', '\\'], '-', $periodeText);
+        $filename = 'Laporan-Aktivitas-Magang-'.$cleanPeriode.'.pdf';
+
+        return $this->pdfService->renderView('pembimbing.aktivitas.cetak', $viewData, $filename, 'P');
     }
 }

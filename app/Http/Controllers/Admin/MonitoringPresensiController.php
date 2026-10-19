@@ -211,9 +211,24 @@ class MonitoringPresensiController extends Controller
                 $periodeMagangTeks = '-';
             }
 
-            // Pembimbing aktif
-            $pembimbingAktif = $magang->getPembimbingAt($endDate) ?? $magang->pembimbing;
-            $pembimbingNama = $pembimbingAktif ? $pembimbingAktif->nama_lengkap : '-';
+            // Pembimbing pada periode ini
+            $penempatanPembimbings = $magang->penempatanMagang
+                ->filter(function ($p) use ($startDate, $endDate) {
+                    $pStart = Carbon::parse($p->tanggal_mulai)->startOfDay();
+                    $pEnd = Carbon::parse($p->tanggal_selesai)->startOfDay();
+
+                    return $pStart->lte($endDate) && $pEnd->gte($startDate);
+                })
+                ->pluck('pembimbing')
+                ->filter();
+
+            if ($penempatanPembimbings->isNotEmpty()) {
+                $pembimbingNama = $penempatanPembimbings->pluck('nama_lengkap')->unique()->implode(', ');
+                $pembimbingAktif = $penempatanPembimbings->last();
+            } else {
+                $pembimbingAktif = $magang->getPembimbingAt($endDate) ?? $magang->pembimbing;
+                $pembimbingNama = $pembimbingAktif ? $pembimbingAktif->nama_lengkap : '-';
+            }
 
             // Hitung irisan tanggal evaluasi antara filter periode dan masa magang
             $effStart = $startDate->copy();

@@ -101,7 +101,7 @@
 </p>
 
 {{-- Skala contoh · 1-100 --}}
-<div class="mt-4 rounded-2xl bg-[#E7F6ED] p-4 text-slate-800 border border-emerald-200/50">
+<div class="mt-4 rounded-2xl bg-brand-soft p-4 text-slate-800 border border-blue-200/60">
     <p class="text-sm font-extrabold text-slate-900 mb-2">Skala contoh &middot; 1-100</p>
     <div class="space-y-1 text-xs text-slate-700 font-medium">
         <div class="flex items-center gap-2">
@@ -219,7 +219,9 @@
                         </div>
 
                         <div class="min-w-0 flex-1">
-                            <h3 class="truncate text-base font-extrabold text-slate-900">{{ $item->nama_lengkap }}</h3>
+                            <a href="{{ route('pembimbing.penilaian.show', $penilaian->id) }}" class="hover:underline">
+                                <h3 class="truncate text-base font-extrabold text-slate-900">{{ $item->nama_lengkap }}</h3>
+                            </a>
                             <p class="truncate text-xs text-slate-500">{{ $item->instansi_pendidikan ?? ($item->divisi->nama_divisi ?? '-') }}</p>
                             
                             <div class="mt-1 flex flex-wrap items-center gap-1.5">
@@ -255,10 +257,10 @@
 
                 <!-- 3 Action Buttons -->
                 <div class="mt-3.5 grid grid-cols-3 gap-2">
-                    <!-- Cetak / Lembar Nilai -->
-                    <a href="{{ route('pembimbing.penilaian.show', $penilaian->id) }}"
+                    <!-- Cetak Langsung mPDF -->
+                    <a href="{{ route('pembimbing.penilaian.cetak', ['penilaian_id' => $penilaian->id]) }}" target="_blank"
                         class="flex items-center justify-center rounded-xl border border-slate-300 bg-white py-2.5 text-slate-700 hover:bg-slate-50 transition shadow-xs"
-                        title="Cetak Lembar Nilai">
+                        title="Cetak Laporan Penilaian (PDF)">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.75A2.25 2.25 0 0015 1.5H9a2.25 2.25 0 00-2.25 2.25v3.456" />
                         </svg>

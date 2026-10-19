@@ -219,7 +219,9 @@ Route::middleware(['auth', 'role:magang'])
 
         // Lembar Penilaian Akhir
         Route::get('/penilaian', [PenilaianSayaController::class, 'index'])->name('penilaian.index');
+        Route::get('/penilaian/cetak', [PenilaianSayaController::class, 'cetak'])->name('penilaian.cetak');
 
         // Cetak Sertifikat Magang
         Route::get('/sertifikat', [SertifikatSayaController::class, 'index'])->name('sertifikat.index');
+        Route::get('/sertifikat/cetak', [SertifikatSayaController::class, 'cetak'])->name('sertifikat.cetak');
     });

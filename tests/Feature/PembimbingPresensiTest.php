@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Divisi;
 use App\Models\Magang;
 use App\Models\Pembimbing;
+use App\Models\PengajuanIzin;
 use App\Models\Pengguna;
 use App\Models\Presensi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -213,15 +214,27 @@ class PembimbingPresensiTest extends TestCase
             'mode_kerja' => 'onsite',
         ]);
 
+        // 1. Default request menghasilkan PDF stream langsung via mPDF
+        $pdfResponse = $this->actingAs($pembimbingUser)->get(route('pembimbing.presensi.cetak', [
+            'tanggal' => '2026-09-28',
+        ]));
+        $pdfResponse->assertStatus(200);
+        $pdfResponse->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+
+        // 2. Format HTML untuk pratinjau / verifikasi template blade
         $response = $this->actingAs($pembimbingUser)->get(route('pembimbing.presensi.cetak', [
             'tanggal' => '2026-09-28',
+            'format' => 'html',
         ]));
 
         $response->assertStatus(200);
         $response->assertViewIs('pembimbing.presensi.cetak');
-        $response->assertSee('Rekapitulasi Presensi Kehadiran Peserta Magang Binaan');
+        $response->assertSee('LAPORAN PRESENSI MAGANG');
         $response->assertSee('Peserta Cetak');
         $response->assertSee($pembimbing->nama_lengkap);
+        $response->assertSee('Periode (pada unit tersebut)');
+        $response->assertSee('TL');
     }
 
     public function test_unauthorized_user_cannot_access_pembimbing_presensi(): void
@@ -240,5 +253,112 @@ class PembimbingPresensiTest extends TestCase
 
         $forbiddenResponse = $this->actingAs($magangUser)->get(route('pembimbing.presensi.index'));
         $forbiddenResponse->assertStatus(403);
+    }
+
+    public function test_pembimbing_laporan_presensi_magang_format_tabel_lengkap_dan_informasi_unit(): void
+    {
+        [$pembimbingUser, $pembimbing] = $this->createPembimbingWithUser('pembimbing_rekap');
+        [$intern1User, $intern1] = $this->createIntern($pembimbing, 'Peserta Rekap Satu', 'rekap_1');
+        $divisi = $intern1->divisi;
+        $pembimbing->update(['divisi_id' => $divisi->id]);
+        $intern1->update([
+            'tanggal_mulai' => '2026-09-01',
+            'tanggal_selesai' => '2026-09-30',
+            'instansi_pendidikan' => 'Universitas Lambung Mangkurat',
+        ]);
+
+        [$intern2User, $intern2] = $this->createIntern($pembimbing, 'Peserta Rekap Dua', 'rekap_2');
+        $intern2->update([
+            'tanggal_mulai' => '2026-09-01',
+            'tanggal_selesai' => '2026-09-30',
+            'instansi_pendidikan' => 'Politeknik Negeri Banjarmasin',
+        ]);
+
+        // Intern 1: Hadir biasa pada 2026-09-01 (Senin)
+        Presensi::create([
+            'pengguna_id' => $intern1User->id,
+            'tanggal' => '2026-09-01',
+            'jam_masuk' => '07:55:00',
+            'jam_keluar' => '16:05:00',
+            'status' => 'hadir',
+            'mode_kerja' => 'onsite',
+        ]);
+
+        // Intern 1: Tugas Luar pada 2026-09-02 (Selasa)
+        Presensi::create([
+            'pengguna_id' => $intern1User->id,
+            'tanggal' => '2026-09-02',
+            'jam_masuk' => '08:00:00',
+            'jam_keluar' => '16:00:00',
+            'status' => 'hadir',
+            'mode_kerja' => 'tugas_luar',
+            'keterangan' => 'Tugas luar peliputan',
+        ]);
+
+        // Intern 1: Sakit pada 2026-09-03 (Rabu)
+        PengajuanIzin::create([
+            'pengguna_id' => $intern1User->id,
+            'jenis_izin' => 'sakit',
+            'tanggal_mulai' => '2026-09-03',
+            'tanggal_selesai' => '2026-09-03',
+            'alasan' => 'Demam tinggi',
+            'status_approval' => 'disetujui',
+        ]);
+
+        // Intern 2: Izin pada 2026-09-01 (Senin)
+        PengajuanIzin::create([
+            'pengguna_id' => $intern2User->id,
+            'jenis_izin' => 'izin',
+            'tanggal_mulai' => '2026-09-01',
+            'tanggal_selesai' => '2026-09-01',
+            'alasan' => 'Urusan kampus',
+            'status_approval' => 'disetujui',
+        ]);
+
+        // Intern 2: Hadir pada 2026-09-02 (Selasa)
+        Presensi::create([
+            'pengguna_id' => $intern2User->id,
+            'tanggal' => '2026-09-02',
+            'jam_masuk' => '07:50:00',
+            'jam_keluar' => '16:10:00',
+            'status' => 'hadir',
+            'mode_kerja' => 'onsite',
+        ]);
+
+        $response = $this->actingAs($pembimbingUser)->get(route('pembimbing.presensi.cetak', [
+            'tanggal_mulai' => '2026-09-01',
+            'tanggal_akhir' => '2026-09-30',
+            'format' => 'html',
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertViewIs('pembimbing.presensi.cetak');
+
+        // Judul laporan & periode
+        $response->assertSee('LAPORAN PRESENSI MAGANG');
+        $response->assertSee('Dari Tanggal 1 September 2026 Sampai Tanggal 30 September 2026');
+
+        // Informasi pembimbing dan unit kerja
+        $response->assertSee($pembimbing->nama_lengkap);
+        $response->assertSee($divisi->nama_divisi);
+        $response->assertSee('Waktu Cetak');
+        $response->assertSee('Cakupan Data');
+
+        // Format kolom tabel
+        $response->assertSee('No');
+        $response->assertSee('Nama');
+        $response->assertSee('Periode (pada unit tersebut)');
+        $response->assertSee('Hadir');
+        $response->assertSee('Sakit');
+        $response->assertSee('Izin');
+        $response->assertSee('Alfa');
+        $response->assertSee('TL');
+
+        // Data peserta dan ringkasan
+        $response->assertSee('Peserta Rekap Satu');
+        $response->assertSee('Peserta Rekap Dua');
+        $response->assertSee('1 Sep 2026 - 30 Sep 2026');
+        $response->assertSee('Ringkasan:');
+        $response->assertSee('Total Peserta 2');
     }
 }

@@ -195,52 +195,59 @@
             @include('admin.cetak.partials.kop-surat')
 
             <div class="text-center my-4">
-                <h3 class="text-base font-bold uppercase tracking-wider">Lembar Penilaian Akhir Magang</h3>
+                <h3 class="text-base font-bold uppercase tracking-wider">LEMBAR PENILAIAN AKHIR MAGANG</h3>
                 <p class="text-xs text-slate-600">Praktik Kerja Lapangan (PKL) / Program Internship</p>
             </div>
 
-            <table class="w-full text-xs mb-4">
-                <tr><td style="width:170px" class="py-1">Nama Peserta Magang</td><td>:</td><td><strong>{{ $penilaian->magang->nama_lengkap }}</strong></td></tr>
-                <tr><td class="py-1">Nomor Induk (NIS/NIM)</td><td>:</td><td>{{ $penilaian->magang->no_induk }}</td></tr>
-                <tr><td class="py-1">Asal Lembaga / Kampus</td><td>:</td><td>{{ $penilaian->magang->instansi_pendidikan }}</td></tr>
-                <tr><td class="py-1">Program Studi / Jurusan</td><td>:</td><td>{{ $penilaian->magang->jurusan ?? '-' }}</td></tr>
-                <tr><td class="py-1">Unit / Divisi Penempatan</td><td>:</td><td>{{ $penilaian->magang->divisi->nama_divisi ?? '-' }}</td></tr>
+            <table class="info-table" style="width: 100%; margin-bottom: 14px;">
+                <colgroup>
+                    <col style="width: 185px;">
+                    <col style="width: 15px;">
+                    <col>
+                </colgroup>
+                <tr><td class="k" style="width: 185px; white-space: nowrap;">Nama Peserta Magang</td><td class="s" style="width: 15px; text-align: center;">:</td><td><strong>{{ $penilaian->magang->nama_lengkap }}</strong></td></tr>
+                <tr><td class="k" style="white-space: nowrap;">Nomor Induk (NIS/NIM)</td><td class="s" style="text-align: center;">:</td><td>{{ $penilaian->magang->no_induk ?? '-' }}</td></tr>
+                <tr><td class="k" style="white-space: nowrap;">Asal Lembaga / Kampus</td><td class="s" style="text-align: center;">:</td><td>{{ $penilaian->magang->instansi_pendidikan ?? '-' }}</td></tr>
+                <tr><td class="k" style="white-space: nowrap;">Program Studi / Jurusan</td><td class="s" style="text-align: center;">:</td><td>{{ $penilaian->magang->jurusan ?? '-' }}</td></tr>
+                <tr><td class="k" style="white-space: nowrap;">Unit / Divisi Penempatan</td><td class="s" style="text-align: center;">:</td><td>{{ $penilaian->penempatanMagang->divisi->nama_divisi ?? ($penilaian->magang->divisi->nama_divisi ?? '-') }}</td></tr>
+                <tr>
+                    <td class="k" style="white-space: nowrap;">Periode Magang</td>
+                    <td class="s" style="text-align: center;">:</td>
+                    <td>
+                        @if($penilaian->magang->tanggal_mulai && $penilaian->magang->tanggal_selesai)
+                            {{ \Carbon\Carbon::parse($penilaian->magang->tanggal_mulai)->locale('id')->isoFormat('D MMMM Y') }} sampai {{ \Carbon\Carbon::parse($penilaian->magang->tanggal_selesai)->locale('id')->isoFormat('D MMMM Y') }}
+                        @else
+                            -
+                        @endif
+                    </td>
+                </tr>
             </table>
 
             <table class="nilai-table">
                 <thead>
                     <tr>
-                        <th style="width:6%">No</th>
+                        <th style="width:8%">No</th>
                         <th>Unsur / Kriteria Penilaian</th>
-                        <th style="width:12%">Bobot</th>
-                        <th style="width:18%">Nilai Angka</th>
-                        <th style="width:18%">Nilai Terbobot</th>
+                        <th style="width:25%">Nilai Angka</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($penilaian->detail as $index => $detail)
-                        @php
-                            $bobot = $detail->kriteria->bobot ?? 0;
-                            $terbobot = round(($detail->nilai * $bobot) / 100, 2);
-                        @endphp
                         <tr>
                             <td class="c">{{ $loop->iteration }}</td>
                             <td>{{ $detail->kriteria->nama ?? 'Kriteria #' . $detail->kriteria_id }}</td>
-                            <td class="c">{{ $bobot }}%</td>
                             <td class="c"><strong>{{ $detail->nilai }}</strong></td>
-                            <td class="c">{{ number_format($terbobot, 2) }}</td>
                         </tr>
                     @endforeach
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="3" style="text-align:right">TOTAL NILAI AKHIR</td>
-                        <td class="c">{{ $penilaian->total_nilai }}</td>
-                        <td class="c">/ 100</td>
+                        <td colspan="2" style="text-align:right">TOTAL NILAI AKHIR</td>
+                        <td class="c font-bold">{{ $penilaian->total_nilai }}</td>
                     </tr>
                     <tr>
-                        <td colspan="3" style="text-align:right">PREDIKAT KELULUSAN</td>
-                        <td colspan="2" class="c">{{ $penilaian->predikat }} ({{ $penilaian->keterangan_predikat }})</td>
+                        <td colspan="2" style="text-align:right">PREDIKAT KELULUSAN</td>
+                        <td class="c font-bold">{{ $penilaian->predikat }} ({{ $penilaian->keterangan_predikat }})</td>
                     </tr>
                 </tfoot>
             </table>
@@ -255,7 +262,7 @@
                         <div>NIP. {{ $penilaian->pembimbing->nip ?? '-' }}</div>
                     </td>
                     <td>
-                        <div>Banjarbaru, {{ \Carbon\Carbon::now()->isoFormat('D MMMM Y') }}</div>
+                        <div>Banjarbaru, {{ \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}</div>
                         <div>Kepala Dinas Kominfo</div>
                         <div class="ruang"></div>
                         <div class="nm">( .................................................. )</div>
@@ -266,10 +273,14 @@
         </div>
 
         {{-- Cetak Penilaian Action Button --}}
-        <div class="no-print pt-1">
+        <div class="no-print pt-1 flex flex-col sm:flex-row gap-2">
+            <a href="{{ route('magang.penilaian.cetak') }}" target="_blank"
+               class="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-brand hover:bg-brand-dark py-3.5 text-sm font-extrabold text-white shadow-xs transition active:scale-[.99]">
+                <span>📄 Cetak Lembar Penilaian (PDF)</span>
+            </a>
             <button type="button" onclick="window.print()"
-                    class="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white hover:bg-slate-50 py-3.5 text-sm font-extrabold text-slate-800 shadow-xs transition active:scale-[.99] cursor-pointer">
-                <span>🖨️ Cetak Penilaian</span>
+                    class="flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white hover:bg-slate-50 py-3.5 px-6 text-sm font-bold text-slate-800 shadow-xs transition active:scale-[.99] cursor-pointer">
+                <span>🖨️ Cetak Cepat</span>
             </button>
         </div>
     @endif

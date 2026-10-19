@@ -67,9 +67,6 @@
         <!-- Logo / Brand Header -->
         <div class="h-16 px-5 flex items-center justify-between border-b border-slate-100 bg-white">
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
-                    PD
-                </div>
                 <div>
                     <h2 class="text-sm font-bold text-slate-900 leading-tight">SEIRAMA</h2>
                     <span class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full mt-0.5">

@@ -4,9 +4,9 @@
     $bidangTtd = $divisi?->bidang_induk ?? $divisi;
 @endphp
 <style>
-    .ttd-dua { width:100%; margin-top:24px; border-collapse:collapse; page-break-inside:avoid; font-size:10.5pt; }
+    .ttd-dua { width:100%; margin-top:28px; border-collapse:collapse; page-break-inside:avoid; font-size:10pt; }
     .ttd-dua td { width:50%; text-align:center; vertical-align:top; line-height:1.4; padding:0 10px; border:0; }
-    .ttd-dua .ruang { height:70px; }
+    .ttd-dua .ruang { height:85px; }
     .ttd-dua .nm { font-weight:bold; text-decoration:underline; }
 </style>
 <table class="ttd-dua">
@@ -20,7 +20,7 @@
             <div>{{ $pembimbing->jabatan ?? ($user->magang?->pembimbing?->jabatan ?? 'Pembimbing Lapangan') }}</div>
         </td>
         <td>
-            <div>{{ $pengaturan->kota_surat ?? 'Banjarbaru' }}, {{ \Carbon\Carbon::now()->isoFormat('D MMMM Y') }}</div>
+            <div>{{ $pengaturan->kota_surat ?? 'Banjarbaru' }}, {{ \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}</div>
             <div>{{ $bidangTtd->jabatan_pimpinan ?? 'Kepala Bidang' }}</div>
             <div class="ruang"></div>
             <div class="nm">{{ $bidangTtd->nama_pimpinan ?? '( .................................................. )' }}</div>

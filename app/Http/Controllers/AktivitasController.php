@@ -8,6 +8,7 @@ use App\Models\Divisi;
 use App\Models\Pembimbing;
 use App\Models\Pengaturan;
 use App\Models\Pengguna;
+use App\Services\PdfService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,10 @@ use Illuminate\Support\Facades\DB;
 
 class AktivitasController extends Controller
 {
+    public function __construct(
+        private PdfService $pdfService
+    ) {}
+
     /**
      * Menampilkan daftar / rekap aktivitas harian magang.
      */
@@ -318,16 +323,31 @@ class AktivitasController extends Controller
 
         if ($tanggalMulai && $tanggalAkhir && strtotime($tanggalMulai) && strtotime($tanggalAkhir)) {
             $query->whereBetween('tanggal', [$tanggalMulai, $tanggalAkhir]);
-            $periodeText = Carbon::parse($tanggalMulai)->isoFormat('D MMMM Y').' s/d '.Carbon::parse($tanggalAkhir)->isoFormat('D MMMM Y');
+            $d1 = Carbon::parse($tanggalMulai)->locale('id');
+            $d2 = Carbon::parse($tanggalAkhir)->locale('id');
+
+            if ($d1->isSameDay($d2)) {
+                $periodeText = $d1->isoFormat('D MMMM Y');
+            } elseif ($d1->year === $d2->year && $d1->month === $d2->month) {
+                if ($d1->day === 1 && $d2->day === $d2->copy()->endOfMonth()->day) {
+                    $periodeText = $d1->isoFormat('MMMM Y');
+                } else {
+                    $periodeText = $d1->isoFormat('D').' sampai '.$d2->isoFormat('D MMMM Y');
+                }
+            } elseif ($d1->year === $d2->year) {
+                $periodeText = $d1->isoFormat('D MMMM').' sampai '.$d2->isoFormat('D MMMM Y');
+            } else {
+                $periodeText = $d1->isoFormat('D MMMM Y').' sampai '.$d2->isoFormat('D MMMM Y');
+            }
         } elseif ($bulan && preg_match('/^\d{4}-\d{2}$/', $bulan)) {
             $query->whereYear('tanggal', substr($bulan, 0, 4))
                 ->whereMonth('tanggal', substr($bulan, 5, 2));
-            $periodeText = Carbon::createFromFormat('Y-m-d', $bulan.'-01')->isoFormat('MMMM Y');
+            $periodeText = Carbon::createFromFormat('Y-m-d', $bulan.'-01')->locale('id')->isoFormat('MMMM Y');
         } else {
             $bulan = Carbon::today()->format('Y-m');
             $query->whereYear('tanggal', Carbon::today()->year)
                 ->whereMonth('tanggal', Carbon::today()->month);
-            $periodeText = Carbon::today()->isoFormat('MMMM Y');
+            $periodeText = Carbon::today()->locale('id')->isoFormat('MMMM Y');
         }
 
         if ($request->filled('status')) {
@@ -348,9 +368,19 @@ class AktivitasController extends Controller
         $pembimbing = $user->magang?->getPembimbingAt($targetDate) ?? $user->magang?->pembimbing ?? Pembimbing::first();
         $pengaturan = Pengaturan::getPengaturan();
 
-        // Mengelompokkan aktivitas berdasarkan Rencana Kerja (sesuai PRD alur-rekap.md)
+        // Mengelompokkan aktivitas berdasarkan Unit Penempatan (Divisi & Pembimbing) lalu Rencana Kerja
+        $penempatanList = Aktivitas::groupByPenempatanDanRencana($aktivitas, $user->magang, $divisi, $pembimbing);
         $groupedByRencana = Aktivitas::groupByRencana($aktivitas);
 
-        return view('aktivitas.cetak', compact('user', 'aktivitas', 'groupedByRencana', 'stats', 'periodeText', 'bulan', 'divisi', 'pembimbing', 'pengaturan'));
+        $viewData = compact('user', 'aktivitas', 'penempatanList', 'groupedByRencana', 'stats', 'periodeText', 'bulan', 'divisi', 'pembimbing', 'pengaturan');
+
+        if ($request->input('format') === 'html') {
+            return view('aktivitas.cetak', $viewData);
+        }
+
+        $cleanPeriode = str_replace([' ', '/', '\\'], '-', $periodeText);
+        $filename = 'Laporan-Aktivitas-'.$cleanPeriode.'.pdf';
+
+        return $this->pdfService->renderView('aktivitas.cetak', $viewData, $filename, 'P');
     }
 }

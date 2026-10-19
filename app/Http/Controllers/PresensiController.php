@@ -12,6 +12,7 @@ use App\Models\Pengaturan;
 use App\Models\Pengguna;
 use App\Models\Presensi;
 use App\Services\FaceVerificationService;
+use App\Services\PdfService;
 use App\Services\PresensiScoreService;
 use App\Support\StoresBase64Image;
 use Carbon\Carbon;
@@ -24,7 +25,10 @@ class PresensiController extends Controller
 {
     use StoresBase64Image;
 
-    public function __construct(private FaceVerificationService $face) {}
+    public function __construct(
+        private FaceVerificationService $face,
+        private PdfService $pdfService
+    ) {}
 
     /**
      * Menampilkan halaman utama presensi (form absen hari ini & riwayat presensi).
@@ -653,27 +657,60 @@ class PresensiController extends Controller
         /** @var Pengguna $user */
         $user = Auth::user();
 
-        // Eager load relasi magang
-        $user->load(['magang.divisi', 'magang.pembimbing']);
+        // Eager load relasi magang beserta penempatan untuk optimasi query
+        $user->load([
+            'magang.divisi',
+            'magang.pembimbing',
+            'magang.penempatanMagang.divisi',
+            'magang.penempatanMagang.pembimbing',
+        ]);
 
         $query = Presensi::where('pengguna_id', $user->id)->with('pengajuanTugasLuar');
 
-        $bulan = $request->input('bulan', Carbon::today()->format('Y-m'));
-        $tanggalMulai = $request->input('tanggal_mulai');
-        $tanggalAkhir = $request->input('tanggal_akhir');
+        $bulan = $request->input('bulan');
+        $tanggalMulai = $request->input('tanggal_mulai') ?? $request->input('tanggal_awal');
+        $tanggalAkhir = $request->input('tanggal_akhir') ?? $request->input('tanggal_selesai');
+
+        $isBulanSpecified = $bulan && preg_match('/^\d{4}-\d{2}$/', $bulan);
+        $bulanPresensiCount = 0;
+        if ($isBulanSpecified) {
+            $bulanPresensiCount = Presensi::where('pengguna_id', $user->id)
+                ->whereYear('tanggal', substr($bulan, 0, 4))
+                ->whereMonth('tanggal', substr($bulan, 5, 2))
+                ->count();
+        }
 
         if ($tanggalMulai && $tanggalAkhir && strtotime($tanggalMulai) && strtotime($tanggalAkhir)) {
             $query->whereBetween('tanggal', [$tanggalMulai, $tanggalAkhir]);
-            $periodeText = Carbon::parse($tanggalMulai)->isoFormat('D MMMM Y').' s/d '.Carbon::parse($tanggalAkhir)->isoFormat('D MMMM Y');
-        } elseif ($bulan && preg_match('/^\d{4}-\d{2}$/', $bulan)) {
+            $periodeText = Carbon::parse($tanggalMulai)->locale('id')->isoFormat('D MMMM Y').' s/d '.Carbon::parse($tanggalAkhir)->locale('id')->isoFormat('D MMMM Y');
+        } elseif ($tanggalMulai && strtotime($tanggalMulai)) {
+            $query->whereDate('tanggal', '>=', $tanggalMulai);
+            $periodeText = 'Mulai '.Carbon::parse($tanggalMulai)->locale('id')->isoFormat('D MMMM Y');
+        } elseif ($tanggalAkhir && strtotime($tanggalAkhir)) {
+            $query->whereDate('tanggal', '<=', $tanggalAkhir);
+            $periodeText = 'Sampai '.Carbon::parse($tanggalAkhir)->locale('id')->isoFormat('D MMMM Y');
+        } elseif ($isBulanSpecified && $bulanPresensiCount > 0) {
             $query->whereYear('tanggal', substr($bulan, 0, 4))
                 ->whereMonth('tanggal', substr($bulan, 5, 2));
-            $periodeText = Carbon::createFromFormat('Y-m', $bulan)->isoFormat('MMMM Y');
+            $periodeText = Carbon::createFromFormat('Y-m', $bulan)->locale('id')->isoFormat('MMMM Y');
         } else {
-            $bulan = Carbon::today()->format('Y-m');
-            $query->whereYear('tanggal', Carbon::today()->year)
-                ->whereMonth('tanggal', Carbon::today()->month);
-            $periodeText = Carbon::today()->isoFormat('MMMM Y');
+            // Tampilkan seluruh rekaman presensi selama periode magang peserta agar rekapan tidak kosong
+            $magang = $user->magang;
+            if ($magang && $magang->tanggal_mulai && $magang->tanggal_selesai) {
+                $periodeText = Carbon::parse($magang->tanggal_mulai)->locale('id')->isoFormat('D MMMM Y').' s/d '.Carbon::parse($magang->tanggal_selesai)->locale('id')->isoFormat('D MMMM Y');
+            } else {
+                $firstPresensi = Presensi::where('pengguna_id', $user->id)->min('tanggal');
+                $lastPresensi = Presensi::where('pengguna_id', $user->id)->max('tanggal');
+                if ($firstPresensi && $lastPresensi) {
+                    $periodeText = Carbon::parse($firstPresensi)->locale('id')->isoFormat('D MMMM Y').' s/d '.Carbon::parse($lastPresensi)->locale('id')->isoFormat('D MMMM Y');
+                } else {
+                    $periodeText = Carbon::today()->locale('id')->isoFormat('MMMM Y');
+                }
+            }
+        }
+
+        if ($request->filled('mode_kerja') && in_array($request->mode_kerja, ['onsite', 'wfh', 'tugas_luar'])) {
+            $query->where('mode_kerja', $request->mode_kerja);
         }
 
         $presensi = $query->orderBy('tanggal', 'asc')
@@ -691,12 +728,42 @@ class PresensiController extends Controller
             'total_tugas_luar' => $totalTL,
         ];
 
-        $targetDate = $tanggalMulai ?? ($bulan ? Carbon::parse($bulan.'-01')->toDateString() : Carbon::today()->toDateString());
+        $targetDate = $tanggalMulai ?? ($isBulanSpecified ? Carbon::parse($bulan.'-01')->toDateString() : Carbon::today()->toDateString());
         $divisi = $user->magang?->getDivisiAt($targetDate) ?? $user->magang?->divisi ?? Divisi::first();
-        $pembimbing = $user->magang?->pembimbing ?? Pembimbing::first();
+        $pembimbing = $user->magang?->getPembimbingAt($targetDate) ?? $user->magang?->pembimbing ?? Pembimbing::first();
         $pengaturan = Pengaturan::getPengaturan();
 
-        return view('presensi.cetak', compact('user', 'presensi', 'stats', 'periodeText', 'bulan', 'divisi', 'pembimbing', 'pengaturan'));
+        $magang = $user->magang;
+        $periodeMagangText = ($magang && $magang->tanggal_mulai && $magang->tanggal_selesai)
+            ? Carbon::parse($magang->tanggal_mulai)->locale('id')->isoFormat('D MMMM Y').' s/d '.Carbon::parse($magang->tanggal_selesai)->locale('id')->isoFormat('D MMMM Y')
+            : $periodeText;
+
+        $nomorSurat = $request->input('nomor_surat', '');
+        $tanggalSurat = Carbon::now()->locale('id')->isoFormat('D MMMM Y');
+
+        $viewData = compact(
+            'user',
+            'magang',
+            'presensi',
+            'stats',
+            'periodeText',
+            'periodeMagangText',
+            'bulan',
+            'divisi',
+            'pembimbing',
+            'pengaturan',
+            'nomorSurat',
+            'tanggalSurat'
+        );
+
+        if ($request->input('format') === 'html') {
+            return view('presensi.cetak', $viewData);
+        }
+
+        $cleanPeriode = str_replace([' ', '/', '\\'], '-', $periodeText);
+        $filename = 'Laporan-Presensi-'.$cleanPeriode.'.pdf';
+
+        return $this->pdfService->renderView('presensi.cetak', $viewData, $filename, 'P');
     }
 
     /**

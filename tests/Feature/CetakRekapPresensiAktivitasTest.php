@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Aktivitas;
+use App\Models\AktivitasDetail;
 use App\Models\DetailPenilaian;
 use App\Models\Divisi;
 use App\Models\KriteriaPenilaian;
@@ -223,22 +224,36 @@ class CetakRekapPresensiAktivitasTest extends TestCase
             'status' => 'hadir',
         ]);
 
+        // 1. Default request menghasilkan PDF stream langsung via mPDF
+        $pdfResponse = $this->actingAs($magang)->get(route('presensi.cetak', [
+            'bulan' => Carbon::today()->format('Y-m'),
+        ]));
+        $pdfResponse->assertStatus(200);
+        $pdfResponse->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+
+        // 2. Format HTML untuk pratinjau / verifikasi template blade
         $response = $this->actingAs($magang)->get(route('presensi.cetak', [
             'bulan' => Carbon::today()->format('Y-m'),
+            'format' => 'html',
         ]));
 
         $response->assertStatus(200);
-        $response->assertSee('LEMBAR REKAPITULASI PRESENSI KEHADIRAN');
+        $response->assertSee('Laporan Rekapitulasi Presensi Siswa/Mahasiswa Magang');
         $response->assertSee('Ahmad Magang');
         $response->assertSee('MG-2026-001');
         $response->assertSee('Teknik Informatika');
         $response->assertSee('Universitas Indonesia');
         $response->assertSee('Teknologi Informasi');
-        $response->assertSee('08:05 WITA');
         $response->assertSee('Dr. Pembimbing, M.Kom');
-        $response->assertSee('Ir. H. Budi Santoso, M.T.');
-        $response->assertSee('Pembimbing Lapangan');
-        $response->assertSee('Kepala Sub-Bagian IT');
+        $response->assertSee('08:05 WITA');
+        $response->assertSee('Sehubungan dengan telah berakhirnya pelaksanaan kegiatan magang');
+        $response->assertSee('Hormat kami,');
+        $response->assertSee('(tanda tangan dan stempel)');
+
+        $pengaturan = Pengaturan::getPengaturan();
+        $response->assertSee($pengaturan->nama_kepala_dinas);
+        $response->assertSee($pengaturan->jabatan_kepala_dinas);
     }
 
     public function test_magang_can_access_personal_aktivitas_cetak(): void
@@ -254,12 +269,29 @@ class CetakRekapPresensiAktivitasTest extends TestCase
             'status' => 'approve',
         ]);
 
+        // 1. Default request menghasilkan PDF stream langsung via mPDF
+        $pdfResponse = $this->actingAs($magang)->get(route('aktivitas.cetak', [
+            'bulan' => Carbon::today()->format('Y-m'),
+        ]));
+        $pdfResponse->assertStatus(200);
+        $pdfResponse->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+
+        // 2. Format HTML untuk pratinjau / verifikasi template blade
         $response = $this->actingAs($magang)->get(route('aktivitas.cetak', [
             'bulan' => Carbon::today()->format('Y-m'),
+            'format' => 'html',
         ]));
 
         $response->assertStatus(200);
-        $response->assertSee('LEMBAR REKAPITULASI AKTIVITAS HARIAN');
+        $response->assertSee('LAPORAN AKTIVITAS HARIAN MAGANG');
+        $response->assertSee('No');
+        $response->assertSee('Unit Penempatan');
+        $response->assertSee('Pembimbing');
+        $response->assertSee('Rencana Kerja');
+        $response->assertSee('Hari / Tanggal');
+        $response->assertSee('Progres');
+        $response->assertSee('Periode Magang');
         $response->assertSee('Ahmad Magang');
         $response->assertSee('Membuat unit test untuk fitur laporan cetak');
         $response->assertSee('100%');
@@ -267,6 +299,85 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         $response->assertSee('Ir. H. Budi Santoso, M.T.');
         $response->assertSee('Pembimbing Lapangan');
         $response->assertSee('Kepala Sub-Bagian IT');
+        $response->assertDontSee('Catatan:');
+    }
+
+    public function test_magang_aktivitas_cetak_renders_merged_cells_per_rencana_kerja(): void
+    {
+        $magangUser = $this->createMagangUser();
+        $magang = $magangUser->magang;
+
+        $rk1 = RencanaKerja::create([
+            'magang_id' => $magang->id,
+            'judul' => 'Pengembangan Fitur Rekap',
+            'deskripsi' => 'Deskripsi fitur rekap',
+            'status' => 'aktif',
+        ]);
+
+        $rk2 = RencanaKerja::create([
+            'magang_id' => $magang->id,
+            'judul' => 'Pengujian dan Evaluasi',
+            'status' => 'aktif',
+        ]);
+
+        // 2 progress items under RK 1
+        $a1 = Aktivitas::create([
+            'pengguna_id' => $magangUser->id,
+            'tanggal' => '2026-10-12',
+            'isi' => 'Analisis format cetak',
+            'status' => 'approve',
+        ]);
+        AktivitasDetail::create([
+            'aktivitas_id' => $a1->id,
+            'rencana_kerja_id' => $rk1->id,
+            'progres' => 'Analisis format cetak',
+        ]);
+
+        $a2 = Aktivitas::create([
+            'pengguna_id' => $magangUser->id,
+            'tanggal' => '2026-10-13',
+            'isi' => 'Implementasi blade template',
+            'status' => 'approve',
+        ]);
+        AktivitasDetail::create([
+            'aktivitas_id' => $a2->id,
+            'rencana_kerja_id' => $rk1->id,
+            'progres' => 'Implementasi blade template',
+        ]);
+
+        // 1 progress item under RK 2
+        $a3 = Aktivitas::create([
+            'pengguna_id' => $magangUser->id,
+            'tanggal' => '2026-10-14',
+            'isi' => 'Menjalankan unit test',
+            'status' => 'pending',
+        ]);
+        AktivitasDetail::create([
+            'aktivitas_id' => $a3->id,
+            'rencana_kerja_id' => $rk2->id,
+            'progres' => 'Menjalankan unit test',
+        ]);
+
+        $response = $this->actingAs($magangUser)->get(route('aktivitas.cetak', [
+            'tanggal_mulai' => '2026-10-01',
+            'tanggal_akhir' => '2026-10-31',
+            'format' => 'html',
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertSee('LAPORAN AKTIVITAS HARIAN MAGANG');
+        $response->assertSee('Pengembangan Fitur Rekap');
+        $response->assertSee('Deskripsi fitur rekap');
+        $response->assertSee('Pengujian dan Evaluasi');
+        $response->assertSee('Analisis format cetak');
+        $response->assertSee('Implementasi blade template');
+        $response->assertSee('Menjalankan unit test');
+        $response->assertSee('(Menunggu Validasi)');
+
+        // Unit Penempatan & Pembimbing same -> rowspan="3"
+        $response->assertSee('rowspan="3"', false);
+        // RK 1 has 2 items -> rowspan="2"
+        $response->assertSee('rowspan="2"', false);
     }
 
     public function test_presensi_index_shows_cetak_button(): void
@@ -690,5 +801,265 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         $response->assertSee('Pembimbing Alpha');
         $response->assertSee('Intern Dua Lengkap');
         $response->assertSee('Pembimbing Beta');
+    }
+
+    public function test_pembimbing_cetak_presensi_aktivitas_dan_penilaian_render_pdf_dan_html(): void
+    {
+        $magangUser = $this->createMagangUser();
+        $pembimbingUser = Pengguna::where('role', 'pembimbing')->first();
+
+        // 1. Pembimbing Presensi Cetak
+        $pdfPresensi = $this->actingAs($pembimbingUser)->get(route('pembimbing.presensi.cetak'));
+        $pdfPresensi->assertStatus(200);
+        $pdfPresensi->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $pdfPresensi->getContent());
+
+        $htmlPresensi = $this->actingAs($pembimbingUser)->get(route('pembimbing.presensi.cetak', ['format' => 'html']));
+        $htmlPresensi->assertStatus(200);
+        $htmlPresensi->assertSee('LAPORAN PRESENSI MAGANG');
+        $htmlPresensi->assertSee('Ahmad Magang');
+
+        // 2. Pembimbing Aktivitas Cetak
+        $pdfAktivitas = $this->actingAs($pembimbingUser)->get(route('pembimbing.aktivitas.cetak'));
+        $pdfAktivitas->assertStatus(200);
+        $pdfAktivitas->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $pdfAktivitas->getContent());
+
+        $htmlAktivitas = $this->actingAs($pembimbingUser)->get(route('pembimbing.aktivitas.cetak', ['format' => 'html']));
+        $htmlAktivitas->assertStatus(200);
+        $htmlAktivitas->assertSee('REKAPITULASI LOG AKTIVITAS HARIAN');
+
+        // 3. Pembimbing Penilaian Cetak
+        $pdfPenilaian = $this->actingAs($pembimbingUser)->get(route('pembimbing.penilaian.cetak'));
+        $pdfPenilaian->assertStatus(200);
+        $pdfPenilaian->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $pdfPenilaian->getContent());
+
+        $htmlPenilaian = $this->actingAs($pembimbingUser)->get(route('pembimbing.penilaian.cetak', ['format' => 'html']));
+        $htmlPenilaian->assertStatus(200);
+        $htmlPenilaian->assertSee('REKAPITULASI PENILAIAN AKHIR MAGANG BINAAN');
+        $htmlPenilaian->assertSee('Ahmad Magang');
+    }
+
+    public function test_pembimbing_aktivitas_cetak_renders_merged_cells_per_peserta_and_rencana_kerja(): void
+    {
+        $magangUser = $this->createMagangUser();
+        $magang = $magangUser->magang;
+        $magang->update(['nama_lengkap' => 'Hasnia Magang']);
+        $pembimbingUser = Pengguna::where('role', 'pembimbing')->first();
+
+        // Buat 3 rencana kerja
+        $rk1 = RencanaKerja::create([
+            'magang_id' => $magang->id,
+            'judul' => 'Penyusunan Desain UI',
+            'status' => 'aktif',
+        ]);
+        $rk2 = RencanaKerja::create([
+            'magang_id' => $magang->id,
+            'judul' => 'Implementasi Modul Auth',
+            'status' => 'aktif',
+        ]);
+        $rk3 = RencanaKerja::create([
+            'magang_id' => $magang->id,
+            'judul' => 'Pengujian Sistem',
+            'status' => 'aktif',
+        ]);
+
+        // Aktivitas Hari 1: RK 1
+        $a1 = Aktivitas::create([
+            'pengguna_id' => $magangUser->id,
+            'tanggal' => '2026-10-12',
+            'isi' => 'Membuat mockup wireframe Figma',
+            'status' => 'approve',
+        ]);
+        AktivitasDetail::create([
+            'aktivitas_id' => $a1->id,
+            'rencana_kerja_id' => $rk1->id,
+            'progres' => 'Membuat mockup wireframe Figma',
+        ]);
+
+        // Aktivitas Hari 2: RK 1
+        $a2 = Aktivitas::create([
+            'pengguna_id' => $magangUser->id,
+            'tanggal' => '2026-10-13',
+            'isi' => 'Revisi komponen UI dan ikon',
+            'status' => 'approve',
+        ]);
+        AktivitasDetail::create([
+            'aktivitas_id' => $a2->id,
+            'rencana_kerja_id' => $rk1->id,
+            'progres' => 'Revisi komponen UI dan ikon',
+        ]);
+
+        // Aktivitas Hari 3: RK 2
+        $a3 = Aktivitas::create([
+            'pengguna_id' => $magangUser->id,
+            'tanggal' => '2026-10-14',
+            'isi' => 'Membuat controller dan request auth',
+            'status' => 'approve',
+        ]);
+        AktivitasDetail::create([
+            'aktivitas_id' => $a3->id,
+            'rencana_kerja_id' => $rk2->id,
+            'progres' => 'Membuat controller dan request auth',
+        ]);
+
+        // Aktivitas Hari 4: RK 3
+        $a4 = Aktivitas::create([
+            'pengguna_id' => $magangUser->id,
+            'tanggal' => '2026-10-15',
+            'isi' => 'Menjalankan automated test',
+            'status' => 'approve',
+        ]);
+        AktivitasDetail::create([
+            'aktivitas_id' => $a4->id,
+            'rencana_kerja_id' => $rk3->id,
+            'progres' => 'Menjalankan automated test',
+        ]);
+
+        // Request format HTML
+        $response = $this->actingAs($pembimbingUser)->get(route('pembimbing.aktivitas.cetak', [
+            'tanggal_mulai' => '2026-10-01',
+            'tanggal_akhir' => '2026-10-31',
+            'format' => 'html',
+        ]));
+
+        $response->assertStatus(200);
+
+        // Header tabel: No, Nama, Rencana Kerja, Hari / Tanggal, Progres
+        $response->assertSee('No');
+        $response->assertSee('Nama');
+        $response->assertSee('Rencana Kerja');
+        $response->assertSee('Hari / Tanggal');
+        $response->assertSee('Progres');
+
+        // Merged cells:
+        // Peserta Hasnia total 4 rows (rowspan="4")
+        $response->assertSee('rowspan="4"', false);
+        // RK 1 memiliki 2 item (rowspan="2")
+        $response->assertSee('rowspan="2"', false);
+
+        // Pastikan nama dan seluruh progres pekerjaan tercantum
+        $response->assertSee('Hasnia Magang');
+        $response->assertSee('Penyusunan Desain UI');
+        $response->assertSee('Membuat mockup wireframe Figma');
+        $response->assertSee('Revisi komponen UI dan ikon');
+        $response->assertSee('Implementasi Modul Auth');
+        $response->assertSee('Membuat controller dan request auth');
+        $response->assertSee('Pengujian Sistem');
+        $response->assertSee('Menjalankan automated test');
+
+        // Request format PDF (default)
+        $pdfResponse = $this->actingAs($pembimbingUser)->get(route('pembimbing.aktivitas.cetak', [
+            'tanggal_mulai' => '2026-10-01',
+            'tanggal_akhir' => '2026-10-31',
+        ]));
+        $pdfResponse->assertStatus(200);
+        $pdfResponse->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+    }
+
+    public function test_magang_can_access_penilaian_cetak_pdf_and_html(): void
+    {
+        $magangUser = $this->createMagangUser();
+        $magang = $magangUser->magang;
+
+        $k1 = KriteriaPenilaian::create([
+            'nama' => 'Inisiatif dan Kreativitas',
+            'bobot' => 50,
+            'is_presensi' => false,
+            'is_active' => true,
+        ]);
+        $k2 = KriteriaPenilaian::create([
+            'nama' => 'Kedisiplinan',
+            'bobot' => 50,
+            'is_presensi' => false,
+            'is_active' => true,
+        ]);
+
+        $pembimbing = Pembimbing::first();
+
+        $penilaian = Penilaian::create([
+            'magang_id' => $magang->id,
+            'pembimbing_id' => $pembimbing->id,
+            'total_nilai' => 88,
+            'predikat' => 'B',
+            'keterangan_predikat' => 'Baik',
+        ]);
+
+        DetailPenilaian::create([
+            'penilaian_id' => $penilaian->id,
+            'kriteria_id' => $k1->id,
+            'nilai' => 86,
+        ]);
+        DetailPenilaian::create([
+            'penilaian_id' => $penilaian->id,
+            'kriteria_id' => $k2->id,
+            'nilai' => 90,
+        ]);
+
+        // 1. PDF stream
+        $pdfResponse = $this->actingAs($magangUser)->get(route('magang.penilaian.cetak'));
+        $pdfResponse->assertStatus(200);
+        $pdfResponse->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+
+        // 2. HTML format
+        $htmlResponse = $this->actingAs($magangUser)->get(route('magang.penilaian.cetak', ['format' => 'html']));
+        $htmlResponse->assertStatus(200);
+        $htmlResponse->assertSee('LEMBAR PENILAIAN AKHIR MAGANG');
+        $htmlResponse->assertSee('Inisiatif dan Kreativitas');
+        $htmlResponse->assertSee('Kedisiplinan');
+        $htmlResponse->assertSee('86');
+        $htmlResponse->assertSee('90');
+        $htmlResponse->assertSee('TOTAL NILAI AKHIR');
+        $htmlResponse->assertSee('88');
+        $htmlResponse->assertSee('PREDIKAT KELULUSAN');
+        $htmlResponse->assertSee('Baik');
+        // Bobot dan Nilai Terbobot tidak disertakan dalam tabel
+        $htmlResponse->assertDontSee('<th>Bobot</th>', false);
+        $htmlResponse->assertDontSee('<th>Nilai Terbobot</th>', false);
+        $htmlResponse->assertDontSee('Nilai Terbobot');
+    }
+
+    public function test_magang_can_stream_pdf_sertifikat_kelulusan_a4_landscape(): void
+    {
+        $magangUser = $this->createMagangUser();
+        $magang = $magangUser->magang;
+
+        $pembimbing = Pembimbing::first();
+
+        $penilaian = Penilaian::create([
+            'magang_id' => $magang->id,
+            'pembimbing_id' => $pembimbing->id,
+            'total_nilai' => 92,
+            'predikat' => 'A',
+            'keterangan_predikat' => 'Sangat Baik',
+        ]);
+
+        // 1. PDF Stream via mPDF
+        $pdfResponse = $this->actingAs($magangUser)->get(route('magang.sertifikat.cetak'));
+        $pdfResponse->assertStatus(200);
+        $pdfResponse->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+
+        // 2. HTML format for preview and content inspection
+        $htmlResponse = $this->actingAs($magangUser)->get(route('magang.sertifikat.cetak', ['format' => 'html']));
+        $htmlResponse->assertStatus(200);
+        $htmlResponse->assertSee('SERTIFIKAT');
+        $htmlResponse->assertSee($magang->nama_lengkap);
+        $htmlResponse->assertSee('Praktik Kerja Lapangan (PKL)');
+        $htmlResponse->assertSee('Dinas Komunikasi dan Informatika');
+        $htmlResponse->assertSee('A');
+        $htmlResponse->assertSee('background-color: #ebf1ff', false);
+    }
+
+    public function test_magang_cannot_access_sertifikat_cetak_without_penilaian(): void
+    {
+        $magangUser = $this->createMagangUser();
+
+        $response = $this->actingAs($magangUser)->get(route('magang.sertifikat.cetak'));
+        $response->assertRedirect(route('magang.sertifikat.index'));
+        $response->assertSessionHas('error');
     }
 }

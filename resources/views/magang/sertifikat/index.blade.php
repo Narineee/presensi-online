@@ -125,46 +125,35 @@
             margin: 0 !important;
             padding: 0 !important;
         }
-        .cert-corner-tl-print {
+        .corner-tl-print {
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
-            width: 55mm !important;
-            z-index: 2 !important;
+            width: 60mm !important;
+            z-index: 1 !important;
         }
-        .cert-corner-br-print {
+        .corner-br-print {
             position: absolute !important;
-            bottom: 0 !important;
-            right: 0 !important;
-            width: 76mm !important;
-            z-index: 2 !important;
+            top: 138mm !important;
+            left: 212mm !important;
+            width: 85mm !important;
+            z-index: 1 !important;
         }
-        .cert-inner-box-print {
+        .cert-card-print {
             position: absolute !important;
-            inset: 11mm 12mm !important;
+            top: 9mm !important;
+            left: 11mm !important;
+            width: 275mm !important;
+            height: 192mm !important;
             background: #ffffff !important;
+            border: 3.5px solid #bae6fd !important;
+            box-sizing: border-box !important;
             z-index: 5 !important;
-            box-sizing: border-box !important;
         }
-        .cert-frame-print {
-            position: absolute !important;
-            inset: 3.5mm !important;
-            border: 1.2mm solid #bae6fd !important;
-            box-shadow: 0 0 0 0.5mm #e0f2fe !important;
-            z-index: 6 !important;
-            pointer-events: none !important;
-            background: transparent !important;
-        }
-        .cert-content-print {
-            position: relative !important;
-            z-index: 10 !important;
+        .section-table-print {
+            width: 100% !important;
             height: 100% !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: space-between !important;
-            padding: 10mm 16mm 9mm 16mm !important;
-            box-sizing: border-box !important;
-            text-align: center !important;
+            border-collapse: collapse !important;
         }
     }
 </style>
@@ -218,18 +207,24 @@
                     <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800">
                         ✓ Siap Dicetak
                     </span>
-                    <span class="hidden sm:inline-block text-xs font-semibold text-slate-500">
-                        Format resmi: Biru Emas Modern
-                    </span>
                 </div>
 
-                <button type="button" onclick="window.print()"
-                        class="inline-flex items-center gap-2 px-4 py-2.5 bg-brand hover:bg-brand/90 text-white rounded-xl text-xs sm:text-sm font-extrabold shadow-sm transition active:scale-[.98] cursor-pointer">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24-1.076-.641-2.135-1.196-3.14m0 0A12.001 12.001 0 0112 3c3.059 0 5.842 1.154 7.961 3.039m-1.196 3.14a12.016 12.016 0 01-1.196 3.14m0 0A11.96 11.96 0 0112 15a11.96 11.96 0 01-5.569-1.171M6 16.5v2.25A2.25 2.25 0 008.25 21h7.5A2.25 2.25 0 0018 18.75V16.5" />
-                    </svg>
-                    <span>Cetak Sertifikat (A4)</span>
-                </button>
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('magang.sertifikat.cetak') }}?v={{ time() }}" target="_blank"
+                       class="inline-flex items-center gap-2 px-4 py-2.5 bg-brand hover:bg-brand/90 text-white rounded-xl text-xs sm:text-sm font-extrabold shadow-sm transition active:scale-[.98]">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                        </svg>
+                        <span>📄 Cetak Sertifikat (PDF)</span>
+                    </a>
+                    <button type="button" onclick="window.print()"
+                            class="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs sm:text-sm font-bold shadow-xs transition active:scale-[.98] cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24-1.076-.641-2.135-1.196-3.14m0 0A12.001 12.001 0 0112 3c3.059 0 5.842 1.154 7.961 3.039m-1.196 3.14a12.016 12.016 0 01-1.196 3.14m0 0A11.96 11.96 0 0112 15a11.96 11.96 0 01-5.569-1.171M6 16.5v2.25A2.25 2.25 0 008.25 21h7.5A2.25 2.25 0 0018 18.75V16.5" />
+                        </svg>
+                        <span>Cetak Cepat</span>
+                    </button>
+                </div>
             </div>
 
             {{-- Responsive Scrollable Wrapper (Memastikan landscape tampak utuh di mobile) --}}
@@ -256,61 +251,61 @@
                             <div class="cert-content-screen">
                                 {{-- 1. Header Judul --}}
                                 <div>
-                                    <h1 class="text-3xl sm:text-4xl md:text-5xl font-black uppercase tracking-[0.18em] text-[#0c3773] drop-shadow-2xs">
+                                    <h1 style="font-size: clamp(1.8rem, 4vw, 2.85rem); font-weight: 900; letter-spacing: 0.18em; color: #0c3773; line-height: 1; text-transform: uppercase;">
                                         SERTIFIKAT
                                     </h1>
-                                    <p class="text-xs sm:text-sm md:text-base font-semibold text-[#0c3773] mt-1 sm:mt-1.5 tracking-wide">
+                                    <p style="font-size: clamp(0.85rem, 1.8vw, 1.15rem); font-weight: 700; color: #0c3773; margin-top: 6px; letter-spacing: 0.05em;">
                                         Diberikan kepada:
                                     </p>
                                 </div>
 
                                 {{-- 2. Nama Peserta (Font Cursive Emas) --}}
-                                <div class="my-1 sm:my-2">
-                                    <p class="font-script-cert text-3xl sm:text-4xl md:text-5xl lg:text-[56px] text-[#c48a28] leading-tight drop-shadow-2xs">
-                                        ({{ $penilaian->magang->nama_lengkap }})
+                                <div style="margin: 4px 0;">
+                                    <p class="font-script-cert" style="font-size: clamp(2.2rem, 5vw, 3.85rem); color: #c48a28; line-height: 1.1;">
+                                        ({{ $penilaian->magang->nama_lengkap ?? ($magang->nama_lengkap ?? 'Peserta') }})
                                     </p>
                                 </div>
 
                                 {{-- 3. Paragraf Kegiatan PKL / Magang --}}
-                                <div class="max-w-[82%] mx-auto space-y-1">
-                                    <p class="text-[11px] sm:text-[13px] md:text-[15px] font-semibold text-[#0c3773] leading-relaxed">
+                                <div style="max-width: 86%; margin: 0 auto;">
+                                    <p style="font-size: clamp(0.75rem, 1.5vw, 1.05rem); font-weight: 600; color: #0c3773; line-height: 1.6; margin: 0;">
                                         Telah melaksanakan Kegiatan Praktik Kerja Lapangan (PKL) di {{ $pengaturan->nama_instansi ?? 'Dinas Komunikasi dan Informatika' }} Provinsi Kalimantan Selatan
                                     </p>
-                                    <p class="text-[11px] sm:text-[13px] md:text-[15px] font-semibold text-[#0c3773] leading-relaxed">
+                                    <p style="font-size: clamp(0.75rem, 1.5vw, 1.05rem); font-weight: 600; color: #0c3773; line-height: 1.6; margin: 2px 0 0 0;">
                                         Pada Tanggal {{ $tanggalMulai }} sampai dengan {{ $tanggalSelesai }}
                                     </p>
                                 </div>
 
                                 {{-- 4. Paragraf Evaluasi Nilai Akhir --}}
-                                <div class="my-1 sm:my-1.5 space-y-0.5">
-                                    <p class="text-[11px] sm:text-[13px] md:text-[14px] font-medium text-[#0c3773]">
+                                <div style="margin: 4px 0;">
+                                    <p style="font-size: clamp(0.75rem, 1.4vw, 1rem); font-weight: 500; color: #0c3773; margin: 0;">
                                         Berdasarkan hasil evaluasi, yang bersangkutan memperoleh nilai akhir sebesar
                                     </p>
-                                    <p class="text-base sm:text-xl md:text-2xl font-black text-[#0c3773] tracking-wide">
+                                    <p style="font-size: clamp(1.15rem, 2.5vw, 1.75rem); font-weight: 900; color: #0c3773; margin: 3px 0 0 0; letter-spacing: 0.05em;">
                                         [{{ $penilaian->predikat }} ({{ $penilaian->keterangan_predikat }})]
                                     </p>
                                 </div>
 
                                 {{-- 5. Bagian Tanda Tangan (Sebelah Kanan Bawah Sesuai Desain) --}}
                                 <div class="w-full flex justify-end">
-                                    <div class="relative z-10 w-[42%] max-w-[320px] text-center space-y-0.5 text-[#0c3773]">
-                                        <p class="text-[10px] sm:text-[12px] md:text-[13px] font-medium leading-tight">
+                                    <div class="relative z-10 w-[44%] max-w-[340px] text-center text-[#0c3773]" style="line-height: 1.4;">
+                                        <p style="font-size: clamp(0.7rem, 1.3vw, 0.95rem); font-weight: 500; margin: 0;">
                                             {{ $pengaturan->kota_surat ?? 'Banjarbaru' }}, {{ $tanggalCetak }}
                                         </p>
-                                        <p class="text-[10px] sm:text-[12px] md:text-[13px] font-bold italic leading-tight">
+                                        <p style="font-size: clamp(0.7rem, 1.3vw, 0.95rem); font-weight: 700; font-style: italic; margin: 2px 0 0 0;">
                                             Kepala {{ $pengaturan->nama_instansi ?? 'Dinas Komunikasi dan Informatika' }}
                                         </p>
 
-                                        {{-- Ruang Tanda Tangan --}}
-                                        <div class="h-10 sm:h-12 md:h-14"></div>
+                                        {{-- Ruang Tanda Tangan (Luas 75px untuk TTD & Stempel) --}}
+                                        <div style="height: clamp(55px, 8vw, 80px); line-height: 1;">&nbsp;</div>
 
-                                        <p class="text-[11px] sm:text-[13px] md:text-[14px] font-bold leading-tight">
-                                            [{{ $pengaturan->nama_kepala_dinas ?? 'Nama Kepala Dinas' }}]
+                                        <p style="font-size: clamp(0.8rem, 1.5vw, 1.1rem); font-weight: 700; margin: 0; text-decoration: underline;">
+                                            {{ $pengaturan->nama_kepala_dinas ?? 'Nama Kepala Dinas' }}
                                         </p>
-                                        <p class="text-[10px] sm:text-[11px] md:text-[12px] font-medium leading-tight">
+                                        <p style="font-size: clamp(0.68rem, 1.2vw, 0.9rem); font-weight: 500; margin: 2px 0 0 0;">
                                             {{ $pengaturan->pangkat_golongan ?? 'Pembina Utama Muda' }}
                                         </p>
-                                        <p class="text-[9px] sm:text-[10px] md:text-[11px] font-medium leading-tight text-slate-600">
+                                        <p style="font-size: clamp(0.65rem, 1.1vw, 0.85rem); font-weight: 500; color: #475569; margin: 2px 0 0 0;">
                                             NIP. {{ $pengaturan->nip_kepala_dinas ?? '-' }}
                                         </p>
                                     </div>
@@ -322,92 +317,124 @@
                 </div>
             </div>
 
-            {{-- Helper note di bawah preview --}}
-            <p class="text-[11px] text-slate-500 text-center">
-                💡 Klik tombol <strong>Cetak Sertifikat</strong> untuk mencetak langsung atau menyimpan dalam format PDF dengan ukuran standar A4 Landscape.
-            </p>
+            {{-- Helper note & bottom action di bawah preview --}}
+            <div class="pt-1 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5">
+                <a href="{{ route('magang.sertifikat.cetak') }}?v={{ time() }}" target="_blank"
+                   class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand hover:bg-brand/90 text-white rounded-xl text-xs font-extrabold shadow-sm transition active:scale-[.98] w-full sm:w-auto">
+                    <span>📄 Unduh Sertifikat (PDF)</span>
+                </a>
+            </div>
         </div>
 
         {{-- 2. PRINT SHEET (Pixel-Perfect A4 Landscape Print Version) --}}
         <div class="cert-print-sheet hidden font-sans-cert">
 
             {{-- Dekorasi Sudut Kiri Atas (bahan-1.png) --}}
-            <img src="{{ asset('images/sertifikat/bahan-1.png') }}"
-                 alt="Dekorasi Sudut Kiri Atas"
-                 class="cert-corner-tl-print">
+            <div class="corner-tl-print">
+                <img src="{{ asset('images/sertifikat/bahan-1.png') }}"
+                     alt="Dekorasi Sudut Kiri Atas"
+                     style="width: 60mm;">
+            </div>
 
             {{-- Dekorasi Sudut Kanan Bawah (bahan-2.png) --}}
-            <img src="{{ asset('images/sertifikat/bahan-2.png') }}"
-                 alt="Dekorasi Sudut Kanan Bawah"
-                 class="cert-corner-br-print">
+            <div class="corner-br-print">
+                <img src="{{ asset('images/sertifikat/bahan-2.png') }}"
+                     alt="Dekorasi Sudut Kanan Bawah"
+                     style="width: 85mm;">
+            </div>
 
-            {{-- Kotak Putih Sertifikat (Menimpa bahan dekorasi sudut sehingga TTD & teks tidak tertutup) --}}
-            <div class="cert-inner-box-print">
-                {{-- Bingkai Garis Biru Muda --}}
-                <div class="cert-frame-print"></div>
+            {{-- Kotak Putih Sertifikat Utama --}}
+            <div class="cert-card-print">
+                <div style="padding: 2.5mm; height: 189mm;">
+                    <div style="border: 1.5px solid #e0f2fe; height: 184mm; padding: 6mm 10mm 4mm 10mm; box-sizing: border-box; text-align: center;">
 
-                {{-- Isi Konten Sertifikat --}}
-                <div class="cert-content-print">
-                    {{-- 1. Header Judul --}}
-                    <div style="margin-top: 4mm;">
-                        <h1 style="font-size: 38pt; font-weight: 900; letter-spacing: 0.18em; color: #0c3773; margin: 0; line-height: 1;">
-                            SERTIFIKAT
-                        </h1>
-                        <p style="font-size: 13pt; font-weight: 600; color: #0c3773; margin-top: 3mm; letter-spacing: 0.05em;">
-                            Diberikan kepada:
-                        </p>
-                    </div>
+                        <table class="section-table-print" style="height: 100%;">
+                            {{-- 1. Header Judul --}}
+                            <tr>
+                                <td style="text-align: center; vertical-align: top; height: 26mm;">
+                                    <h1 style="font-size: 42pt; font-weight: 900; letter-spacing: 0.2em; color: #0c3773; margin: 0; line-height: 1; text-transform: uppercase;">
+                                        SERTIFIKAT
+                                    </h1>
+                                    <p style="font-size: 14pt; font-weight: bold; color: #0c3773; margin: 3.5mm 0 0 0; letter-spacing: 0.05em;">
+                                        Diberikan kepada:
+                                    </p>
+                                </td>
+                            </tr>
 
-                    {{-- 2. Nama Peserta (Font Cursive Emas) --}}
-                    <div style="margin: 3mm 0;">
-                        <p class="font-script-cert" style="font-size: 46pt; color: #c48a28; margin: 0; line-height: 1.1;">
-                            ({{ $penilaian->magang->nama_lengkap }})
-                        </p>
-                    </div>
+                            {{-- 2. Nama Peserta (Font Cursive Emas Great Vibes) --}}
+                            <tr>
+                                <td style="text-align: center; vertical-align: middle; height: 32mm;">
+                                    <p style="font-family: 'Great Vibes', 'Brush Script MT', cursive; font-size: 58pt; color: #c48a28; margin: 0; line-height: 1;">
+                                        ({{ $penilaian->magang->nama_lengkap ?? ($magang->nama_lengkap ?? 'Peserta') }})
+                                    </p>
+                                </td>
+                            </tr>
 
-                    {{-- 3. Paragraf Kegiatan PKL / Magang --}}
-                    <div style="max-width: 82%; margin: 0 auto; line-height: 1.6;">
-                        <p style="font-size: 12pt; font-weight: 600; color: #0c3773; margin: 0;">
-                            Telah melaksanakan Kegiatan Praktik Kerja Lapangan (PKL) di {{ $pengaturan->nama_instansi ?? 'Dinas Komunikasi dan Informatika' }} Provinsi Kalimantan Selatan
-                        </p>
-                        <p style="font-size: 12pt; font-weight: 600; color: #0c3773; margin: 1mm 0 0 0;">
-                            Pada Tanggal {{ $tanggalMulai }} sampai dengan {{ $tanggalSelesai }}
-                        </p>
-                    </div>
+                            {{-- 3. Paragraf Kegiatan PKL / Magang --}}
+                            <tr>
+                                <td style="text-align: center; vertical-align: middle; height: 26mm;">
+                                    <div style="font-size: 13.5pt; font-weight: 600; color: #0c3773; line-height: 1.6; width: 88%; margin: 0 auto;">
+                                        Telah melaksanakan Kegiatan Praktik Kerja Lapangan (PKL) di {{ $pengaturan->nama_instansi ?? 'Dinas Komunikasi dan Informatika' }} Provinsi Kalimantan Selatan<br>
+                                        Pada Tanggal {{ $tanggalMulai }} sampai dengan {{ $tanggalSelesai }}
+                                    </div>
+                                </td>
+                            </tr>
 
-                    {{-- 4. Paragraf Evaluasi Nilai Akhir --}}
-                    <div style="margin: 2mm 0;">
-                        <p style="font-size: 11.5pt; font-weight: 500; color: #0c3773; margin: 0;">
-                            Berdasarkan hasil evaluasi, yang bersangkutan memperoleh nilai akhir sebesar
-                        </p>
-                        <p style="font-size: 18pt; font-weight: 900; color: #0c3773; margin: 1.5mm 0 0 0; letter-spacing: 0.04em;">
-                            [{{ $penilaian->predikat }} ({{ $penilaian->keterangan_predikat }})]
-                        </p>
-                    </div>
+                            {{-- 4. Paragraf Evaluasi Nilai Akhir --}}
+                            <tr>
+                                <td style="text-align: center; vertical-align: middle; height: 24mm;">
+                                    <p style="font-size: 13pt; font-weight: 500; color: #0c3773; margin: 0;">
+                                        Berdasarkan hasil evaluasi, yang bersangkutan memperoleh nilai akhir sebesar
+                                    </p>
+                                    <p style="font-size: 22pt; font-weight: 900; color: #0c3773; margin: 1.5mm 0 0 0; letter-spacing: 0.05em;">
+                                        [{{ $penilaian->predikat }} ({{ $penilaian->keterangan_predikat }})]
+                                    </p>
+                                </td>
+                            </tr>
 
-                    {{-- 5. Bagian Tanda Tangan (Sebelah Kanan Bawah) --}}
-                    <div style="width: 100%; display: flex; justify-content: flex-end;">
-                        <div style="position: relative; z-index: 10; width: 38%; text-align: center; color: #0c3773; margin-right: 6mm;">
-                            <p style="font-size: 11pt; font-weight: 500; margin: 0; line-height: 1.3;">
-                                {{ $pengaturan->kota_surat ?? 'Banjarbaru' }}, {{ $tanggalCetak }}
-                            </p>
-                            <p style="font-size: 11pt; font-weight: 700; font-style: italic; margin: 1mm 0 0 0; line-height: 1.3;">
-                                Kepala {{ $pengaturan->nama_instansi ?? 'Dinas Komunikasi dan Informatika' }}
-                            </p>
+                            {{-- 5. Bagian Tanda Tangan (Sebelah Kanan Bawah Sesuai Desain) --}}
+                            <tr>
+                                <td style="vertical-align: bottom; height: 60mm; padding-bottom: 2mm;">
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        <tr>
+                                            <td style="width: 55%;"></td>
+                                            <td style="width: 45%; text-align: center; color: #0c3773; padding-right: 5mm;">
+                                                <table style="width: 100%; border-collapse: collapse;">
+                                                    <tr>
+                                                        <td style="text-align: center; color: #0c3773; line-height: 1.35;">
+                                                            <div style="font-size: 11.5pt; font-weight: 500;">
+                                                                {{ $pengaturan->kota_surat ?? 'Banjarbaru' }}, {{ $tanggalCetak }}
+                                                            </div>
+                                                            <div style="font-size: 11.5pt; font-weight: bold; font-style: italic; margin-top: 1mm;">
+                                                                Kepala {{ $pengaturan->nama_instansi ?? 'Dinas Komunikasi dan Informatika' }}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        {{-- Ruang Kosong Tanda Tangan & Stempel (24mm uncollapsible) --}}
+                                                        <td style="height: 24mm; line-height: 24mm; text-align: center;">&nbsp;</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="text-align: center; color: #0c3773; line-height: 1.35;">
+                                                            <div style="font-size: 12.5pt; font-weight: bold; text-decoration: underline;">
+                                                                {{ $pengaturan->nama_kepala_dinas ?? 'Nama Kepala Dinas' }}
+                                                            </div>
+                                                            <div style="font-size: 10.5pt; font-weight: 500; margin-top: 1mm;">
+                                                                {{ $pengaturan->pangkat_golongan ?? 'Pembina Utama Muda' }}
+                                                            </div>
+                                                            <div style="font-size: 9.5pt; font-weight: 500; color: #475569; margin-top: 0.8mm;">
+                                                                NIP. {{ $pengaturan->nip_kepala_dinas ?? '-' }}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
 
-                            {{-- Ruang Tanda Tangan --}}
-                            <div style="height: 18mm;"></div>
-
-                            <p style="font-size: 12pt; font-weight: 800; margin: 0; line-height: 1.3;">
-                                [{{ $pengaturan->nama_kepala_dinas ?? 'Nama Kepala Dinas' }}]
-                            </p>
-                            <p style="font-size: 10pt; font-weight: 500; margin: 0.5mm 0 0 0; line-height: 1.3;">
-                                {{ $pengaturan->pangkat_golongan ?? 'Pembina Utama Muda' }}
-                            </p>
-                            <p style="font-size: 9.5pt; font-weight: 500; color: #475569; margin: 0.5mm 0 0 0; line-height: 1.3;">
-                                NIP. {{ $pengaturan->nip_kepala_dinas ?? '-' }}
-                            </p>
-                        </div>
                     </div>
                 </div>
             </div>
