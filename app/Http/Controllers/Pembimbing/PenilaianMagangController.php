@@ -345,6 +345,8 @@ class PenilaianMagangController extends Controller
             'nilai' => 'required|array',
             'nilai.*' => 'required|numeric|min:0|max:100',
             'status_magang' => 'nullable|in:aktif,selesai',
+            'hasil_karya' => 'nullable|array',
+            'hasil_karya.*' => 'nullable|string|max:255',
         ], [
             'magang_id.required' => 'Data magang wajib dipilih.',
             'nilai.required' => 'Nilai per kriteria wajib diisi.',
@@ -411,12 +413,20 @@ class PenilaianMagangController extends Controller
 
         $totalNilai = $totalBobot > 0 ? (int) round($sumBobotNilai / $totalBobot) : 0;
 
+        // Bersihkan dan siapkan hasil karya (opsional poin per poin)
+        $hasilKarya = null;
+        if ($request->has('hasil_karya') && is_array($request->hasil_karya)) {
+            $filtered = array_values(array_filter(array_map('trim', $request->hasil_karya), fn ($item) => $item !== ''));
+            $hasilKarya = ! empty($filtered) ? $filtered : null;
+        }
+
         // Simpan tabel utama penilaian
         $penilaian = Penilaian::create([
             'magang_id' => $magang->id,
             'pembimbing_id' => $pembimbing->id,
             'penempatan_magang_id' => $penempatanId,
             'total_nilai' => $totalNilai,
+            'hasil_karya' => $hasilKarya,
         ]);
 
         // Simpan setiap rincian kriteria ke detail_penilaian
@@ -535,6 +545,8 @@ class PenilaianMagangController extends Controller
             'nilai' => 'required|array',
             'nilai.*' => 'required|numeric|min:0|max:100',
             'status_magang' => 'nullable|in:aktif,selesai',
+            'hasil_karya' => 'nullable|array',
+            'hasil_karya.*' => 'nullable|string|max:255',
         ], [
             'nilai.required' => 'Nilai per kriteria wajib diisi.',
             'nilai.*.required' => 'Semua nilai kriteria wajib diisi.',
@@ -579,8 +591,16 @@ class PenilaianMagangController extends Controller
 
         $totalNilai = $totalBobot > 0 ? (int) round($sumBobotNilai / $totalBobot) : 0;
 
+        // Bersihkan dan siapkan hasil karya (opsional poin per poin)
+        $hasilKarya = null;
+        if ($request->has('hasil_karya') && is_array($request->hasil_karya)) {
+            $filtered = array_values(array_filter(array_map('trim', $request->hasil_karya), fn ($item) => $item !== ''));
+            $hasilKarya = ! empty($filtered) ? $filtered : null;
+        }
+
         $penilaian->update([
             'total_nilai' => $totalNilai,
+            'hasil_karya' => $hasilKarya,
         ]);
 
         if ($request->filled('status_magang')) {

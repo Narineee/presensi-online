@@ -82,10 +82,16 @@ class PresensiScoreService
         // Ambil data pengajuan tugas luar yang telah disetujui
         $approvedTugasLuarList = PengajuanTugasLuar::where('pengguna_id', $magang->pengguna_id)
             ->where('status_verifikasi', 'disetujui')
-            ->whereDate('tanggal', '<=', $endDate->toDateString())
-            ->whereDate('tanggal', '>=', $startDate->toDateString())
-            ->get()
-            ->keyBy(fn ($item) => Carbon::parse($item->tanggal)->toDateString());
+            ->where(function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('tanggal', [$startDate->toDateString(), $endDate->toDateString()])
+                    ->orWhere(function ($sub) use ($startDate, $endDate) {
+                        $sub->whereNotNull('tanggal_mulai')
+                            ->whereNotNull('tanggal_selesai')
+                            ->where('tanggal_mulai', '<=', $endDate->toDateString())
+                            ->where('tanggal_selesai', '>=', $startDate->toDateString());
+                    });
+            })
+            ->get();
 
         $targetHari = 0;
         $targetMenit = 0;
@@ -177,19 +183,60 @@ class PresensiScoreService
                 continue;
             }
 
-            // KASUS A2: Tugas Luar (TL) Disetujui Pembimbing -> DIHITUNG HADIR PENUH (480 menit)
-            $tugasLuar = $approvedTugasLuarList->get($dateStr);
-            $isTugasLuar = $tugasLuar
-                || ($presensi && ($presensi->mode_kerja === 'tugas_luar' || stripos((string) $presensi->keterangan, 'tugas luar') !== false));
+            // KASUS A2: Tugas Luar (TL) Disetujui Pembimbing -> DIHITUNG HADIR PENUH (480 menit) KECUALI TELAT MASUK
+            $tugasLuar = $approvedTugasLuarList->first(function ($item) use ($current) {
+                if ($item->tanggal_mulai && $item->tanggal_selesai) {
+                    return $current->betweenIncluded(
+                        Carbon::parse($item->tanggal_mulai)->startOfDay(),
+                        Carbon::parse($item->tanggal_selesai)->startOfDay()
+                    );
+                }
+
+                return Carbon::parse($item->tanggal)->toDateString() === $current->toDateString();
+            });
+
+            // Tugas Luar dihitung hadir penuh jika telah diverifikasi dan disetujui oleh pembimbing
+            $isTugasLuar = (bool) $tugasLuar
+                || ($presensi && ($presensi->pengajuanTugasLuar?->status_verifikasi === 'disetujui'
+                    || (! $presensi->pengajuanTugasLuar && ($presensi->mode_kerja === 'tugas_luar' || stripos((string) $presensi->keterangan, 'tugas luar') !== false))));
 
             if ($isTugasLuar) {
-                $menit = self::MENIT_PER_HARI;
+                $jamMasukRaw = $presensi?->jam_masuk
+                    ?? $presensi?->jam_masuk_efektif
+                    ?? $tugasLuar?->waktu_mulai
+                    ?? ($tugasLuar?->created_at ? $tugasLuar->created_at->format('H:i:s') : null)
+                    ?? self::JAM_MASUK_STANDAR;
+
+                $jamMasukBatas = Carbon::createFromTimeString(self::JAM_MASUK_STANDAR);
+                $jamMasuk = Carbon::createFromTimeString($jamMasukRaw);
+
+                // Tugas Luar dihitung full 8 jam (480 menit) kecuali jika telat masuk
+                $menitTerlambat = 0;
+                if ($jamMasuk->gt($jamMasukBatas)) {
+                    $menitTerlambat = (int) abs($jamMasuk->diffInMinutes($jamMasukBatas));
+                    $menitTerlambatPotong += $menitTerlambat;
+                    $totalHariTerlambat++;
+                    $menit = max(0, self::MENIT_PER_HARI - $menitTerlambat);
+                } else {
+                    $menit = self::MENIT_PER_HARI;
+                }
+
                 $totalMenitRealisasi += $menit;
                 $menitHadirNormal += $menit;
                 $totalHariHadir++;
 
-                $jamMasukFmt = ($presensi && $presensi->jam_masuk) ? substr($presensi->jam_masuk, 0, 5) : ($tugasLuar?->waktu_mulai ? substr($tugasLuar->waktu_mulai, 0, 5) : '08:00');
-                $jamKeluarFmt = ($presensi && $presensi->jam_keluar) ? substr($presensi->jam_keluar, 0, 5) : ($tugasLuar?->waktu_selesai ? substr($tugasLuar->waktu_selesai, 0, 5) : '16:00');
+                $jamMasukFmt = substr($jamMasukRaw, 0, 5);
+                $jamKeluarRaw = $presensi?->jam_keluar
+                    ?? $presensi?->jam_keluar_efektif
+                    ?? $tugasLuar?->waktu_selesai
+                    ?? self::JAM_KELUAR_STANDAR;
+                $jamKeluarFmt = substr($jamKeluarRaw, 0, 5);
+
+                $tujuanTL = $tugasLuar?->tujuan ?? 'Tugas Luar';
+                $ketTL = 'Hadir — Tugas Luar ('.$tujuanTL.' - Disetujui Pembimbing)';
+                if ($menitTerlambat > 0) {
+                    $ketTL .= ' [Terlambat '.$menitTerlambat.' Menit]';
+                }
 
                 $rincianHarian[] = [
                     'tanggal' => $dateStr,
@@ -199,7 +246,7 @@ class PresensiScoreService
                     'jam_keluar' => $jamKeluarFmt,
                     'menit' => $menit,
                     'is_hitung_target' => true,
-                    'keterangan' => 'Hadir — Tugas Luar ('.($tugasLuar?->tujuan ?? 'Tugas Luar').' - Disetujui Pembimbing)',
+                    'keterangan' => $ketTL,
                 ];
 
                 $current->addDay();

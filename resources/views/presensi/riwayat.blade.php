@@ -81,13 +81,13 @@
             <div class="space-y-3">
                 @foreach($presensiList as $item)
                     @php
-                        $jamMasuk = $item->jam_masuk ? substr($item->jam_masuk, 0, 5) : '-';
-                        $jamKeluar = $item->jam_keluar ? substr($item->jam_keluar, 0, 5) : '-';
+                        $jamMasuk = $item->jam_masuk_efektif ? substr($item->jam_masuk_efektif, 0, 5) : '-';
+                        $jamKeluar = $item->formatJamKeluar(':');
                         $isTerlambat = $item->jam_masuk && $item->jam_masuk > '08:00:00';
                         $modeBadge = match($item->mode_kerja) {
                             'wfh' => ['WFH', 'bg-blue-50 text-blue-700 border-blue-200'],
                             'tugas_luar' => ['Tugas Luar', 'bg-purple-50 text-purple-700 border-purple-200'],
-                            default => ['Onsite', 'bg-emerald-50 text-emerald-700 border-emerald-200']
+                            default => $item->is_tugas_luar ? ['Tugas Luar', 'bg-purple-50 text-purple-700 border-purple-200'] : ['Onsite', 'bg-emerald-50 text-emerald-700 border-emerald-200']
                         };
                     @endphp
                     <div class="rounded-2xl glass-subcard p-4 shadow-2xs space-y-2.5">
@@ -120,7 +120,7 @@
                             </div>
                             <div class="bg-white/80 rounded-xl p-2.5 border border-white">
                                 <span class="text-[11px] text-slate-500 block">Jam Keluar</span>
-                                <span class="text-sm font-extrabold text-slate-900">{{ $jamKeluar }} WITA</span>
+                                <span class="text-sm font-extrabold text-slate-900">{{ $jamKeluar !== '-' ? $jamKeluar . ' WITA' : '-' }}</span>
                             </div>
                         </div>
 

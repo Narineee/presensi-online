@@ -259,10 +259,13 @@
                                     </p>
                                 </div>
 
-                                {{-- 2. Nama Peserta (Font Cursive Emas) --}}
+                                {{-- 2. Nama Peserta (Font Cursive Emas) & Nomor Induk --}}
                                 <div style="margin: 4px 0;">
                                     <p class="font-script-cert" style="font-size: clamp(2.2rem, 5vw, 3.85rem); color: #c48a28; line-height: 1.1;">
                                         ({{ $penilaian->magang->nama_lengkap ?? ($magang->nama_lengkap ?? 'Peserta') }})
+                                    </p>
+                                    <p style="font-size: clamp(0.75rem, 1.3vw, 0.95rem); font-weight: 700; color: #0c3773; margin-top: 4px; letter-spacing: 0.05em;">
+                                        Nomor Induk: {{ !empty($penilaian->magang->no_induk ?? $magang->no_induk) ? ($penilaian->magang->no_induk ?? $magang->no_induk) : '-' }}
                                     </p>
                                 </div>
 
@@ -279,10 +282,10 @@
                                 {{-- 4. Paragraf Evaluasi Nilai Akhir --}}
                                 <div style="margin: 4px 0;">
                                     <p style="font-size: clamp(0.75rem, 1.4vw, 1rem); font-weight: 500; color: #0c3773; margin: 0;">
-                                        Berdasarkan hasil evaluasi, yang bersangkutan memperoleh nilai akhir sebesar
+                                        Berdasarkan hasil evaluasi, yang bersangkutan memperoleh nilai akhir dengan kualifikasi
                                     </p>
                                     <p style="font-size: clamp(1.15rem, 2.5vw, 1.75rem); font-weight: 900; color: #0c3773; margin: 3px 0 0 0; letter-spacing: 0.05em;">
-                                        [{{ $penilaian->predikat }} ({{ $penilaian->keterangan_predikat }})]
+                                        {{ $penilaian->keterangan_predikat }}
                                     </p>
                                 </div>
 
@@ -361,11 +364,14 @@
                                 </td>
                             </tr>
 
-                            {{-- 2. Nama Peserta (Font Cursive Emas Great Vibes) --}}
+                            {{-- 2. Nama Peserta (Font Cursive Emas Great Vibes) & Nomor Induk --}}
                             <tr>
                                 <td style="text-align: center; vertical-align: middle; height: 32mm;">
-                                    <p style="font-family: 'Great Vibes', 'Brush Script MT', cursive; font-size: 58pt; color: #c48a28; margin: 0; line-height: 1;">
+                                    <p style="font-family: 'Great Vibes', 'Brush Script MT', cursive; font-size: 52pt; color: #c48a28; margin: 0; line-height: 1;">
                                         ({{ $penilaian->magang->nama_lengkap ?? ($magang->nama_lengkap ?? 'Peserta') }})
+                                    </p>
+                                    <p style="font-size: 11pt; font-weight: 700; color: #0c3773; margin: 2.5mm 0 0 0; letter-spacing: 0.05em;">
+                                        Nomor Induk: {{ !empty($penilaian->magang->no_induk ?? $magang->no_induk) ? ($penilaian->magang->no_induk ?? $magang->no_induk) : '-' }}
                                     </p>
                                 </td>
                             </tr>
@@ -384,10 +390,10 @@
                             <tr>
                                 <td style="text-align: center; vertical-align: middle; height: 24mm;">
                                     <p style="font-size: 13pt; font-weight: 500; color: #0c3773; margin: 0;">
-                                        Berdasarkan hasil evaluasi, yang bersangkutan memperoleh nilai akhir sebesar
+                                        Berdasarkan hasil evaluasi, yang bersangkutan memperoleh nilai akhir dengan kualifikasi
                                     </p>
                                     <p style="font-size: 22pt; font-weight: 900; color: #0c3773; margin: 1.5mm 0 0 0; letter-spacing: 0.05em;">
-                                        [{{ $penilaian->predikat }} ({{ $penilaian->keterangan_predikat }})]
+                                        {{ $penilaian->keterangan_predikat }}
                                     </p>
                                 </td>
                             </tr>

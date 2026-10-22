@@ -13,6 +13,11 @@ class Penilaian extends Model
         'pembimbing_id',
         'penempatan_magang_id',
         'total_nilai',
+        'hasil_karya',
+    ];
+
+    protected $casts = [
+        'hasil_karya' => 'array',
     ];
 
     public function magang()

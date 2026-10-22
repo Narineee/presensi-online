@@ -44,7 +44,9 @@ class SertifikatSayaController extends Controller
         $tanggalSelesai = $magang->tanggal_selesai
             ? Carbon::parse($magang->tanggal_selesai)->locale('id')->isoFormat('D MMMM Y')
             : '-';
-        $tanggalCetak = Carbon::now()->locale('id')->isoFormat('D MMMM Y');
+        $tanggalCetak = $magang->tanggal_selesai
+            ? Carbon::parse($magang->tanggal_selesai)->locale('id')->isoFormat('D MMMM Y')
+            : Carbon::now()->locale('id')->isoFormat('D MMMM Y');
 
         $bahan1Path = public_path('images/sertifikat/bahan-1.png');
         $bahan2Path = public_path('images/sertifikat/bahan-2.png');
@@ -101,7 +103,9 @@ class SertifikatSayaController extends Controller
         $tanggalSelesai = $magang->tanggal_selesai
             ? Carbon::parse($magang->tanggal_selesai)->locale('id')->isoFormat('D MMMM Y')
             : '-';
-        $tanggalCetak = Carbon::now()->locale('id')->isoFormat('D MMMM Y');
+        $tanggalCetak = $magang->tanggal_selesai
+            ? Carbon::parse($magang->tanggal_selesai)->locale('id')->isoFormat('D MMMM Y')
+            : Carbon::now()->locale('id')->isoFormat('D MMMM Y');
 
         $bahan1Path = public_path('images/sertifikat/bahan-1.png');
         $bahan2Path = public_path('images/sertifikat/bahan-2.png');

@@ -5,12 +5,23 @@
 @php
     $in = 'mt-1.5 w-full rounded-2xl border border-slate-300 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-900 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 transition shadow-2xs';
     $adaRencana = $rencanaKerjaList->isNotEmpty();
+    $normalizeProgres = function ($p) {
+        $pLower = strtolower(trim((string) $p));
+        if ($pLower === 'selesai') {
+            return 'Selesai';
+        }
+        if (in_array($pLower, ['belum', 'belum selesai', 'proses', 'berjalan', 'aktif'])) {
+            return 'Belum';
+        }
+        return !empty($p) ? (stripos($pLower, 'selesai') !== false ? 'Selesai' : 'Belum') : '';
+    };
+
     $existingItems = $aktivitas->details->map(fn($d) => [
         'rencana_kerja_id' => (string) $d->rencana_kerja_id,
-        'progres' => $d->progres,
+        'progres' => $normalizeProgres($d->progres),
     ])->values()->toArray();
     if (empty($existingItems)) {
-        $existingItems = [['rencana_kerja_id' => '', 'progres' => $aktivitas->isi ?? '']];
+        $existingItems = [['rencana_kerja_id' => '', 'progres' => $normalizeProgres($aktivitas->isi)]];
     }
     $oldItems = old('items', $existingItems);
 @endphp
@@ -67,7 +78,7 @@
         <div class="flex items-center justify-between border-b border-slate-200/80 pb-3">
             <div>
                 <h2 class="text-base font-extrabold text-slate-900">Rencana Kerja & Progres</h2>
-                <p class="text-xs text-slate-500 font-medium">Sesuaikan rencana kerja dan progres yang dikerjakan</p>
+                <p class="text-xs text-slate-500 font-medium">Sesuaikan rencana kerja dan status progres yang dikerjakan</p>
             </div>
             <a href="{{ route('rencana.create', ['redirect_to' => 'aktivitas']) }}" class="text-xs font-bold text-brand hover:underline shrink-0">
                 + Rencana Baru
@@ -105,17 +116,38 @@
                         </select>
                     </div>
 
-                    {{-- Progres Khusus Rencana --}}
+                    {{-- Tombol Pilihan Selesai / Belum --}}
                     <div>
-                        <label class="block text-xs font-bold text-slate-800 mb-1">
-                            Uraian Progres Pekerjaan <span class="text-rose-500">*</span>
+                        <label class="block text-xs font-bold text-slate-800 mb-1.5">
+                            Status Progres <span class="text-rose-500">*</span>
                         </label>
-                        <textarea :name="'items[' + index + '][progres]'"
-                                  x-model="item.progres"
-                                  rows="3"
-                                  minlength="5"
-                                  required
-                                  class="{{ $in }}"></textarea>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <label class="flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-extrabold cursor-pointer transition select-none active:scale-[0.99]"
+                                   :class="item.progres === 'Selesai'
+                                       ? 'border-emerald-500 bg-emerald-500 text-white shadow-xs'
+                                       : 'border-slate-300 bg-white/90 text-slate-700 hover:bg-slate-50 hover:border-slate-400'">
+                                <input type="radio"
+                                       :name="'items[' + index + '][progres]'"
+                                       value="Selesai"
+                                       x-model="item.progres"
+                                       required
+                                       class="sr-only">
+                                <span>✓ Selesai</span>
+                            </label>
+
+                            <label class="flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-extrabold cursor-pointer transition select-none active:scale-[0.99]"
+                                   :class="item.progres === 'Belum'
+                                       ? 'border-amber-500 bg-amber-500 text-white shadow-xs'
+                                       : 'border-slate-300 bg-white/90 text-slate-700 hover:bg-slate-50 hover:border-slate-400'">
+                                <input type="radio"
+                                       :name="'items[' + index + '][progres]'"
+                                       value="Belum"
+                                       x-model="item.progres"
+                                       required
+                                       class="sr-only">
+                                <span>⏳ Belum</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </template>

@@ -59,7 +59,7 @@
                 </div>
                 <div class="min-w-0">
                     <dt class="text-[11px] text-white/70 truncate">Jam keluar</dt>
-                    <dd class="text-xl sm:text-2xl font-black mt-0.5 truncate">{{ $jam($todayPresensi?->jam_keluar) }}</dd>
+                    <dd class="text-base sm:text-xl font-black mt-0.5 truncate" title="{{ $todayPresensi ? $todayPresensi->formatJamKeluar(':') : '-' }}">{{ $todayPresensi ? $todayPresensi->formatJamKeluar(':') : '-' }}</dd>
                 </div>
                 <div class="min-w-0">
                     <dt class="text-[11px] text-white/70 truncate">Unit Kerja</dt>
@@ -80,8 +80,8 @@
                     @endif
                 @elseif (! $sudahPulang)
                     @unless ($punyaTL)
-                        <button type="button" @click="tl = true" class="rounded-2xl bg-white/15 hover:bg-white/20 px-4 py-3 text-sm font-extrabold ring-1 ring-white/30 backdrop-blur-sm transition">
-                            Ajukan TL
+                        <button type="button" @click="tl = true" class="rounded-2xl bg-white/15 hover:bg-white/20 px-3.5 sm:px-4 py-3 text-xs sm:text-sm font-extrabold ring-1 ring-white/30 backdrop-blur-sm transition">
+                            Ajukan TL (insidentil)
                         </button>
                     @endunless
                     @if ($timeStatus['is_before_pulang'])
@@ -146,11 +146,17 @@
             <a href="{{ route('magang.rekap') }}" class="text-xs sm:text-sm font-bold text-brand hover:underline">Lihat rekap</a>
         </div>
         <div class="rounded-3xl glass-card p-4 shadow-xs">
-            <div class="grid grid-cols-3 gap-2">
-                @foreach ([['Hadir', $stats['total_hadir']], ['Tepat Waktu', $stats['tepat_waktu']], ['Izin', $stats['total_izin']]] as [$l, $v])
+            <div class="grid grid-cols-3 sm:grid-cols-5 gap-2.5 sm:gap-3">
+                @foreach ([
+                    ['Hadir', $stats['total_hadir']],
+                    ['Tepat Waktu', $stats['tepat_waktu']],
+                    ['Izin', $stats['total_izin']],
+                    ['Sakit', $stats['total_sakit']],
+                    ['Alfa', $stats['total_alfa']],
+                ] as [$l, $v])
                     <div class="min-w-0 text-center sm:text-left">
                         <p class="text-xs text-slate-500 font-medium truncate">{{ $l }}</p>
-                        <p class="text-lg sm:text-xl font-black text-slate-900 mt-0.5 truncate">{{ $v }} hari</p>
+                        <p class="text-lg sm:text-xl font-black {{ $l === 'Alfa' && $v > 0 ? 'text-rose-600' : 'text-slate-900' }} mt-0.5 truncate">{{ $v }} hari</p>
                     </div>
                 @endforeach
             </div>
@@ -191,31 +197,15 @@
                 $subMasuk = $jam($todayPresensi->jam_masuk).' ('.$labelMasuk.')';
             }
 
-            $isPulangAwal = $sudahPulang && ($todayPresensi->jam_keluar < '16:00:00');
-            if ($sudahPulang) {
-                $subPulang = $jam($todayPresensi->jam_keluar);
-                if ($isPulangAwal && $todayPresensi->keterangan) {
-                    $rawKeterangan = (string) $todayPresensi->keterangan;
-                    $alasanPulang = null;
-                    if (preg_match('/\|\s*Pulang:\s*([^|]+)/i', $rawKeterangan, $m)) {
-                        $alasanPulang = trim($m[1]);
-                    } elseif (preg_match('/Pulang:\s*([^|]+)/i', $rawKeterangan, $m)) {
-                        $alasanPulang = trim($m[1]);
-                    } elseif (preg_match('/\b(Sakit|Izin)(?:\s*\([^)]+\))?/i', $rawKeterangan, $m)) {
-                        $alasanPulang = trim($m[0]);
-                    } else {
-                        $cleaned = trim(preg_replace('/\[?Terlambat[^\]|]+\]?\s*\|?\s*/i', '', $rawKeterangan));
-                        if (! empty($cleaned)) {
-                            $alasanPulang = $cleaned;
-                        }
-                    }
-
-                    if ($alasanPulang) {
-                        $labelAlasan = preg_match('/^pulang\s*:/i', $alasanPulang)
-                            ? $alasanPulang
-                            : 'Pulang: '.$alasanPulang;
-                        $subPulang .= ' ('.$labelAlasan.')';
-                    }
+            $isTlToday = (bool) $todayPresensi?->is_tugas_luar;
+            $sudahPulang = (bool) ($todayPresensi?->jam_keluar || $isTlToday);
+            if ($sudahPulang && $todayPresensi) {
+                if ($isTlToday) {
+                    $subPulang = $todayPresensi->formatJamKeluar(':');
+                } elseif ($todayPresensi->catatan_pulang) {
+                    $subPulang = $jam($todayPresensi->jam_keluar).' (Pulang: '.ucfirst($todayPresensi->catatan_pulang).')';
+                } else {
+                    $subPulang = $jam($todayPresensi->jam_keluar_efektif);
                 }
             } else {
                 $subPulang = $hasAktivitasToday
@@ -257,7 +247,7 @@
             @csrf
             <div class="flex items-center justify-between border-b border-slate-200/80 pb-3">
                 <div>
-                    <h3 class="text-base font-extrabold text-slate-900">Ajukan Tugas Luar</h3>
+                    <h3 class="text-base font-extrabold text-slate-900">Ajukan TL (insidentil)</h3>
                     <p class="text-xs text-slate-500 font-medium">Lengkapi rincian penugasan dinas luar Anda</p>
                 </div>
                 <button type="button" @click="tl = false" class="grid h-8 w-8 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition" aria-label="Tutup">

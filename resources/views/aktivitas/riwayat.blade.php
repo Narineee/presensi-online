@@ -140,9 +140,15 @@
                         @if ($item->details->isNotEmpty())
                             <div class="space-y-1.5 bg-white/80 p-2.5 rounded-xl border border-white text-xs text-slate-700">
                                 @foreach($item->details as $d)
-                                    <div class="leading-relaxed break-words">
-                                        <span class="font-extrabold text-brand">• {{ $d->judul_rencana }}:</span>
-                                        <span>{{ \Illuminate\Support\Str::limit($d->progres, 120) }}</span>
+                                    <div class="leading-relaxed break-words flex items-center justify-between gap-2">
+                                        <span class="font-extrabold text-brand truncate">• {{ $d->judul_rencana }}:</span>
+                                        @if (in_array(strtolower(trim($d->progres)), ['selesai', 'belum']))
+                                            <span class="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold {{ strtolower(trim($d->progres)) === 'selesai' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
+                                                {{ strtolower(trim($d->progres)) === 'selesai' ? '✓ Selesai' : '⏳ Belum' }}
+                                            </span>
+                                        @else
+                                            <span class="text-slate-600 truncate">{{ \Illuminate\Support\Str::limit($d->progres, 60) }}</span>
+                                        @endif
                                     </div>
                                 @endforeach
                             </div>

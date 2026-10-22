@@ -119,11 +119,11 @@
     <section class="rounded-3xl bg-white p-4 ring-1 ring-slate-200">
         <span class="inline-block rounded-full px-3 py-1 text-xs font-extrabold {{ $p ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' }}">{{ $badgeHariIni }}</span>
         <dl class="mt-3 grid grid-cols-2 gap-3 text-sm">
-            <div><dt class="text-xs text-slate-500">Masuk</dt><dd class="text-lg font-extrabold">{{ $jam($p?->jam_masuk) }}</dd></div>
+            <div><dt class="text-xs text-slate-500">Masuk</dt><dd class="text-lg font-extrabold">{{ $jam($p?->jam_masuk_efektif) }}</dd></div>
             <div>
                 <dt class="text-xs text-slate-500">Keluar</dt>
                 <dd class="text-lg font-extrabold">
-                    {{ $jam($p?->jam_keluar) }}@if (!empty($catatanPulangHariIni)) <span class="text-xs font-semibold text-slate-600">({{ $catatanPulangHariIni }})</span>@endif
+                    {{ $jam($p?->jam_keluar_efektif) }}@if (!empty($catatanPulangHariIni)) <span class="text-xs font-semibold text-slate-600">({{ $catatanPulangHariIni }})</span>@endif
                 </dd>
             </div>
         </dl>

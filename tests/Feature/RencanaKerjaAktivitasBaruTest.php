@@ -350,4 +350,84 @@ class RencanaKerjaAktivitasBaruTest extends TestCase
         $response->assertSee(route('presensi.index'));
         $response->assertSee('Kembali ke Presensi');
     }
+
+    public function test_activity_create_form_renders_selesai_and_belum_selection_buttons(): void
+    {
+        [$pUser, $pembimbing] = $this->createPembimbingWithUser('pem11');
+        [$user, $intern] = $this->createIntern($pembimbing, 'Peserta K', 'peserta_k');
+
+        RencanaKerja::create([
+            'magang_id' => $intern->id,
+            'judul' => 'Integrasi API Payment',
+            'status' => 'aktif',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('aktivitas.create'));
+        $response->assertStatus(200);
+        $response->assertSee('Status Progres');
+        $response->assertSee('✓ Selesai');
+        $response->assertSee('⏳ Belum');
+        $response->assertDontSee('Uraian Progres Pekerjaan');
+    }
+
+    public function test_activity_can_be_stored_and_updated_with_selesai_or_belum_choice(): void
+    {
+        [$pUser, $pembimbing] = $this->createPembimbingWithUser('pem12');
+        [$user, $intern] = $this->createIntern($pembimbing, 'Peserta L', 'peserta_l');
+
+        $rk1 = RencanaKerja::create([
+            'magang_id' => $intern->id,
+            'judul' => 'Desain ERD',
+            'status' => 'aktif',
+        ]);
+        $rk2 = RencanaKerja::create([
+            'magang_id' => $intern->id,
+            'judul' => 'Slicing UI Dashboard',
+            'status' => 'aktif',
+        ]);
+
+        // Simpan aktivitas dengan status Selesai & Belum
+        $response = $this->actingAs($user)->post(route('aktivitas.store'), [
+            'tanggal' => '2026-10-15',
+            'items' => [
+                ['rencana_kerja_id' => $rk1->id, 'progres' => 'Selesai'],
+                ['rencana_kerja_id' => $rk2->id, 'progres' => 'Belum'],
+            ],
+        ]);
+
+        $response->assertRedirect(route('presensi.index'));
+        $this->assertDatabaseHas('aktivitas_detail', [
+            'rencana_kerja_id' => $rk1->id,
+            'progres' => 'Selesai',
+        ]);
+        $this->assertDatabaseHas('aktivitas_detail', [
+            'rencana_kerja_id' => $rk2->id,
+            'progres' => 'Belum',
+        ]);
+
+        $aktivitas = Aktivitas::where('pengguna_id', $user->id)->first();
+        $this->assertStringContainsString('• [Desain ERD]: Selesai', $aktivitas->isi);
+        $this->assertStringContainsString('• [Slicing UI Dashboard]: Belum', $aktivitas->isi);
+
+        // Akses form edit
+        $editResponse = $this->actingAs($user)->get(route('aktivitas.edit', $aktivitas->id));
+        $editResponse->assertStatus(200);
+        $editResponse->assertSee('✓ Selesai');
+        $editResponse->assertSee('⏳ Belum');
+
+        // Update menjadi Selesai semua
+        $updateResponse = $this->actingAs($user)->put(route('aktivitas.update', $aktivitas->id), [
+            'tanggal' => '2026-10-15',
+            'items' => [
+                ['rencana_kerja_id' => $rk1->id, 'progres' => 'Selesai'],
+                ['rencana_kerja_id' => $rk2->id, 'progres' => 'Selesai'],
+            ],
+        ]);
+
+        $updateResponse->assertRedirect(route('magang.rekap'));
+        $this->assertDatabaseHas('aktivitas_detail', [
+            'rencana_kerja_id' => $rk2->id,
+            'progres' => 'Selesai',
+        ]);
+    }
 }

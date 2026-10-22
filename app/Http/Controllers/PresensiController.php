@@ -66,37 +66,7 @@ class PresensiController extends Controller
         $riwayat = $historyQuery->orderBy('tanggal', 'desc')->paginate(10)->withQueryString();
 
         // Hitung statistik presensi bulan ini
-        $currentMonth = Carbon::now()->month;
-        $currentYear = Carbon::now()->year;
-
-        $stats = [
-            'total_hadir' => Presensi::where('pengguna_id', $user->id)
-                ->whereYear('tanggal', $currentYear)
-                ->whereMonth('tanggal', $currentMonth)
-                ->where('status', 'hadir')
-                ->count(),
-            'tepat_waktu' => Presensi::where('pengguna_id', $user->id)
-                ->whereYear('tanggal', $currentYear)
-                ->whereMonth('tanggal', $currentMonth)
-                ->where('status', 'hadir')
-                ->whereTime('jam_masuk', '<=', '08:00:00')
-                ->count(),
-            'total_izin' => PengajuanIzin::where('pengguna_id', $user->id)
-                ->whereYear('tanggal_mulai', $currentYear)
-                ->whereMonth('tanggal_mulai', $currentMonth)
-                ->where('status_approval', 'disetujui')
-                ->count(),
-            'total_onsite' => Presensi::where('pengguna_id', $user->id)
-                ->whereYear('tanggal', $currentYear)
-                ->whereMonth('tanggal', $currentMonth)
-                ->where('mode_kerja', 'onsite')
-                ->count(),
-            'total_wfh' => Presensi::where('pengguna_id', $user->id)
-                ->whereYear('tanggal', $currentYear)
-                ->whereMonth('tanggal', $currentMonth)
-                ->where('mode_kerja', 'wfh')
-                ->count(),
-        ];
+        $stats = $this->getMonthlyStats($user);
 
         // Cek apakah pengguna sudah mengisi aktivitas harian hari ini (wajib untuk Magang)
         $hasAktivitasToday = Aktivitas::where('pengguna_id', $user->id)
@@ -412,8 +382,8 @@ class PresensiController extends Controller
                 'tanggal_selesai' => $tanggalSelesai,
                 'tujuan' => $request->tujuan,
                 'keperluan' => $request->keperluan,
-                'waktu_mulai' => $request->waktu_mulai,
-                'waktu_selesai' => $request->waktu_selesai,
+                'waktu_mulai' => $request->waktu_mulai ?: $jamMasukStr,
+                'waktu_selesai' => $request->waktu_selesai ?: '16:00:00',
                 'bukti' => $buktiPath,
                 'status_verifikasi' => 'menunggu',
             ]);
@@ -438,24 +408,7 @@ class PresensiController extends Controller
     {
         $user = Auth::user();
         $today = Carbon::today()->toDateString();
-
-        $todayPresensi = Presensi::where('pengguna_id', $user->id)
-            ->whereDate('tanggal', $today)
-            ->first();
-
-        if (! $todayPresensi || ! $todayPresensi->jam_masuk) {
-            return redirect()->back()->with('error', 'Anda harus melakukan presensi masuk terlebih dahulu sebelum mengajukan Tugas Luar.');
-        }
-
-        $existing = PengajuanTugasLuar::where('pengguna_id', $user->id)
-            ->whereDate('tanggal', $today)
-            ->whereIn('status_verifikasi', ['menunggu', 'disetujui'])
-            ->first();
-
-        if ($existing) {
-            return redirect()->back()->with('error', 'Anda sudah memiliki pengajuan Tugas Luar untuk hari ini.');
-        }
-
+        $nowTimeStr = Carbon::now()->format('H:i:s');
         $isLegacyTimeSent = $request->filled('waktu_mulai');
 
         $request->validate([
@@ -488,22 +441,84 @@ class PresensiController extends Controller
             return redirect()->back()->withInput()->with('error', 'Tanggal mulai penugasan tidak boleh melewati tanggal selesai.');
         }
 
+        $existing = PengajuanTugasLuar::where('pengguna_id', $user->id)
+            ->where(function ($q) use ($tanggalSelesai) {
+                $q->whereDate('tanggal', $tanggalSelesai)
+                    ->orWhereDate('tanggal_selesai', $tanggalSelesai);
+            })
+            ->whereIn('status_verifikasi', ['menunggu', 'disetujui'])
+            ->first();
+
+        if ($existing) {
+            return redirect()->back()->with('error', 'Anda sudah memiliki pengajuan Tugas Luar untuk hari ini.');
+        }
+
         $buktiPath = null;
         if ($request->hasFile('bukti_tugas_luar')) {
             $buktiPath = $request->file('bukti_tugas_luar')->store('tugas_luar', 'public');
         }
 
+        $waktuMulai = $request->waktu_mulai ?: $nowTimeStr;
+        $waktuSelesai = $request->waktu_selesai ?: '16:00:00';
+
+        $isToday = ($tanggalSelesai === $today);
+        $presensiId = null;
+
+        if ($isToday) {
+            $todayPresensi = Presensi::where('pengguna_id', $user->id)
+                ->whereDate('tanggal', $today)
+                ->first();
+
+            if (! $todayPresensi) {
+                $todayPresensi = Presensi::create([
+                    'pengguna_id' => $user->id,
+                    'tanggal' => $today,
+                    'jam_masuk' => $nowTimeStr,
+                    'status' => 'hadir',
+                    'mode_kerja' => 'tugas_luar',
+                    'keterangan' => 'Tugas Luar: '.$request->tujuan,
+                ]);
+            } elseif (! $todayPresensi->jam_masuk) {
+                $todayPresensi->update([
+                    'jam_masuk' => $nowTimeStr,
+                    'status' => 'hadir',
+                    'mode_kerja' => 'tugas_luar',
+                ]);
+            }
+
+            // Jika peserta sudah absen masuk pagi dan waktu mulai TL berbeda, waktu keluar kantor dicatat waktu pengajuan/mulai TL
+            if ($todayPresensi->jam_masuk && $todayPresensi->jam_masuk !== $waktuMulai) {
+                $todayPresensi->update([
+                    'jam_keluar' => $waktuMulai,
+                ]);
+            } elseif (! $todayPresensi->jam_keluar) {
+                $todayPresensi->update([
+                    'jam_keluar' => $waktuSelesai,
+                    'mode_kerja' => 'tugas_luar',
+                ]);
+            }
+
+            $presensiId = $todayPresensi->id;
+        } else {
+            // Jika TL diajukan untuk kemarin atau besok, jangan sentuh presensi hari ini
+            $targetPresensi = Presensi::where('pengguna_id', $user->id)
+                ->whereDate('tanggal', $tanggalSelesai)
+                ->first();
+
+            $presensiId = $targetPresensi?->id;
+        }
+
         PengajuanTugasLuar::create([
-            'presensi_id' => $todayPresensi->id,
+            'presensi_id' => $presensiId,
             'pengguna_id' => $user->id,
             'magang_id' => $user->magang?->id,
-            'tanggal' => $today,
+            'tanggal' => $tanggalSelesai,
             'tanggal_mulai' => $tanggalMulai,
             'tanggal_selesai' => $tanggalSelesai,
             'tujuan' => $request->tujuan,
             'keperluan' => $request->keperluan,
-            'waktu_mulai' => $request->waktu_mulai,
-            'waktu_selesai' => $request->waktu_selesai,
+            'waktu_mulai' => $waktuMulai,
+            'waktu_selesai' => $waktuSelesai,
             'bukti' => $buktiPath,
             'status_verifikasi' => 'menunggu',
         ]);
@@ -566,14 +581,17 @@ class PresensiController extends Controller
 
         if ($isPulangAwal) {
             $rules['alasan_pulang'] = 'required|in:Sakit,Izin';
+            $rules['keterangan_keluar'] = 'required|string|max:255';
         }
 
         $request->validate($rules, [
             'lokasi_keluar.required' => 'Titik lokasi GPS kepulangan wajib terdeteksi.',
             'foto_keluar.required' => 'Foto selfie pulang wajib diambil.',
             'face_descriptor.required' => 'Verifikasi wajah belum selesai. Silakan ulangi.',
-            'alasan_pulang.required' => 'Alasan pulang sebelum pukul 16.00 (Sakit atau Izin) wajib dipilih.',
-            'alasan_pulang.in' => 'Alasan kepulangan harus berupa Sakit atau Izin.',
+            'alasan_pulang.required' => 'Kategori alasan pulang sebelum pukul 16.00 (Sakit atau Izin) wajib dipilih.',
+            'alasan_pulang.in' => 'Kategori kepulangan harus berupa Sakit atau Izin.',
+            'keterangan_keluar.required' => 'Alasan kepulangan sebelum pukul 16.00 wajib diisi.',
+            'keterangan_keluar.max' => 'Alasan kepulangan maksimal 255 karakter.',
         ]);
 
         $inputAman = $request->except(['foto_keluar', 'face_descriptor']);
@@ -764,6 +782,144 @@ class PresensiController extends Controller
         $filename = 'Laporan-Presensi-'.$cleanPeriode.'.pdf';
 
         return $this->pdfService->renderView('presensi.cetak', $viewData, $filename, 'P');
+    }
+
+    /**
+     * Menghitung ringkasan statistik presensi bulan berjalan untuk peserta magang.
+     *
+     * @return array<string, int>
+     */
+    private function getMonthlyStats(Pengguna $user): array
+    {
+        $now = Carbon::now();
+        $today = Carbon::today();
+        $currentMonth = $now->month;
+        $currentYear = $now->year;
+        $startOfMonth = $now->copy()->startOfMonth();
+        $endOfMonth = $now->copy()->endOfMonth();
+
+        // Ambil seluruh presensi user pada bulan ini
+        $presensiList = Presensi::where('pengguna_id', $user->id)
+            ->whereYear('tanggal', $currentYear)
+            ->whereMonth('tanggal', $currentMonth)
+            ->get();
+        $userPresensi = $presensiList->keyBy(fn ($item) => Carbon::parse($item->tanggal)->toDateString());
+
+        // Ambil izin yang disetujui pada bulan ini
+        $userApprovedIzin = PengajuanIzin::where('pengguna_id', $user->id)
+            ->where('status_approval', 'disetujui')
+            ->whereDate('tanggal_mulai', '<=', $endOfMonth->toDateString())
+            ->whereDate('tanggal_selesai', '>=', $startOfMonth->toDateString())
+            ->get();
+
+        // Ambil tugas luar yang disetujui pada bulan ini
+        $userApprovedTugasLuar = PengajuanTugasLuar::where('pengguna_id', $user->id)
+            ->where('status_verifikasi', 'disetujui')
+            ->whereBetween('tanggal', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+            ->get()
+            ->keyBy(fn ($item) => Carbon::parse($item->tanggal)->toDateString());
+
+        // Lookup hari libur nasional
+        $allHolidays = array_merge(
+            HariLibur::getDaftarLiburNasionalBawaan(),
+            HariLibur::whereBetween('tanggal', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+                ->pluck('nama', 'tanggal')
+                ->mapWithKeys(fn ($nama, $tgl) => [Carbon::parse($tgl)->toDateString() => $nama])
+                ->toArray()
+        );
+
+        $magang = $user->magang;
+        $unitStart = $magang?->tanggal_mulai ? Carbon::parse($magang->tanggal_mulai)->startOfDay() : null;
+        $unitEnd = $magang?->tanggal_selesai ? Carbon::parse($magang->tanggal_selesai)->startOfDay() : null;
+
+        $totalHadir = 0;
+        $tepatWaktu = 0;
+        $totalIzin = 0;
+        $totalSakit = 0;
+        $totalAlfa = 0;
+
+        $cur = $startOfMonth->copy();
+        while ($cur->lte($endOfMonth)) {
+            $dateStr = $cur->toDateString();
+            $presensi = $userPresensi->get($dateStr);
+            $tugasLuar = $userApprovedTugasLuar->get($dateStr);
+            $izinResmi = $userApprovedIzin->first(function ($item) use ($cur) {
+                return $cur->betweenIncluded(
+                    Carbon::parse($item->tanggal_mulai)->startOfDay(),
+                    Carbon::parse($item->tanggal_selesai)->startOfDay()
+                );
+            });
+
+            $isWeekendOrHoliday = $cur->isWeekend() || isset($allHolidays[$dateStr]);
+            $isFuture = $cur->gt($today);
+            $isActiveDay = $magang && ($unitStart === null || $cur->gte($unitStart)) && ($unitEnd === null || $cur->lte($unitEnd));
+
+            // Jika akhir pekan / libur / masa depan tanpa ada rekaman presensi/tugas luar/izin, lewati
+            if (($isWeekendOrHoliday || $isFuture) && ! $presensi && ! $tugasLuar && ! $izinResmi) {
+                $cur->addDay();
+
+                continue;
+            }
+
+            if ($izinResmi) {
+                if ($izinResmi->jenis_izin === 'sakit') {
+                    $totalSakit++;
+                } else {
+                    $totalIzin++;
+                }
+            } elseif ($presensi || $tugasLuar) {
+                $isTugasLuar = $tugasLuar
+                    || ($presensi && (
+                        $presensi->status === 'tugas_luar'
+                        || $presensi->mode_kerja === 'tugas_luar'
+                        || stripos((string) $presensi->keterangan, 'tugas luar') !== false
+                        || stripos((string) $presensi->keterangan, 'dinas luar') !== false
+                    ));
+
+                if ($isTugasLuar) {
+                    $totalHadir++;
+                    if ($presensi?->jam_masuk && substr($presensi->jam_masuk, 0, 8) <= '08:00:00') {
+                        $tepatWaktu++;
+                    }
+                } elseif ($presensi->status === 'sakit') {
+                    $totalSakit++;
+                } elseif ($presensi->status === 'cuti' || $presensi->status === 'izin') {
+                    $totalIzin++;
+                } elseif ($presensi->status === 'hadir' || ! empty($presensi->jam_masuk)) {
+                    $totalHadir++;
+                    if ($presensi->jam_masuk && substr($presensi->jam_masuk, 0, 8) <= '08:00:00') {
+                        $tepatWaktu++;
+                    }
+                } elseif ($presensi->status === 'alpa') {
+                    $totalAlfa++;
+                } else {
+                    $totalAlfa++;
+                }
+            } else {
+                // Hari kerja aktif tanpa presensi dan tanpa izin
+                if ($isActiveDay && ! $isWeekendOrHoliday && ! $isFuture) {
+                    if ($cur->lt($today) || $now->hour >= 16) {
+                        $totalAlfa++;
+                    }
+                }
+            }
+
+            $cur->addDay();
+        }
+
+        $totalOnsite = $presensiList->where('mode_kerja', 'onsite')->count();
+        $totalWfh = $presensiList->where('mode_kerja', 'wfh')->count();
+
+        return [
+            'total_hadir' => $totalHadir,
+            'tepat_waktu' => $tepatWaktu,
+            'total_izin' => $totalIzin,
+            'total_sakit' => $totalSakit,
+            'total_alfa' => $totalAlfa,
+            'total_alpa' => $totalAlfa,
+            'total_onsite' => $totalOnsite,
+            'total_wfh' => $totalWfh,
+        ];
     }
 
     /**

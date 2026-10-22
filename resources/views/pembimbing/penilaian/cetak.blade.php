@@ -105,6 +105,18 @@
                 &bull; <strong>&lt; 60:</strong> E (Tidak Baik)
             </div>
 
+            {{-- Hasil Karya Peserta Magang (Opsional) --}}
+            @if(!empty($penilaian->hasil_karya) && count(array_filter($penilaian->hasil_karya)) > 0)
+                <div style="margin-top: 10px; font-size: 9.5pt; page-break-inside: avoid;">
+                    <div style="font-weight: bold; color: #0f172a; margin-bottom: 4px;">Hasil Karya Peserta Magang:</div>
+                    <ol style="margin: 0; padding-left: 20px; color: #334155; line-height: 1.5;">
+                        @foreach(array_filter($penilaian->hasil_karya) as $karya)
+                            <li>{{ $karya }}</li>
+                        @endforeach
+                    </ol>
+                </div>
+            @endif
+
             @include('admin.cetak.partials.ttd-dua', [
                 'divisi' => $penilaian->penempatanMagang?->divisi ?? $penilaian->magang?->divisi ?? $divisi,
                 'pembimbing' => $penilaian->pembimbing ?? $pembimbing,

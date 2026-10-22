@@ -83,11 +83,14 @@
                     </td>
                 </tr>
 
-                {{-- 2. Nama Peserta (Font Cursive Emas Great Vibes) --}}
+                {{-- 2. Nama Peserta (Font Cursive Emas Great Vibes) & Nomor Induk --}}
                 <tr>
                     <td style="text-align: center; vertical-align: middle; height: 32mm;">
-                        <p style="font-family: greatvibes, 'Great Vibes', 'Brush Script MT', cursive; font-size: 58pt; color: #c48a28; margin: 0; line-height: 1;">
+                        <p style="font-family: greatvibes, 'Great Vibes', 'Brush Script MT', cursive; font-size: 52pt; color: #c48a28; margin: 0; line-height: 1;">
                             ({{ $penilaian->magang->nama_lengkap ?? ($magang->nama_lengkap ?? 'Peserta') }})
+                        </p>
+                        <p style="font-size: 11pt; font-weight: 700; color: #0c3773; margin: 2.5mm 0 0 0; letter-spacing: 0.05em;">
+                            Nomor Induk: {{ !empty($penilaian->magang->no_induk ?? $magang->no_induk) ? ($penilaian->magang->no_induk ?? $magang->no_induk) : '-' }}
                         </p>
                     </td>
                 </tr>
@@ -106,10 +109,10 @@
                 <tr>
                     <td style="text-align: center; vertical-align: middle; height: 24mm;">
                         <p style="font-size: 13pt; font-weight: 500; color: #0c3773; margin: 0;">
-                            Berdasarkan hasil evaluasi, yang bersangkutan memperoleh nilai akhir sebesar
+                            Berdasarkan hasil evaluasi, yang bersangkutan memperoleh nilai akhir dengan kualifikasi
                         </p>
                         <p style="font-size: 22pt; font-weight: 900; color: #0c3773; margin: 1.5mm 0 0 0; letter-spacing: 0.05em;">
-                            [{{ $penilaian->predikat }} ({{ $penilaian->keterangan_predikat }})]
+                            {{ $penilaian->keterangan_predikat }}
                         </p>
                     </td>
                 </tr>

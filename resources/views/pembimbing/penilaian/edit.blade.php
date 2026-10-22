@@ -350,6 +350,62 @@
             </div>
         </div>
 
+        <!-- Input Hasil Karya Peserta Magang (Opsional - Point per Point) -->
+        <div x-data="{ points: {{ Js::from(old('hasil_karya', !empty($penilaian->hasil_karya) ? $penilaian->hasil_karya : [''])) }} }" class="rounded-2xl border border-slate-300 bg-white p-4 shadow-xs space-y-3">
+            <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                <div class="flex items-center gap-2">
+                    <div class="h-7 w-7 rounded-lg bg-brand-soft text-brand flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-extrabold text-slate-900">Hasil Karya Peserta Magang</h3>
+                        <p class="text-[11px] text-slate-500">Tuliskan karya atau proyek yang dihasilkan peserta selama magang.</p>
+                    </div>
+                </div>
+                <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-200">
+                    Opsional
+                </span>
+            </div>
+
+            <div class="space-y-2">
+                <template x-for="(point, index) in points" :key="index">
+                    <div class="flex items-center gap-2">
+                        <span class="h-9 w-9 shrink-0 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 font-bold text-xs flex items-center justify-center font-mono" x-text="(index + 1) + '.'"></span>
+                        <input type="text" 
+                               name="hasil_karya[]" 
+                               x-model="points[index]" 
+                               placeholder="Contoh: Modul Laporan Presensi Digital berbasis Web" 
+                               class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-800 placeholder-slate-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25 transition">
+                        <button type="button" 
+                                @click="points.splice(index, 1)" 
+                                class="h-9 w-9 shrink-0 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center transition" 
+                                title="Hapus poin">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </template>
+
+                <div x-show="points.length === 0" class="text-center py-3 px-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 text-slate-400 text-xs">
+                    Belum ada poin hasil karya yang ditambahkan.
+                </div>
+            </div>
+
+            <div class="pt-1">
+                <button type="button" 
+                        @click="points.push('')" 
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-brand/30 bg-brand-soft text-brand text-xs font-bold hover:bg-brand/10 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                    </svg>
+                    <span>Tambah Poin Hasil Karya</span>
+                </button>
+            </div>
+        </div>
+
         <!-- Opsi Status Magang & Konfirmasi -->
         <div class="rounded-2xl border border-slate-300 bg-white p-4 shadow-xs">
             <label class="flex items-start gap-3 cursor-pointer select-none">

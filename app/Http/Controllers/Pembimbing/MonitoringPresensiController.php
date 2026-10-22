@@ -169,22 +169,25 @@ class MonitoringPresensiController extends Controller
         }
 
         $catatanPulang = null;
-        if (! $isIzin && $p->jam_keluar && $p->jam_keluar < '16:00:00') {
-            $rawKet = (string) $p->keterangan;
-            if (preg_match('/\|\s*Pulang:\s*([^|]+)/i', $rawKet, $m)) {
-                $catatanPulang = trim($m[1]);
-            } elseif (preg_match('/Pulang:\s*([^|]+)/i', $rawKet, $m)) {
-                $catatanPulang = trim($m[1]);
-            } elseif (preg_match('/\b(Sakit|Izin)(?:\s*\([^)]+\))?/i', $rawKet, $m)) {
-                $catatanPulang = trim($m[0]);
-            } else {
-                $izinHari = $izinUser->first(fn ($i) => $p->tanggal && $p->tanggal->betweenIncluded($i->tanggal_mulai, $i->tanggal_selesai));
-                if ($izinHari) {
-                    $catatanPulang = $izinHari->jenis_izin;
+        if (! $isIzin) {
+            $catatanPulang = $p->catatan_pulang;
+            if (! $catatanPulang && $p->jam_keluar && $p->jam_keluar < '16:00:00') {
+                $rawKet = (string) $p->keterangan;
+                if (preg_match('/\|\s*Pulang:\s*([^|]+)/i', $rawKet, $m)) {
+                    $catatanPulang = trim($m[1]);
+                } elseif (preg_match('/Pulang:\s*([^|]+)/i', $rawKet, $m)) {
+                    $catatanPulang = trim($m[1]);
+                } elseif (preg_match('/\b(Sakit|Izin)(?:\s*\([^)]+\))?/i', $rawKet, $m)) {
+                    $catatanPulang = trim($m[0]);
+                } else {
+                    $izinHari = $izinUser->first(fn ($i) => $p->tanggal && $p->tanggal->betweenIncluded($i->tanggal_mulai, $i->tanggal_selesai));
+                    if ($izinHari) {
+                        $catatanPulang = $izinHari->jenis_izin;
+                    }
                 }
-            }
-            if ($catatanPulang) {
-                $catatanPulang = strtolower(trim(preg_replace('/^Pulang:\s*/i', '', $catatanPulang)));
+                if ($catatanPulang) {
+                    $catatanPulang = strtolower(trim((string) preg_replace('/^Pulang:\s*/i', '', $catatanPulang)));
+                }
             }
         }
 
@@ -195,8 +198,8 @@ class MonitoringPresensiController extends Controller
             'tanggal' => $p->tanggal,
             'badge' => $isIzin ? ucfirst($p->status) : ($isTl ? 'TL' : ($p->status === 'alpa' ? 'Alpa' : 'Hadir')),
             'badge_kunci' => $isIzin ? $p->status : ($isTl ? 'tl' : ($p->status === 'alpa' ? 'alpa' : 'hadir')),
-            'jam_masuk' => $isIzin ? '-' : $jam($p->jam_masuk),
-            'jam_keluar' => $isIzin ? '-' : $jam($p->jam_keluar),
+            'jam_masuk' => $isIzin ? '-' : $jam($p->jam_masuk_efektif),
+            'jam_keluar' => $isIzin ? '-' : $jam($p->jam_keluar_efektif),
             'catatan_pulang' => $catatanPulang,
             'terlambat' => $terlambat,
             'foto_masuk_url' => $isIzin ? null : $p->foto_masuk_url,

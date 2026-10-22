@@ -55,13 +55,22 @@
 
                 @foreach ($aktivitas->details as $idx => $detail)
                     <div class="rounded-2xl glass-subcard p-4 border border-white space-y-2">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-extrabold text-brand">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-xs font-extrabold text-brand truncate">
                                 #{{ $idx + 1 }} {{ $detail->judul_rencana }}
                             </span>
+                            @if (in_array(strtolower(trim($detail->progres)), ['selesai', 'belum']))
+                                <span class="shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold {{ strtolower(trim($detail->progres)) === 'selesai' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300' }}">
+                                    {{ strtolower(trim($detail->progres)) === 'selesai' ? '✓ Selesai' : '⏳ Belum' }}
+                                </span>
+                            @endif
                         </div>
                         <div class="whitespace-pre-line rounded-xl bg-white/90 p-3 text-xs font-medium leading-relaxed text-slate-800 border border-slate-100 break-words">
-{{ $detail->progres }}
+                            @if (in_array(strtolower(trim($detail->progres)), ['selesai', 'belum']))
+                                Status progres: <strong class="{{ strtolower(trim($detail->progres)) === 'selesai' ? 'text-emerald-700 font-black' : 'text-amber-700 font-black' }}">{{ $detail->progres }}</strong>
+                            @else
+                                {{ $detail->progres }}
+                            @endif
                         </div>
                     </div>
                 @endforeach

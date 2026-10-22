@@ -827,7 +827,7 @@ class CetakRekapPresensiAktivitasTest extends TestCase
 
         $htmlAktivitas = $this->actingAs($pembimbingUser)->get(route('pembimbing.aktivitas.cetak', ['format' => 'html']));
         $htmlAktivitas->assertStatus(200);
-        $htmlAktivitas->assertSee('REKAPITULASI LOG AKTIVITAS HARIAN');
+        $htmlAktivitas->assertSee('LAPORAN AKTIVITAS HARIAN PESERTA BINAAN');
 
         // 3. Pembimbing Penilaian Cetak
         $pdfPenilaian = $this->actingAs($pembimbingUser)->get(route('pembimbing.penilaian.cetak'));
@@ -837,7 +837,7 @@ class CetakRekapPresensiAktivitasTest extends TestCase
 
         $htmlPenilaian = $this->actingAs($pembimbingUser)->get(route('pembimbing.penilaian.cetak', ['format' => 'html']));
         $htmlPenilaian->assertStatus(200);
-        $htmlPenilaian->assertSee('REKAPITULASI PENILAIAN AKHIR MAGANG BINAAN');
+        $htmlPenilaian->assertSee('LAPORAN PENILAIAN AKHIR MAGANG');
         $htmlPenilaian->assertSee('Ahmad Magang');
     }
 
@@ -1048,9 +1048,12 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         $htmlResponse->assertStatus(200);
         $htmlResponse->assertSee('SERTIFIKAT');
         $htmlResponse->assertSee($magang->nama_lengkap);
+        $htmlResponse->assertSee('Nomor Induk:');
         $htmlResponse->assertSee('Praktik Kerja Lapangan (PKL)');
         $htmlResponse->assertSee('Dinas Komunikasi dan Informatika');
-        $htmlResponse->assertSee('A');
+        $htmlResponse->assertSee('memperoleh nilai akhir dengan kualifikasi');
+        $htmlResponse->assertSee('Sangat Baik');
+        $htmlResponse->assertDontSee('[A (Sangat Baik)]');
         $htmlResponse->assertSee('background-color: #ebf1ff', false);
     }
 

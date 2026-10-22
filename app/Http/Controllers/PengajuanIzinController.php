@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PengajuanIzin;
+use App\Models\PengajuanTugasLuar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -51,17 +52,25 @@ class PengajuanIzinController extends Controller
     }
 
     /**
-     * Menampilkan formulir pengajuan izin / sakit baru.
+     * Menampilkan formulir layanan pengajuan (Tugas Luar & Izin/Sakit).
      */
     public function create()
     {
+        $userId = Auth::id();
+
         $terakhir = PengajuanIzin::with('validator.pembimbing')
-            ->where('pengguna_id', Auth::id())
+            ->where('pengguna_id', $userId)
             ->latest()
             ->take(3)
             ->get();
 
-        return view('izin.create', compact('terakhir'));
+        $terakhirTL = PengajuanTugasLuar::with('validator.pembimbing')
+            ->where('pengguna_id', $userId)
+            ->latest()
+            ->take(3)
+            ->get();
+
+        return view('izin.create', compact('terakhir', 'terakhirTL'));
     }
 
     /**

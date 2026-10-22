@@ -179,7 +179,7 @@
                                 {{ $item->jam_masuk ?? '-' }}
                             </td>
                             <td class="px-6 py-4 font-mono font-medium text-slate-900">
-                                {{ $item->jam_keluar ?? '-' }}
+                                {{ $item->formatJamKeluar(':') }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center gap-2">

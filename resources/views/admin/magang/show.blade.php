@@ -649,8 +649,8 @@
                                 <td class="py-3 px-4 font-semibold text-slate-800">{{ \Carbon\Carbon::parse($p->tanggal)->format('d M Y') }}</td>
                                 <td class="py-3 px-4 text-slate-700 font-medium">{{ $divisiTanggal?->nama_divisi ?? '-' }}</td>
                                 <td class="py-3 px-4 text-center uppercase font-bold text-[10px] text-slate-600">{{ $p->mode_kerja }}</td>
-                                <td class="py-3 px-4 text-center font-mono">{{ $p->jam_masuk ? substr($p->jam_masuk, 0, 5) : '-' }}</td>
-                                <td class="py-3 px-4 text-center font-mono">{{ $p->jam_keluar ? substr($p->jam_keluar, 0, 5) : '-' }}</td>
+                                <td class="py-3 px-4 text-center font-mono">{{ $p->jam_masuk_efektif ? substr($p->jam_masuk_efektif, 0, 5) : '-' }}</td>
+                                <td class="py-3 px-4 text-center font-mono">{{ $p->formatJamKeluar(':') }}</td>
                                 <td class="py-3 px-4 text-center">
                                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $p->status === 'hadir' ? 'bg-emerald-100 text-emerald-800' : ($p->status === 'terlambat' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800') }}">
                                         {{ ucfirst($p->status) }}

@@ -238,6 +238,7 @@ class PulangSebelum16Test extends TestCase
                 'foto_keluar' => $this->createValidBase64Image(),
                 'face_descriptor' => json_encode($this->fakeFaceDescriptor),
                 'alasan_pulang' => 'Izin',
+                'keterangan_keluar' => 'Keperluan keluarga mendesak',
             ]);
 
         $response->assertRedirect(route('presensi.index'));
@@ -246,7 +247,44 @@ class PulangSebelum16Test extends TestCase
         $presensi->refresh();
         $this->assertEquals('13:30:00', $presensi->jam_keluar);
         $this->assertEquals('hadir', $presensi->status);
-        $this->assertEquals('Izin', $presensi->keterangan);
+        $this->assertStringContainsString('Izin', $presensi->keterangan);
+    }
+
+    public function test_checkout_before_1600_fails_if_alasan_keterangan_keluar_is_missing(): void
+    {
+        [$pembimbingUser, $pembimbing] = $this->createPembimbingWithUser('pem_val');
+        [$internUser, $intern] = $this->createInternWithPembimbing($pembimbing, 'Peserta Val', 'magang_val');
+
+        Carbon::setTestNow(Carbon::parse('2026-10-13 13:30:00', 'Asia/Makassar'));
+        $today = '2026-10-13';
+
+        Presensi::create([
+            'pengguna_id' => $internUser->id,
+            'tanggal' => $today,
+            'jam_masuk' => '07:55:00',
+            'mode_kerja' => 'onsite',
+            'status' => 'hadir',
+        ]);
+
+        Aktivitas::create([
+            'pengguna_id' => $internUser->id,
+            'tanggal' => $today,
+            'isi' => 'Membantu pelayanan berkas pemohon.',
+            'progress' => 100,
+            'status' => 'pending',
+        ]);
+
+        // Kirim tanpa keterangan_keluar (harus gagal validasi karena sekarang wajib)
+        $response = $this->actingAs($internUser)
+            ->post(route('presensi.keluar'), [
+                'lokasi_keluar' => '-3.4893886, 114.8252584',
+                'foto_keluar' => $this->createValidBase64Image(),
+                'face_descriptor' => json_encode($this->fakeFaceDescriptor),
+                'alasan_pulang' => 'Sakit',
+                'keterangan_keluar' => '',
+            ]);
+
+        $response->assertSessionHasErrors('keterangan_keluar');
     }
 
     public function test_status_remains_hadir_when_checked_out_early(): void
@@ -279,6 +317,7 @@ class PulangSebelum16Test extends TestCase
                 'foto_keluar' => $this->createValidBase64Image(),
                 'face_descriptor' => json_encode($this->fakeFaceDescriptor),
                 'alasan_pulang' => 'Sakit',
+                'keterangan_keluar' => 'Demam tinggi',
             ]);
 
         $presensi->refresh();

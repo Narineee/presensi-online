@@ -54,6 +54,7 @@
           }), {
               isPulangAwal: @js($isPulangAwal),
               alasanPulang: @js(old('alasan_pulang', '')),
+              keteranganKeluar: @js(old('keterangan_keluar', '')),
           })"
           @submit="submitting = true">
         @csrf
@@ -100,10 +101,12 @@
 
                     <div>
                         <label for="keterangan_keluar" class="block text-xs font-bold text-slate-700 mb-1">
-                            Catatan Tambahan <span class="font-normal text-slate-400 text-[11px]">(Opsional)</span>
+                            Alasan <span class="text-rose-500 font-bold">*</span>
                         </label>
                         <textarea id="keterangan_keluar" name="keterangan_keluar" rows="2"
-                                  placeholder="Contoh: Mengalami demam / urus berkas kampus"
+                                  x-model="keteranganKeluar"
+                                  required
+                                  placeholder="Tuliskan rincian alasan kepulangan Anda (wajib diisi)"
                                   class="block w-full min-w-0 max-w-full box-border rounded-2xl border border-slate-300 bg-white/90 px-3.5 py-2 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 shadow-2xs transition resize-none">{{ old('keterangan_keluar') }}</textarea>
                     </div>
                 </div>
@@ -112,12 +115,12 @@
             @include('presensi.lokasi', ['office' => $officeLocation])
 
             <div class="pt-1">
-                <button type="button" @click="next()" :disabled="!locReady || (isPulangAwal && !alasanPulang)"
+                <button type="button" @click="next()" :disabled="!locReady || (isPulangAwal && (!alasanPulang || !keteranganKeluar || !keteranganKeluar.trim()))"
                         class="btn-brand-primary flex w-full items-center justify-center rounded-2xl py-4 text-sm font-extrabold text-white shadow-sm transition active:scale-[.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 cursor-pointer">
                     Lanjut verifikasi wajah
                 </button>
-                <p x-show="isPulangAwal && !alasanPulang" class="mt-1.5 text-center text-xs font-bold text-amber-600">
-                    Pilih alasan Sakit atau Izin terlebih dahulu untuk melanjutkan.
+                <p x-show="isPulangAwal && (!alasanPulang || !keteranganKeluar || !keteranganKeluar.trim())" class="mt-1.5 text-center text-xs font-bold text-amber-600">
+                    Pilih kategori (Sakit/Izin) dan tuliskan alasan kepulangan terlebih dahulu untuk melanjutkan.
                 </p>
                 <p class="mt-2 text-center text-xs text-slate-500 leading-tight">Dengan melanjutkan, Anda menyetujui pencatatan lokasi untuk presensi ini.</p>
             </div>

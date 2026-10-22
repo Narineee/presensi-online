@@ -105,10 +105,42 @@ class SertifikatMagangTest extends TestCase
         $response->assertSee('SERTIFIKAT');
         $response->assertSee('Diberikan kepada:');
         $response->assertSee('Intern Sertif Testing');
+        $response->assertSee('Nomor Induk: NIM998877');
         $response->assertSee('Dinas Komunikasi dan Informatika');
-        $response->assertSee('A');
+        $response->assertSee('memperoleh nilai akhir dengan kualifikasi');
         $response->assertSee('Sangat Baik');
+        $response->assertDontSee('[A (Sangat Baik)]');
+        $response->assertSee('30 November 2026'); // Tanggal sertif dibuat = tanggal terakhir periode magang
         $response->assertSee('Cetak Sertifikat');
         $response->assertDontSee('Sertifikat Belum Diterbitkan');
+
+        // Uji juga pada tampilan cetak / PDF format html
+        $cetakResponse = $this->actingAs($internUser)->get(route('magang.sertifikat.cetak', ['format' => 'html']));
+        $cetakResponse->assertStatus(200);
+        $cetakResponse->assertSee('Nomor Induk: NIM998877');
+        $cetakResponse->assertSee('memperoleh nilai akhir dengan kualifikasi');
+        $cetakResponse->assertSee('Sangat Baik');
+        $cetakResponse->assertDontSee('[A (Sangat Baik)]');
+        $cetakResponse->assertSee('30 November 2026');
+    }
+
+    public function test_sertifikat_pdf_is_single_page(): void
+    {
+        [$internUser, $magang, $pembimbing] = $this->createInternUser();
+
+        Penilaian::create([
+            'magang_id' => $magang->id,
+            'pembimbing_id' => $pembimbing->id,
+            'total_nilai' => 95,
+        ]);
+
+        $pdfResponse = $this->actingAs($internUser)->get(route('magang.sertifikat.cetak'));
+        $pdfResponse->assertStatus(200);
+        $content = $pdfResponse->getContent();
+        $this->assertStringStartsWith('%PDF-', $content);
+
+        // Memastikan PDF sertifikat hanya 1 halaman (tidak overflow ke halaman kedua)
+        $pageMatches = preg_match_all('/\/Type\s*\/Page\b/', $content);
+        $this->assertEquals(1, $pageMatches);
     }
 }

@@ -121,6 +121,8 @@ class TugasLuarValidasiController extends Controller
                 ->first();
 
             $infoTugasLuar = 'Tugas Luar ('.$tugasLuar->tujuan.') disetujui oleh '.$namaPembimbing;
+            $waktuMasukTL = $tugasLuar->waktu_mulai ?: ($tugasLuar->created_at ? $tugasLuar->created_at->format('H:i:s') : '08:00:00');
+            $waktuPulangTL = $tugasLuar->waktu_selesai ?: '16:00:00';
 
             if ($presensi) {
                 // Skenario 1 atau Skenario 2: Presensi sudah ada
@@ -132,8 +134,17 @@ class TugasLuarValidasiController extends Controller
                         : $infoTugasLuar;
                 }
 
+                $jamKeluarSync = $presensi->jam_keluar;
+                if (! $jamKeluarSync) {
+                    $jamKeluarSync = ($presensi->jam_masuk && $presensi->jam_masuk !== $waktuMasukTL)
+                        ? $waktuMasukTL
+                        : $waktuPulangTL;
+                }
+
                 $presensi->update([
                     'status' => 'hadir',
+                    'jam_masuk' => $presensi->jam_masuk ?: $waktuMasukTL,
+                    'jam_keluar' => $jamKeluarSync,
                     'keterangan' => $keteranganUpdate,
                 ]);
             } else {
@@ -141,8 +152,8 @@ class TugasLuarValidasiController extends Controller
                 $presensi = Presensi::create([
                     'pengguna_id' => $tugasLuar->pengguna_id,
                     'tanggal' => $tugasLuar->tanggal,
-                    'jam_masuk' => $tugasLuar->waktu_mulai ?? '08:00:00',
-                    'jam_keluar' => $tugasLuar->waktu_selesai,
+                    'jam_masuk' => $waktuMasukTL,
+                    'jam_keluar' => $waktuPulangTL,
                     'status' => 'hadir',
                     'mode_kerja' => 'tugas_luar',
                     'keterangan' => $infoTugasLuar,

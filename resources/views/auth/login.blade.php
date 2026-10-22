@@ -121,16 +121,6 @@
                     </p>
                 </div>
 
-                <!-- Welcome Subheading -->
-                <div class="text-center mt-7">
-                    <h2 class="text-2xl sm:text-[26px] font-extrabold tracking-wide text-white uppercase leading-tight">
-                        WELCOME BACK
-                    </h2>
-                    <p class="text-xs sm:text-[13px] text-white/70 font-normal mt-1">
-                        Manage your daily task
-                    </p>
-                </div>
-
                 <!-- Flash Status Message (e.g. Logout) -->
                 @if (session('status'))
                     <div class="mt-4 p-3 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-medium flex items-center gap-2 backdrop-blur-md">

@@ -380,8 +380,8 @@
                     <td>{{ $unitKerja }}</td>
                     <td>{{ $pembimbingNama }}</td>
                     <td class="c">{{ $modeText }}</td>
-                    <td class="c">{{ $item->jam_masuk ? substr($item->jam_masuk, 0, 5) . ' WITA' : '-' }}</td>
-                    <td class="c">{{ $item->jam_keluar ? substr($item->jam_keluar, 0, 5) . ' WITA' : '-' }}</td>
+                    <td class="c">{{ $item->jam_masuk_efektif ? substr($item->jam_masuk_efektif, 0, 5) . ' WITA' : '-' }}</td>
+                    <td class="c">{{ $item->formatJamKeluar(':') !== '-' ? $item->formatJamKeluar(':') . ' WITA' : '-' }}</td>
                     <td class="c">{{ $statusBadge }}</td>
                     <td>{{ $keteranganText }}</td>
                 </tr>

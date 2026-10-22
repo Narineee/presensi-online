@@ -1,111 +1,202 @@
 @extends('layouts.mobile')
-@section('title', 'Pengajuan Ketidakhadiran')
+@section('title', 'Layanan Pengajuan')
 
 @section('content')
 @php
     $in = 'mt-1.5 w-full rounded-2xl border border-slate-300 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-900 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 transition shadow-2xs';
+    $initTab = old('jenis_izin') || $errors->has('jenis_izin') || $errors->has('alasan') || $errors->has('bukti_file')
+        ? 'izin'
+        : (old('tujuan') || old('tanggal_selesai') || $errors->has('tujuan') || $errors->has('keperluan') || $errors->has('tanggal_selesai') ? 'tl' : request('tab', 'tl'));
 @endphp
 
-<header class="sticky-top-nav -mx-4 mb-4 flex items-center gap-3 border-b border-slate-200/80 bg-white/85 px-4 pb-3 backdrop-blur-xl lg:mx-0 lg:rounded-2xl lg:border">
-    <a href="{{ route('presensi.index') }}" class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-slate-300 bg-white text-lg hover:bg-slate-50 transition shadow-xs" aria-label="Kembali">
-        <svg class="w-5 h-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-        </svg>
-    </a>
-    <div class="min-w-0 flex-1">
-        <h1 class="text-base font-extrabold leading-tight text-slate-900 truncate">Pengajuan Ketidakhadiran</h1>
-        <p class="text-xs text-slate-500 font-medium truncate">Ajukan ketidakhadiran magang</p>
-    </div>
-</header>
-
-@include('layouts.partials.mobile-alerts')
-
-<form method="POST" action="{{ route('izin.store') }}" enctype="multipart/form-data" class="space-y-4"
-      x-data="{ jenis: @js(old('jenis_izin', '')), mulai: @js(old('tanggal_mulai', '')), selesai: @js(old('tanggal_selesai', '')), alasan: @js(old('alasan', '')), file: false, busy: false }"
-      @submit="busy = true">
-    @csrf
-
-    {{-- Jenis permohonan --}}
-    <div id="step-card-1">
-        <span id="tracker-step-1" class="hidden"></span>
-        <p class="mb-2 text-sm sm:text-base font-extrabold text-slate-900">Jenis permohonan</p>
-        <div class="grid grid-cols-3 gap-2" role="radiogroup">
-            @foreach (['sakit' => 'Sakit', 'izin' => 'Izin', 'cuti' => 'Cuti'] as $k => $label)
-                <label class="cursor-pointer">
-                    <input type="radio" name="jenis_izin" value="{{ $k }}" x-model="jenis" class="peer sr-only" required>
-                    <span class="block rounded-2xl border py-3 text-center text-xs sm:text-sm font-extrabold transition peer-focus-visible:ring-2 peer-focus-visible:ring-brand peer-focus-visible:ring-offset-2 truncate px-1"
-                          :class="jenis === '{{ $k }}' ? 'border-brand bg-brand text-white shadow-sm' : 'border-slate-200/90 bg-white/80 backdrop-blur-sm text-slate-700 hover:bg-white'">{{ $label }}</span>
-                </label>
-            @endforeach
+<div x-data="{ activeTab: @js($initTab) }" class="space-y-4">
+    {{-- Header --}}
+    <header class="sticky-top-nav -mx-4 mb-3 flex items-center gap-3 border-b border-slate-200/80 bg-white/85 px-4 pb-3 backdrop-blur-xl lg:mx-0 lg:rounded-2xl lg:border">
+        <a href="{{ route('presensi.index') }}" class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-slate-300 bg-white text-lg hover:bg-slate-50 transition shadow-xs" aria-label="Kembali ke Presensi">
+            <svg class="w-5 h-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+            </svg>
+        </a>
+        <div class="min-w-0 flex-1">
+            <h1 class="text-base font-extrabold leading-tight text-slate-900 truncate">Layanan Pengajuan</h1>
+            <p class="text-xs text-slate-500 font-medium truncate">Ajukan penugasan dinas luar atau ketidakhadiran</p>
         </div>
-    </div>
+    </header>
 
-    <section class="space-y-4 rounded-3xl glass-card p-5 shadow-sm">
-        <div id="step-card-2" class="grid grid-cols-2 gap-2.5" :class="!jenis ? 'opacity-40 select-none' : ''">
-            <label class="block text-xs sm:text-sm font-bold text-slate-800 min-w-0">Mulai
-                <input type="date" name="tanggal_mulai" x-model="mulai" :disabled="!jenis" required class="{{ $in }}">
-            </label>
-            <label class="block text-xs sm:text-sm font-bold text-slate-800 min-w-0">Selesai
-                <input type="date" name="tanggal_selesai" x-model="selesai" :min="mulai" :disabled="!jenis" required class="{{ $in }}">
-            </label>
-        </div>
+    @include('layouts.partials.mobile-alerts')
 
-        <div id="step-card-3" :class="!(mulai && selesai && selesai >= mulai) ? 'opacity-40 select-none' : ''">
-            <label class="block text-xs sm:text-sm font-bold text-slate-800">Alasan/keterangan tidak hadir
-                <textarea name="alasan" rows="5" minlength="5" x-model="alasan" :disabled="!(mulai && selesai && selesai >= mulai)" required class="{{ $in }}" placeholder="Jelaskan alasan ketidakhadiran Anda"></textarea>
-            </label>
-        </div>
-
-        <div id="step-card-4" :class="alasan.trim().length < 5 ? 'opacity-40 select-none' : ''">
-            <span id="tracker-step-4" class="hidden"></span>
-            <label class="block text-xs sm:text-sm font-bold text-slate-800">
-                <span class="flex items-center justify-between gap-1 mb-1">
-                    <span class="truncate">Lampiran Bukti (Surat Dokter / Dokumen Pendukung)</span>
-                    <span class="text-[11px] font-bold text-rose-600 shrink-0">Wajib dilampirkan</span>
-                </span>
-                <input type="file" name="bukti_file" accept=".jpg,.jpeg,.png,.pdf" required :disabled="alasan.trim().length < 5" @change="file = $event.target.files.length > 0"
-                       class="{{ $in }} file:mr-3 file:rounded-xl file:border-0 file:bg-brand-soft file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-brand">
-                <span class="mt-1.5 block text-[11px] font-normal text-slate-500">Format yang didukung: JPG, PNG, atau PDF. Maksimal 2MB.</span>
-            </label>
-        </div>
-    </section>
-
-    <div class="flex gap-3 rounded-2xl border border-blue-200 bg-blue-50/80 backdrop-blur-sm p-3.5 text-xs leading-relaxed text-slate-700 shadow-2xs">
-        <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-[11px] font-bold text-white">i</span>
-        <p class="break-words">Pengajuan akan diperiksa pembimbing. Status <b>Menunggu persetujuan</b> tidak dihitung alpa.</p>
+    {{-- Segmented Tab Switcher --}}
+    <div class="rounded-2xl bg-slate-200/80 p-1.5 flex gap-1 shadow-inner">
+        <button type="button" 
+                @click="activeTab = 'tl'" 
+                class="flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-extrabold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                :class="activeTab === 'tl' ? 'bg-white text-brand shadow-sm' : 'text-slate-600 hover:text-slate-900'">
+            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.129-1.125V14.25m-19.5 0h19.5m-19.5 0l2.625-7.875A1.125 1.125 0 014.5 5.625h15a1.125 1.125 0 011.065.75L23.25 14.25" />
+            </svg>
+            <span class="truncate">Tugas Luar (TL)</span>
+        </button>
+        <button type="button" 
+                @click="activeTab = 'izin'" 
+                class="flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-extrabold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                :class="activeTab === 'izin' ? 'bg-white text-brand shadow-sm' : 'text-slate-600 hover:text-slate-900'">
+            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+            <span class="truncate">Izin / Sakit</span>
+        </button>
     </div>
 
-    <button type="submit" id="btn-submit-izin"
-            :disabled="busy || !(jenis && mulai && selesai && selesai >= mulai && alasan.trim().length >= 5 && file)"
-            class="btn-brand-primary flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-extrabold text-white shadow-sm transition active:scale-[.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 cursor-pointer">
-        <span x-show="busy">Mengirim…</span>
-        <span x-show="!busy && !(jenis && mulai && selesai && selesai >= mulai && alasan.trim().length >= 5 && file)">Lengkapi Semua Langkah</span>
-        <span x-show="!busy && (jenis && mulai && selesai && selesai >= mulai && alasan.trim().length >= 5 && file)">➤ Kirim pengajuan</span>
-    </button>
-</form>
+    {{-- ==================== TAB 1: FORM TUGAS LUAR (TL) ==================== --}}
+    <div x-show="activeTab === 'tl'" x-cloak class="space-y-4">
+        {{-- Banner Edukasi Status Hadir --}}
+        <div class="flex items-start gap-3 rounded-2xl border border-blue-200/90 bg-blue-50/80 backdrop-blur-sm p-3.5 text-xs text-blue-900 shadow-2xs">
+            <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-[11px] font-bold text-white">✓</span>
+            <div class="space-y-0.5">
+                <p class="font-extrabold text-blue-950">Status: Tetap Dihitung Hadir</p>
+                <p class="text-blue-900/90 leading-relaxed">
+                    Pengajuan Tugas Luar (TL) dinas di luar kantor akan diverifikasi oleh pembimbing. Setelah disetujui, kehadiran Anda otomatis tercatat sebagai <b>Hadir</b>.
+                </p>
+            </div>
+        </div>
 
-{{-- Pengajuan terakhir --}}
-@if ($terakhir->isNotEmpty())
-    <h2 class="mt-6 mb-2 text-sm font-extrabold text-slate-900">Pengajuan terakhir</h2>
-    <ul class="space-y-2.5">
-        @foreach ($terakhir as $item)
-            @php
-                $st = match ($item->status_approval) {
-                    'disetujui' => ['Disetujui', 'bg-emerald-50 text-emerald-700 border-emerald-200', 'Disetujui oleh '.$item->nama_validator],
-                    'ditolak' => ['Ditolak', 'bg-rose-50 text-rose-700 border-rose-200', 'Ditolak oleh '.$item->nama_validator],
-                    default => ['Menunggu', 'bg-amber-50 text-amber-700 border-amber-200', 'Menunggu persetujuan pembimbing'],
-                };
-            @endphp
-            <li>
-                <a href="{{ route('izin.show', $item->id) }}" class="flex items-center justify-between gap-3 rounded-2xl glass-card px-4 py-3 shadow-2xs hover:border-brand/40 transition">
-                    <div class="min-w-0 flex-1">
-                        <p class="truncate text-xs sm:text-sm font-bold text-slate-900">{{ ucfirst($item->jenis_izin) }} {{ \Illuminate\Support\Str::limit($item->alasan, 28) }} - {{ $item->tanggal_mulai->locale('id')->isoFormat('D MMM') }}</p>
-                        <p class="truncate text-[11px] text-slate-500 mt-0.5">{{ $st[2] }}</p>
-                    </div>
-                    <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold border {{ $st[1] }}">{{ $st[0] }}</span>
-                </a>
-            </li>
-        @endforeach
-    </ul>
-@endif
+        <form method="POST" action="{{ route('presensi.tugas-luar') }}" enctype="multipart/form-data" class="space-y-4">
+            @csrf
+            <section class="space-y-4 rounded-3xl glass-card p-5 shadow-sm">
+                @include('presensi.form-tl', ['formId' => 'tl_layanan'])
+            </section>
+
+            <button type="submit"
+                    class="btn-brand-primary flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-extrabold text-white shadow-sm transition active:scale-[.99] cursor-pointer">
+                <span>➤ Kirim pengajuan Tugas Luar</span>
+            </button>
+        </form>
+
+        {{-- Riwayat Pengajuan TL Terakhir --}}
+        @if (isset($terakhirTL) && $terakhirTL->isNotEmpty())
+            <div class="pt-2">
+                <h2 class="mb-2.5 text-sm font-extrabold text-slate-900">Pengajuan TL terakhir</h2>
+                <ul class="space-y-2.5">
+                    @foreach ($terakhirTL as $tl)
+                        @php
+                            $st = match ($tl->status_verifikasi) {
+                                'disetujui' => ['Disetujui', 'bg-emerald-50 text-emerald-700 border-emerald-200', 'Disetujui oleh '.($tl->validator?->nama_lengkap ?? 'Pembimbing')],
+                                'ditolak' => ['Ditolak', 'bg-rose-50 text-rose-700 border-rose-200', 'Ditolak'.($tl->catatan_pembimbing ? ': '.$tl->catatan_pembimbing : '')],
+                                default => ['Menunggu', 'bg-amber-50 text-amber-700 border-amber-200', 'Menunggu persetujuan pembimbing'],
+                            };
+                            $tglText = $tl->tanggal_mulai && $tl->tanggal_selesai
+                                ? ($tl->tanggal_mulai->format('d/m/Y') . ' - ' . $tl->tanggal_selesai->format('d/m/Y'))
+                                : ($tl->tanggal ? \Carbon\Carbon::parse($tl->tanggal)->format('d/m/Y') : '-');
+                        @endphp
+                        <li class="flex items-center justify-between gap-3 rounded-2xl glass-card px-4 py-3 shadow-2xs">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs sm:text-sm font-bold text-slate-900 truncate">{{ $tl->tujuan }}</span>
+                                    <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold border {{ $st[1] }}">{{ $st[0] }}</span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 mt-0.5 truncate">{{ $tglText }} &bull; {{ $tl->keperluan }}</p>
+                                <p class="text-[10px] text-slate-400 mt-0.5 truncate">{{ $st[2] }}</p>
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+    </div>
+
+    {{-- ==================== TAB 2: FORM IZIN / SAKIT / CUTI ==================== --}}
+    <div x-show="activeTab === 'izin'" x-cloak class="space-y-4">
+        {{-- Banner Edukasi Status Tidak Hadir --}}
+        <div class="flex gap-3 rounded-2xl border border-blue-200/90 bg-blue-50/80 backdrop-blur-sm p-3.5 text-xs leading-relaxed text-slate-700 shadow-2xs">
+            <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-[11px] font-bold text-white">i</span>
+            <p class="break-words">Pengajuan izin/sakit akan diperiksa pembimbing. Status <b>Menunggu persetujuan</b> tidak dihitung alpa.</p>
+        </div>
+
+        <form method="POST" action="{{ route('izin.store') }}" enctype="multipart/form-data" class="space-y-4"
+              x-data="{ jenis: @js(old('jenis_izin', '')), mulai: @js(old('tanggal_mulai', '')), selesai: @js(old('tanggal_selesai', '')), alasan: @js(old('alasan', '')), file: false, busy: false }"
+              @submit="busy = true">
+            @csrf
+
+            {{-- Jenis permohonan --}}
+            <div id="step-card-1">
+                <span id="tracker-step-1" class="hidden"></span>
+                <p class="mb-2 text-sm sm:text-base font-extrabold text-slate-900">Jenis permohonan</p>
+                <div class="grid grid-cols-3 gap-2" role="radiogroup">
+                    @foreach (['sakit' => 'Sakit', 'izin' => 'Izin', 'cuti' => 'Cuti'] as $k => $label)
+                        <label class="cursor-pointer">
+                            <input type="radio" name="jenis_izin" value="{{ $k }}" x-model="jenis" class="peer sr-only" required>
+                            <span class="block rounded-2xl border py-3 text-center text-xs sm:text-sm font-extrabold transition peer-focus-visible:ring-2 peer-focus-visible:ring-brand peer-focus-visible:ring-offset-2 truncate px-1"
+                                  :class="jenis === '{{ $k }}' ? 'border-brand bg-brand text-white shadow-sm' : 'border-slate-200/90 bg-white/80 backdrop-blur-sm text-slate-700 hover:bg-white'">{{ $label }}</span>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+
+            <section class="space-y-4 rounded-3xl glass-card p-5 shadow-sm">
+                <div id="step-card-2" class="grid grid-cols-2 gap-2.5" :class="!jenis ? 'opacity-40 select-none' : ''">
+                    <label class="block text-xs sm:text-sm font-bold text-slate-800 min-w-0">Mulai
+                        <input type="date" name="tanggal_mulai" x-model="mulai" :disabled="!jenis" required class="{{ $in }}">
+                    </label>
+                    <label class="block text-xs sm:text-sm font-bold text-slate-800 min-w-0">Selesai
+                        <input type="date" name="tanggal_selesai" x-model="selesai" :min="mulai" :disabled="!jenis" required class="{{ $in }}">
+                    </label>
+                </div>
+
+                <div id="step-card-3" :class="!(mulai && selesai && selesai >= mulai) ? 'opacity-40 select-none' : ''">
+                    <label class="block text-xs sm:text-sm font-bold text-slate-800">Alasan/keterangan tidak hadir
+                        <textarea name="alasan" rows="5" minlength="5" x-model="alasan" :disabled="!(mulai && selesai && selesai >= mulai)" required class="{{ $in }}" placeholder="Jelaskan alasan ketidakhadiran Anda"></textarea>
+                    </label>
+                </div>
+
+                <div id="step-card-4" :class="alasan.trim().length < 5 ? 'opacity-40 select-none' : ''">
+                    <span id="tracker-step-4" class="hidden"></span>
+                    <label class="block text-xs sm:text-sm font-bold text-slate-800">
+                        <span class="flex items-center justify-between gap-1 mb-1">
+                            <span class="truncate">Lampiran Bukti (Surat Dokter / Dokumen Pendukung)</span>
+                            <span class="text-[11px] font-bold text-rose-600 shrink-0">Wajib dilampirkan</span>
+                        </span>
+                        <input type="file" name="bukti_file" accept=".jpg,.jpeg,.png,.pdf" required :disabled="alasan.trim().length < 5" @change="file = $event.target.files.length > 0"
+                               class="{{ $in }} file:mr-3 file:rounded-xl file:border-0 file:bg-brand-soft file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-brand">
+                        <span class="mt-1.5 block text-[11px] font-normal text-slate-500">Format yang didukung: JPG, PNG, atau PDF. Maksimal 2MB.</span>
+                    </label>
+                </div>
+            </section>
+
+            <button type="submit" id="btn-submit-izin"
+                    :disabled="busy || !(jenis && mulai && selesai && selesai >= mulai && alasan.trim().length >= 5 && file)"
+                    class="btn-brand-primary flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-extrabold text-white shadow-sm transition active:scale-[.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 cursor-pointer">
+                <span x-show="busy">Mengirim…</span>
+                <span x-show="!busy && !(jenis && mulai && selesai && selesai >= mulai && alasan.trim().length >= 5 && file)">Lengkapi Semua Langkah</span>
+                <span x-show="!busy && (jenis && mulai && selesai && selesai >= mulai && alasan.trim().length >= 5 && file)">➤ Kirim pengajuan</span>
+            </button>
+        </form>
+
+        {{-- Pengajuan izin terakhir --}}
+        @if ($terakhir->isNotEmpty())
+            <div class="pt-2">
+                <h2 class="mb-2.5 text-sm font-extrabold text-slate-900">Pengajuan izin terakhir</h2>
+                <ul class="space-y-2.5">
+                    @foreach ($terakhir as $item)
+                        @php
+                            $st = match ($item->status_approval) {
+                                'disetujui' => ['Disetujui', 'bg-emerald-50 text-emerald-700 border-emerald-200', 'Disetujui oleh '.$item->nama_validator],
+                                'ditolak' => ['Ditolak', 'bg-rose-50 text-rose-700 border-rose-200', 'Ditolak oleh '.$item->nama_validator],
+                                default => ['Menunggu', 'bg-amber-50 text-amber-700 border-amber-200', 'Menunggu persetujuan pembimbing'],
+                            };
+                        @endphp
+                        <li>
+                            <a href="{{ route('izin.show', $item->id) }}" class="flex items-center justify-between gap-3 rounded-2xl glass-card px-4 py-3 shadow-2xs hover:border-brand/40 transition">
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-xs sm:text-sm font-bold text-slate-900">{{ ucfirst($item->jenis_izin) }} {{ \Illuminate\Support\Str::limit($item->alasan, 28) }} - {{ $item->tanggal_mulai->locale('id')->isoFormat('D MMM') }}</p>
+                                    <p class="truncate text-[11px] text-slate-500 mt-0.5">{{ $st[2] }}</p>
+                                </div>
+                                <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold border {{ $st[1] }}">{{ $st[0] }}</span>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+    </div>
+</div>
 @endsection

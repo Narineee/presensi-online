@@ -204,7 +204,7 @@ class MagangJenisKelaminTest extends TestCase
 
         $responseCreate = $this->actingAs($this->admin)->get(route('admin.magang.create'));
         $responseCreate->assertStatus(200);
-        $responseCreate->assertSee('Jenis Kelamin');
+        $responseCreate->assertSee('jenis kelamin');
 
         $responseEdit = $this->actingAs($this->admin)->get(route('admin.magang.edit', $magang->id));
         $responseEdit->assertStatus(200);

@@ -81,7 +81,7 @@
         <div class="flex items-center justify-between border-b border-slate-200/80 pb-3">
             <div>
                 <h2 class="text-base font-extrabold text-slate-900">Rencana Kerja & Progres</h2>
-                <p class="text-xs text-slate-500 font-medium">Pilih rencana kerja dan uraikan hasil progresnya</p>
+                <p class="text-xs text-slate-500 font-medium">Pilih rencana kerja dan tentukan status progresnya</p>
             </div>
             <a href="{{ route('rencana.create', ['redirect_to' => 'aktivitas']) }}" class="text-xs font-bold text-brand hover:underline shrink-0">
                 + Rencana Baru
@@ -121,18 +121,38 @@
                         </select>
                     </div>
 
-                    {{-- Kolom Progres Khusus Rencana Tersebut --}}
+                    {{-- Tombol Pilihan Selesai / Belum --}}
                     <div>
-                        <label class="block text-xs font-bold text-slate-800 mb-1">
-                            Uraian Progres Pekerjaan <span class="text-rose-500">*</span>
+                        <label class="block text-xs font-bold text-slate-800 mb-1.5">
+                            Status Progres <span class="text-rose-500">*</span>
                         </label>
-                        <textarea :name="'items[' + index + '][progres]'"
-                                  x-model="item.progres"
-                                  rows="3"
-                                  minlength="5"
-                                  required
-                                  placeholder="Contoh: Menyelesaikan perancangan antarmuka sebesar 70%, membantu verifikasi berkas 5 pemohon..."
-                                  class="{{ $in }}"></textarea>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <label class="flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-extrabold cursor-pointer transition select-none active:scale-[0.99]"
+                                   :class="item.progres === 'Selesai'
+                                       ? 'border-emerald-500 bg-emerald-500 text-white shadow-xs'
+                                       : 'border-slate-300 bg-white/90 text-slate-700 hover:bg-slate-50 hover:border-slate-400'">
+                                <input type="radio"
+                                       :name="'items[' + index + '][progres]'"
+                                       value="Selesai"
+                                       x-model="item.progres"
+                                       required
+                                       class="sr-only">
+                                <span>✓ Selesai</span>
+                            </label>
+
+                            <label class="flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-extrabold cursor-pointer transition select-none active:scale-[0.99]"
+                                   :class="item.progres === 'Belum'
+                                       ? 'border-amber-500 bg-amber-500 text-white shadow-xs'
+                                       : 'border-slate-300 bg-white/90 text-slate-700 hover:bg-slate-50 hover:border-slate-400'">
+                                <input type="radio"
+                                       :name="'items[' + index + '][progres]'"
+                                       value="Belum"
+                                       x-model="item.progres"
+                                       required
+                                       class="sr-only">
+                                <span>⏳ Belum</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </template>
@@ -151,7 +171,7 @@
     {{-- Info Validasi --}}
     <div class="flex gap-3 rounded-2xl border border-blue-200 bg-blue-50/80 backdrop-blur-sm p-3.5 text-xs leading-relaxed text-slate-700 shadow-2xs">
         <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-[11px] font-bold text-white">i</span>
-        <p class="break-words"><b>Alur validasi:</b> Aktivitas yang Anda laporkan akan ditinjau oleh pembimbing lapangan. Pembimbing dapat menyetujui atau memberikan catatan revisi jika uraian progres perlu dilengkapi.</p>
+        <p class="break-words"><b>Alur validasi:</b> Aktivitas yang Anda laporkan akan ditinjau oleh pembimbing lapangan. Pembimbing dapat menyetujui atau memberikan catatan revisi terkait laporan aktivitas Anda.</p>
     </div>
 
     {{-- Submit Button --}}

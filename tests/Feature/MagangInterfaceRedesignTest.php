@@ -4,10 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Divisi;
 use App\Models\Magang;
-use App\Models\Pekerjaan;
 use App\Models\Pembimbing;
 use App\Models\PengajuanIzin;
 use App\Models\Pengguna;
+use App\Models\RencanaKerja;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -110,32 +110,33 @@ class MagangInterfaceRedesignTest extends TestCase
 
     public function test_magang_can_submit_aktivitas_with_custom_judul(): void
     {
-        $pekerjaan = Pekerjaan::create([
+        $rk = RencanaKerja::create([
             'magang_id' => $this->magang->id,
-            'pembimbing_id' => $this->pembimbing->id,
             'judul' => 'Pengembangan Sistem Presensi',
-            'deskripsi' => 'Merancang UI Glassmorphism',
-            'jenis' => 'proyek',
-            'progress' => 25,
-            'tanggal_mulai' => '2026-09-01',
             'status' => 'aktif',
         ]);
 
         $response = $this->actingAs($this->userMagang)->post(route('aktivitas.store'), [
-            'pekerjaan_id' => $pekerjaan->id,
-            'judul' => 'Implementasi UI Glassmorphism Mobile Bottom Bar',
             'tanggal' => '2026-10-01',
-            'isi' => 'Menyelesaikan antarmuka responsive glassmorphism sesuai PRD images.',
+            'items' => [
+                [
+                    'rencana_kerja_id' => $rk->id,
+                    'progres' => 'Selesai',
+                ],
+            ],
         ]);
 
-        $response->assertRedirect(route('aktivitas.index'));
+        $response->assertRedirect(route('presensi.index'));
 
         $this->assertDatabaseHas('aktivitas', [
             'pengguna_id' => $this->userMagang->id,
-            'pekerjaan_id' => $pekerjaan->id,
-            'judul' => 'Implementasi UI Glassmorphism Mobile Bottom Bar',
-            'isi' => 'Menyelesaikan antarmuka responsive glassmorphism sesuai PRD images.',
             'status' => 'pending',
+        ]);
+
+        $this->assertDatabaseHas('aktivitas_detail', [
+            'rencana_kerja_id' => $rk->id,
+            'rencana_kerja_snapshot' => 'Pengembangan Sistem Presensi',
+            'progres' => 'Selesai',
         ]);
     }
 

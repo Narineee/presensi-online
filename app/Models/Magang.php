@@ -227,6 +227,18 @@ class Magang extends Model
         $dto->detail_rata_rata = $detailAkumulasi;
         $dto->created_at = $evaluations->last()->created_at ?? now();
 
+        $hasilKaryaList = collect();
+        foreach ($evaluations as $ev) {
+            if (! empty($ev->hasil_karya) && is_array($ev->hasil_karya)) {
+                foreach ($ev->hasil_karya as $hk) {
+                    if (is_string($hk) && trim($hk) !== '') {
+                        $hasilKaryaList->push(trim($hk));
+                    }
+                }
+            }
+        }
+        $dto->hasil_karya = $hasilKaryaList->unique()->values()->all();
+
         return $dto;
     }
 

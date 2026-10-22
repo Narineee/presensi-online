@@ -121,7 +121,7 @@ class AktivitasController extends Controller
             'tanggal' => 'required|date',
             'items' => 'required|array|min:1',
             'items.*.rencana_kerja_id' => ['required', 'in:'.implode(',', $allowedRencanaIds)],
-            'items.*.progres' => 'required|string|min:5',
+            'items.*.progres' => 'required|string',
         ], [
             'tanggal.required' => 'Tanggal aktivitas wajib diisi.',
             'tanggal.date' => 'Format tanggal tidak valid.',
@@ -129,8 +129,7 @@ class AktivitasController extends Controller
             'items.min' => 'Minimal pilih 1 rencana kerja untuk dilaporkan.',
             'items.*.rencana_kerja_id.required' => 'Rencana kerja wajib dipilih.',
             'items.*.rencana_kerja_id.in' => 'Rencana kerja yang dipilih tidak valid atau bukan milik Anda.',
-            'items.*.progres.required' => 'Uraian progres pekerjaan wajib diisi.',
-            'items.*.progres.min' => 'Uraian progres minimal 5 karakter.',
+            'items.*.progres.required' => 'Pilihan status progres pekerjaan (Selesai/Belum) wajib dipilih.',
         ]);
 
         // Cek duplikasi pemilihan rencana kerja yang sama dalam satu pengisian aktivitas
@@ -236,15 +235,14 @@ class AktivitasController extends Controller
             'tanggal' => 'required|date',
             'items' => 'required|array|min:1',
             'items.*.rencana_kerja_id' => ['required', 'in:'.implode(',', $allowedRencanaIds)],
-            'items.*.progres' => 'required|string|min:5',
+            'items.*.progres' => 'required|string',
         ], [
             'tanggal.required' => 'Tanggal aktivitas wajib diisi.',
             'items.required' => 'Minimal pilih 1 rencana kerja untuk dilaporkan.',
             'items.min' => 'Minimal pilih 1 rencana kerja untuk dilaporkan.',
             'items.*.rencana_kerja_id.required' => 'Rencana kerja wajib dipilih.',
             'items.*.rencana_kerja_id.in' => 'Rencana kerja yang dipilih tidak valid atau bukan milik Anda.',
-            'items.*.progres.required' => 'Uraian progres pekerjaan wajib diisi.',
-            'items.*.progres.min' => 'Uraian progres minimal 5 karakter.',
+            'items.*.progres.required' => 'Pilihan status progres pekerjaan (Selesai/Belum) wajib dipilih.',
         ]);
 
         $selectedRencanaIds = collect($request->items)->pluck('rencana_kerja_id')->toArray();

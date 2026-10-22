@@ -94,7 +94,14 @@
                     <div class="mt-3 space-y-2.5">
                         @foreach ($a->details as $idx => $d)
                             <div class="rounded-xl bg-slate-50 p-3 border border-slate-200 text-xs">
-                                <span class="font-extrabold text-brand block mb-1">#{{ $idx + 1 }} {{ $d->judul_rencana }}</span>
+                                <div class="flex items-center justify-between mb-1 gap-2">
+                                    <span class="font-extrabold text-brand truncate">#{{ $idx + 1 }} {{ $d->judul_rencana }}</span>
+                                    @if (in_array(strtolower(trim($d->progres)), ['selesai', 'belum']))
+                                        <span class="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold {{ strtolower(trim($d->progres)) === 'selesai' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
+                                            {{ strtolower(trim($d->progres)) === 'selesai' ? '✓ Selesai' : '⏳ Belum' }}
+                                        </span>
+                                    @endif
+                                </div>
                                 <p class="whitespace-pre-line text-slate-800 leading-relaxed">{{ $d->progres }}</p>
                             </div>
                         @endforeach

@@ -319,8 +319,8 @@ class BinaanController extends Controller
             return [
                 'tanggal' => $p->tanggal,
                 'mode' => $isIzin ? $label : ($p->is_tugas_luar ? 'TUGAS LUAR' : strtoupper((string) $p->mode_kerja)),
-                'jam_masuk' => $isIzin ? $label : $jam($p->jam_masuk),
-                'jam_pulang' => $isIzin ? $label : $jam($p->jam_keluar),
+                'jam_masuk' => $isIzin ? $label : $jam($p->jam_masuk_efektif),
+                'jam_pulang' => $isIzin ? $label : $jam($p->jam_keluar_efektif),
                 'catatan_pulang' => $catatanPulang,
                 'terlambat' => $terlambat,
                 'foto_masuk_url' => $p->foto_masuk_url,
@@ -341,11 +341,19 @@ class BinaanController extends Controller
      */
     private function extractCatatanPulang(?Presensi $p, ?Collection $izin = null): ?string
     {
-        if (! $p || ! $p->jam_keluar || $p->jam_keluar >= '16:00:00') {
+        if (! $p) {
             return null;
         }
 
         if (in_array($p->status, ['sakit', 'izin', 'cuti'])) {
+            return null;
+        }
+
+        if ($p->catatan_pulang) {
+            return $p->catatan_pulang;
+        }
+
+        if (! $p->jam_keluar || $p->jam_keluar >= '16:00:00') {
             return null;
         }
 
