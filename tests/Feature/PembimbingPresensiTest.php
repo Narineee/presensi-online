@@ -159,10 +159,49 @@ class PembimbingPresensiTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Kehadiran Intern Satu Unik');
         $response->assertDontSee('Kehadiran Intern Dua Unik');
+        $response->assertSee('name="magang_id"', false);
+        $response->assertSee('Peserta Satu');
+        $response->assertSee('Peserta Dua');
         $response->assertViewHas('presensi', function ($presensi) use ($intern1User, $intern2User) {
             return $presensi->contains('pengguna_id', $intern1User->id)
                 && ! $presensi->contains('pengguna_id', $intern2User->id);
         });
+    }
+
+    public function test_pembimbing_all_monitoring_pages_render_magang_filter_dropdown(): void
+    {
+        [$pembimbingUser, $pembimbing] = $this->createPembimbingWithUser('pembimbing_dropdown_test');
+        [$internUser, $intern] = $this->createIntern($pembimbing, 'Peserta Dropdown Cek', 'magang_dd');
+
+        // 1. Presensi
+        $resPresensi = $this->actingAs($pembimbingUser)->get(route('pembimbing.presensi.index'));
+        $resPresensi->assertStatus(200);
+        $resPresensi->assertSee('name="magang_id"', false);
+        $resPresensi->assertSee('Peserta Dropdown Cek');
+
+        // 2. Aktivitas
+        $resAktivitas = $this->actingAs($pembimbingUser)->get(route('pembimbing.aktivitas.index'));
+        $resAktivitas->assertStatus(200);
+        $resAktivitas->assertSee('name="magang_id"', false);
+        $resAktivitas->assertSee('Peserta Dropdown Cek');
+
+        // 3. Izin
+        $resIzin = $this->actingAs($pembimbingUser)->get(route('pembimbing.izin.index'));
+        $resIzin->assertStatus(200);
+        $resIzin->assertSee('name="magang_id"', false);
+        $resIzin->assertSee('Peserta Dropdown Cek');
+
+        // 4. Tugas Luar
+        $resTL = $this->actingAs($pembimbingUser)->get(route('pembimbing.tugas-luar.index'));
+        $resTL->assertStatus(200);
+        $resTL->assertSee('name="magang_id"', false);
+        $resTL->assertSee('Peserta Dropdown Cek');
+
+        // 5. Rencana Kerja
+        $resRencana = $this->actingAs($pembimbingUser)->get(route('pembimbing.rencana.index'));
+        $resRencana->assertStatus(200);
+        $resRencana->assertSee('name="magang_id"', false);
+        $resRencana->assertSee('Peserta Dropdown Cek');
     }
 
     public function test_pembimbing_can_filter_by_date_and_mode_kerja(): void

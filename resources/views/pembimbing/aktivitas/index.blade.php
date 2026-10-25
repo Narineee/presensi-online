@@ -31,7 +31,7 @@
 
 {{-- Filter --}}
 <form method="GET" action="{{ route('pembimbing.aktivitas.index') }}" class="space-y-2.5">
-    @foreach (['magang_id', 'pekerjaan_id', 'tanggal'] as $tetap)
+    @foreach (['pekerjaan_id', 'tanggal'] as $tetap)
         @if (request($tetap))<input type="hidden" name="{{ $tetap }}" value="{{ request($tetap) }}">@endif
     @endforeach
     <label class="relative block">
@@ -40,6 +40,24 @@
         <input type="search" name="q" value="{{ request('q') }}" placeholder="Cari peserta" class="{{ $in }} pl-9">
     </label>
     <div class="grid grid-cols-2 gap-2.5">
+        <label class="block"><span class="sr-only">Pilih Peserta Magang</span>
+            <select name="magang_id" class="{{ $in }}">
+                <option value="">Semua peserta</option>
+                @foreach ($magangList as $sm)
+                    <option value="{{ $sm->id }}" @selected(request('magang_id') == $sm->id)>{{ $sm->nama_lengkap }}</option>
+                @endforeach
+            </select>
+        </label>
+        <label class="block"><span class="sr-only">Status</span>
+            <select name="status" class="{{ $in }}">
+                <option value="">Semua status</option>
+                <option value="pending" @selected(request('status') === 'pending')>Menunggu validasi</option>
+                <option value="approve" @selected(request('status') === 'approve')>Disetujui</option>
+                <option value="revisi" @selected(request('status') === 'revisi')>Perbaikan</option>
+            </select>
+        </label>
+    </div>
+    <div class="grid grid-cols-2 gap-2.5">
         <label class="block"><span class="sr-only">Tanggal mulai</span>
             <input type="date" name="tanggal_mulai" value="{{ request('tanggal_mulai') }}" class="{{ $in }}" title="Tanggal mulai">
         </label>
@@ -47,14 +65,6 @@
             <input type="date" name="tanggal_akhir" value="{{ request('tanggal_akhir') }}" class="{{ $in }}" title="Tanggal selesai">
         </label>
     </div>
-    <label class="block"><span class="sr-only">Status</span>
-        <select name="status" class="{{ $in }}">
-            <option value="">Semua status</option>
-            <option value="pending" @selected(request('status') === 'pending')>Menunggu validasi</option>
-            <option value="approve" @selected(request('status') === 'approve')>Disetujui</option>
-            <option value="revisi" @selected(request('status') === 'revisi')>Perbaikan</option>
-        </select>
-    </label>
     <button type="submit" class="w-full rounded-2xl bg-brand py-3.5 text-sm font-extrabold text-white shadow-sm active:scale-[.99]">Terapkan Filter</button>
     @if ($adaFilter)
         <a href="{{ route('pembimbing.aktivitas.index') }}" class="block text-center text-xs font-bold text-slate-500 underline">Reset filter</a>
@@ -102,7 +112,13 @@
                                         </span>
                                     @endif
                                 </div>
-                                <p class="whitespace-pre-line text-slate-800 leading-relaxed">{{ $d->progres }}</p>
+                                <p class="whitespace-pre-line text-slate-800 leading-relaxed font-semibold">Status: {{ $d->progres }}</p>
+                                @if (strtolower(trim($d->progres)) === 'belum' && $d->alasan)
+                                    <div class="mt-2 pt-1.5 border-t border-slate-200">
+                                        <span class="font-extrabold text-amber-900 block text-[11px]">Alasan Belum:</span>
+                                        <p class="text-slate-700 italic bg-amber-50/70 p-2 rounded-lg border border-amber-200/60 mt-0.5">{{ $d->alasan }}</p>
+                                    </div>
+                                @endif
                             </div>
                         @endforeach
                     </div>

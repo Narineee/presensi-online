@@ -19,9 +19,10 @@
     $existingItems = $aktivitas->details->map(fn($d) => [
         'rencana_kerja_id' => (string) $d->rencana_kerja_id,
         'progres' => $normalizeProgres($d->progres),
+        'alasan' => (string) ($d->alasan ?? ''),
     ])->values()->toArray();
     if (empty($existingItems)) {
-        $existingItems = [['rencana_kerja_id' => '', 'progres' => $normalizeProgres($aktivitas->isi)]];
+        $existingItems = [['rencana_kerja_id' => '', 'progres' => $normalizeProgres($aktivitas->isi), 'alasan' => '']];
     }
     $oldItems = old('items', $existingItems);
 @endphp
@@ -53,7 +54,7 @@
           busy: false,
           items: {{ Js::from($oldItems) }},
           addItem() {
-              this.items.push({ rencana_kerja_id: '', progres: '' });
+              this.items.push({ rencana_kerja_id: '', progres: '', alasan: '' });
           },
           removeItem(index) {
               if (this.items.length > 1) {
@@ -148,6 +149,21 @@
                                 <span>⏳ Belum</span>
                             </label>
                         </div>
+                    </div>
+
+                    {{-- Input Alasan Jika Belum Selesai --}}
+                    <div x-show="item.progres === 'Belum'" x-cloak class="space-y-1.5 pt-1">
+                        <label class="block text-xs font-bold text-amber-950">
+                            Alasan Belum Selesai <span class="text-rose-500">*</span>
+                        </label>
+                        <textarea :name="'items[' + index + '][alasan]'"
+                                  x-model="item.alasan"
+                                  :required="item.progres === 'Belum'"
+                                  :disabled="item.progres !== 'Belum'"
+                                  rows="2"
+                                  placeholder="Tuliskan kendala atau alasan mengapa rencana kerja ini belum selesai..."
+                                  class="{{ $in }}"></textarea>
+                        <p class="text-[11px] text-amber-800 font-medium">Wajib diisi untuk menjelaskan alasan atau kendala progres.</p>
                     </div>
                 </div>
             </template>

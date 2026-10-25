@@ -105,7 +105,10 @@ class SertifikatMagangTest extends TestCase
         $response->assertSee('SERTIFIKAT');
         $response->assertSee('Diberikan kepada:');
         $response->assertSee('Intern Sertif Testing');
-        $response->assertSee('Nomor Induk: NIM998877');
+        $response->assertSee('<u>Intern Sertif Testing</u>', false);
+        $response->assertSee('Nomor Induk NIM998877');
+        $response->assertSee('Jurusan: Ilmu Komputer');
+        $response->assertSee('Lembaga Pendidikan: Universitas Lambung Mangkurat');
         $response->assertSee('Dinas Komunikasi dan Informatika');
         $response->assertSee('memperoleh nilai akhir dengan kualifikasi');
         $response->assertSee('Sangat Baik');
@@ -117,7 +120,10 @@ class SertifikatMagangTest extends TestCase
         // Uji juga pada tampilan cetak / PDF format html
         $cetakResponse = $this->actingAs($internUser)->get(route('magang.sertifikat.cetak', ['format' => 'html']));
         $cetakResponse->assertStatus(200);
-        $cetakResponse->assertSee('Nomor Induk: NIM998877');
+        $cetakResponse->assertSee('<u>Intern Sertif Testing</u>', false);
+        $cetakResponse->assertSee('Nomor Induk NIM998877');
+        $cetakResponse->assertSee('Jurusan: Ilmu Komputer');
+        $cetakResponse->assertSee('Lembaga Pendidikan: Universitas Lambung Mangkurat');
         $cetakResponse->assertSee('memperoleh nilai akhir dengan kualifikasi');
         $cetakResponse->assertSee('Sangat Baik');
         $cetakResponse->assertDontSee('[A (Sangat Baik)]');
@@ -140,6 +146,32 @@ class SertifikatMagangTest extends TestCase
         $this->assertStringStartsWith('%PDF-', $content);
 
         // Memastikan PDF sertifikat hanya 1 halaman (tidak overflow ke halaman kedua)
+        $pageMatches = preg_match_all('/\/Type\s*\/Page\b/', $content);
+        $this->assertEquals(1, $pageMatches);
+    }
+
+    public function test_sertifikat_pdf_remains_single_page_with_long_participant_data(): void
+    {
+        [$internUser, $magang, $pembimbing] = $this->createInternUser();
+
+        $magang->update([
+            'nama_lengkap' => 'Muhammad Rizky Ramadhan Al-Fattah Ash-Shiddiq',
+            'no_induk' => '20261100998877665544',
+            'jurusan' => 'Pendidikan Teknik Informatika dan Komputer Terapan',
+            'instansi_pendidikan' => 'Universitas Lambung Mangkurat Banjarmasin Kalimantan Selatan',
+        ]);
+
+        Penilaian::create([
+            'magang_id' => $magang->id,
+            'pembimbing_id' => $pembimbing->id,
+            'total_nilai' => 90,
+        ]);
+
+        $pdfResponse = $this->actingAs($internUser)->get(route('magang.sertifikat.cetak'));
+        $pdfResponse->assertStatus(200);
+        $content = $pdfResponse->getContent();
+        $this->assertStringStartsWith('%PDF-', $content);
+
         $pageMatches = preg_match_all('/\/Type\s*\/Page\b/', $content);
         $this->assertEquals(1, $pageMatches);
     }

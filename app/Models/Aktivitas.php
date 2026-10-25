@@ -216,9 +216,15 @@ class Aktivitas extends Model
                         ];
                     }
 
+                    $progresText = $d->progres;
+                    if (strcasecmp(trim((string) $d->progres), 'Belum') === 0 && ! empty($d->alasan)) {
+                        $progresText .= "\nAlasan: ".trim($d->alasan);
+                    }
+
                     $penempatanGroups[$groupKey]['rencana_kerja_list'][$rkId]['items'][] = [
                         'tanggal' => $item->tanggal,
-                        'progres' => $d->progres,
+                        'progres' => $progresText,
+                        'alasan' => $d->alasan,
                         'status' => $item->status,
                         'status_label' => match ($item->status) {
                             'approve', 'disetujui' => 'Disetujui',

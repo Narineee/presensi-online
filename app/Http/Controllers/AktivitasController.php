@@ -138,12 +138,31 @@ class AktivitasController extends Controller
             return redirect()->back()->withInput()->with('error', 'Rencana kerja yang sama tidak boleh dipilih lebih dari satu kali dalam satu tanggal pengisian aktivitas.');
         }
 
+        // Validasi wajib alasan jika status progres belum selesai
+        $alasanErrors = [];
+        foreach ($request->items as $idx => $it) {
+            $progres = trim($it['progres'] ?? '');
+            $alasan = trim($it['alasan'] ?? '');
+            if (strcasecmp($progres, 'Belum') === 0 && $alasan === '') {
+                $alasanErrors["items.{$idx}.alasan"] = 'Alasan wajib diisi jika status progres pekerjaan belum selesai.';
+            }
+        }
+        if (! empty($alasanErrors)) {
+            return redirect()->back()->withInput()->withErrors($alasanErrors);
+        }
+
         // Susun ringkasan isi untuk kompatibilitas data & pencarian
         $isiRingkasan = collect($request->items)->map(function ($item) use ($allowedRencana) {
             $rk = $allowedRencana->firstWhere('id', $item['rencana_kerja_id']);
             $judul = $rk ? $rk->judul : 'Rencana Kerja';
+            $progres = trim($item['progres'] ?? '');
+            $alasan = trim($item['alasan'] ?? '');
+            $text = $progres;
+            if (strcasecmp($progres, 'Belum') === 0 && $alasan !== '') {
+                $text .= " (Alasan: {$alasan})";
+            }
 
-            return "• [{$judul}]: ".trim($item['progres']);
+            return "• [{$judul}]: ".$text;
         })->implode("\n\n");
 
         DB::transaction(function () use ($user, $request, $allowedRencana, $isiRingkasan) {
@@ -158,11 +177,15 @@ class AktivitasController extends Controller
 
             foreach ($request->items as $item) {
                 $rk = $allowedRencana->firstWhere('id', $item['rencana_kerja_id']);
+                $progres = trim($item['progres'] ?? '');
+                $alasan = (strcasecmp($progres, 'Belum') === 0) ? (trim($item['alasan'] ?? '') ?: null) : null;
+
                 AktivitasDetail::create([
                     'aktivitas_id' => $aktivitas->id,
                     'rencana_kerja_id' => $item['rencana_kerja_id'],
                     'rencana_kerja_snapshot' => $rk?->judul,
-                    'progres' => trim($item['progres']),
+                    'progres' => $progres,
+                    'alasan' => $alasan,
                 ]);
             }
         });
@@ -250,11 +273,30 @@ class AktivitasController extends Controller
             return redirect()->back()->withInput()->with('error', 'Rencana kerja yang sama tidak boleh dipilih lebih dari satu kali dalam satu tanggal pengisian aktivitas.');
         }
 
+        // Validasi wajib alasan jika status progres belum selesai
+        $alasanErrors = [];
+        foreach ($request->items as $idx => $it) {
+            $progres = trim($it['progres'] ?? '');
+            $alasan = trim($it['alasan'] ?? '');
+            if (strcasecmp($progres, 'Belum') === 0 && $alasan === '') {
+                $alasanErrors["items.{$idx}.alasan"] = 'Alasan wajib diisi jika status progres pekerjaan belum selesai.';
+            }
+        }
+        if (! empty($alasanErrors)) {
+            return redirect()->back()->withInput()->withErrors($alasanErrors);
+        }
+
         $isiRingkasan = collect($request->items)->map(function ($item) use ($allowedRencana) {
             $rk = $allowedRencana->firstWhere('id', $item['rencana_kerja_id']);
             $judul = $rk ? $rk->judul : 'Rencana Kerja';
+            $progres = trim($item['progres'] ?? '');
+            $alasan = trim($item['alasan'] ?? '');
+            $text = $progres;
+            if (strcasecmp($progres, 'Belum') === 0 && $alasan !== '') {
+                $text .= " (Alasan: {$alasan})";
+            }
 
-            return "• [{$judul}]: ".trim($item['progres']);
+            return "• [{$judul}]: ".$text;
         })->implode("\n\n");
 
         $statusBaru = ($aktivitas->status === 'revisi') ? 'pending' : $aktivitas->status;
@@ -272,11 +314,15 @@ class AktivitasController extends Controller
 
             foreach ($request->items as $item) {
                 $rk = $allowedRencana->firstWhere('id', $item['rencana_kerja_id']);
+                $progres = trim($item['progres'] ?? '');
+                $alasan = (strcasecmp($progres, 'Belum') === 0) ? (trim($item['alasan'] ?? '') ?: null) : null;
+
                 AktivitasDetail::create([
                     'aktivitas_id' => $aktivitas->id,
                     'rencana_kerja_id' => $item['rencana_kerja_id'],
                     'rencana_kerja_snapshot' => $rk?->judul,
-                    'progres' => trim($item['progres']),
+                    'progres' => $progres,
+                    'alasan' => $alasan,
                 ]);
             }
         });

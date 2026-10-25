@@ -259,13 +259,20 @@
                                     </p>
                                 </div>
 
-                                {{-- 2. Nama Peserta (Font Cursive Emas) & Nomor Induk --}}
+                                {{-- 2. Nama Peserta (Font Cursive Emas Digarisbawahi) & Identitas (Nomor Induk, Jurusan, Lembaga Pendidikan) --}}
                                 <div style="margin: 4px 0;">
-                                    <p class="font-script-cert" style="font-size: clamp(2.2rem, 5vw, 3.85rem); color: #c48a28; line-height: 1.1;">
-                                        ({{ $penilaian->magang->nama_lengkap ?? ($magang->nama_lengkap ?? 'Peserta') }})
+                                    <p class="font-script-cert" style="font-size: clamp(2rem, 4.5vw, 3.5rem); color: #c48a28; line-height: 1.15;">
+                                        <span style="text-decoration: underline;"><u>{{ $penilaian->magang->nama_lengkap ?? ($magang->nama_lengkap ?? 'Peserta') }}</u></span>
                                     </p>
-                                    <p style="font-size: clamp(0.75rem, 1.3vw, 0.95rem); font-weight: 700; color: #0c3773; margin-top: 4px; letter-spacing: 0.05em;">
-                                        Nomor Induk: {{ !empty($penilaian->magang->no_induk ?? $magang->no_induk) ? ($penilaian->magang->no_induk ?? $magang->no_induk) : '-' }}
+                                    {{-- Nomor Induk kecil di bawah garis nama (habis kata Nomor Induk spasi saja) --}}
+                                    <p style="font-size: clamp(0.65rem, 1.1vw, 0.85rem); font-weight: 500; color: #475569; margin-top: 2px; letter-spacing: 0.04em;">
+                                        Nomor Induk {{ !empty($penilaian->magang->no_induk ?? $magang->no_induk) ? ($penilaian->magang->no_induk ?? $magang->no_induk) : '-' }}
+                                    </p>
+                                    <p style="font-size: clamp(0.72rem, 1.25vw, 0.92rem); font-weight: 700; color: #0c3773; margin-top: 4px; letter-spacing: 0.04em;">
+                                        Jurusan: {{ !empty($penilaian->magang->jurusan ?? $magang->jurusan) ? ($penilaian->magang->jurusan ?? $magang->jurusan) : '-' }}
+                                    </p>
+                                    <p style="font-size: clamp(0.72rem, 1.25vw, 0.92rem); font-weight: 700; color: #0c3773; margin-top: 2px; letter-spacing: 0.04em;">
+                                        Lembaga Pendidikan: {{ !empty($penilaian->magang->instansi_pendidikan ?? $magang->instansi_pendidikan) ? ($penilaian->magang->instansi_pendidikan ?? $magang->instansi_pendidikan) : '-' }}
                                     </p>
                                 </div>
 
@@ -364,14 +371,21 @@
                                 </td>
                             </tr>
 
-                            {{-- 2. Nama Peserta (Font Cursive Emas Great Vibes) & Nomor Induk --}}
+                            {{-- 2. Nama Peserta (Font Cursive Emas Digarisbawahi) & Identitas (Nomor Induk, Jurusan, Lembaga Pendidikan) --}}
                             <tr>
-                                <td style="text-align: center; vertical-align: middle; height: 32mm;">
-                                    <p style="font-family: 'Great Vibes', 'Brush Script MT', cursive; font-size: 52pt; color: #c48a28; margin: 0; line-height: 1;">
-                                        ({{ $penilaian->magang->nama_lengkap ?? ($magang->nama_lengkap ?? 'Peserta') }})
+                                <td style="text-align: center; vertical-align: middle; height: 38mm;">
+                                    <p style="font-family: 'Great Vibes', 'Brush Script MT', cursive; font-size: 46pt; color: #c48a28; margin: 0; line-height: 1.1;">
+                                        <span style="text-decoration: underline;"><u>{{ $penilaian->magang->nama_lengkap ?? ($magang->nama_lengkap ?? 'Peserta') }}</u></span>
                                     </p>
-                                    <p style="font-size: 11pt; font-weight: 700; color: #0c3773; margin: 2.5mm 0 0 0; letter-spacing: 0.05em;">
-                                        Nomor Induk: {{ !empty($penilaian->magang->no_induk ?? $magang->no_induk) ? ($penilaian->magang->no_induk ?? $magang->no_induk) : '-' }}
+                                    {{-- Nomor Induk kecil di bawah garis nama (habis kata Nomor Induk spasi saja) --}}
+                                    <p style="font-size: 9.5pt; font-weight: 500; color: #475569; margin: 0.8mm 0 0 0; letter-spacing: 0.05em;">
+                                        Nomor Induk {{ !empty($penilaian->magang->no_induk ?? $magang->no_induk) ? ($penilaian->magang->no_induk ?? $magang->no_induk) : '-' }}
+                                    </p>
+                                    <p style="font-size: 11pt; font-weight: 700; color: #0c3773; margin: 2.2mm 0 0 0; letter-spacing: 0.03em;">
+                                        Jurusan: {{ !empty($penilaian->magang->jurusan ?? $magang->jurusan) ? ($penilaian->magang->jurusan ?? $magang->jurusan) : '-' }}
+                                    </p>
+                                    <p style="font-size: 11pt; font-weight: 700; color: #0c3773; margin: 1mm 0 0 0; letter-spacing: 0.03em;">
+                                        Lembaga Pendidikan: {{ !empty($penilaian->magang->instansi_pendidikan ?? $magang->instansi_pendidikan) ? ($penilaian->magang->instansi_pendidikan ?? $magang->instansi_pendidikan) : '-' }}
                                     </p>
                                 </td>
                             </tr>

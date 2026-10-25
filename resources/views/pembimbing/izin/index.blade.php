@@ -4,7 +4,7 @@
 @section('content')
 @php
     $in = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25';
-    $adaFilter = request()->hasAny(['q', 'tanggal_mulai', 'tanggal_akhir', 'jenis_izin', 'status_approval', 'status']);
+    $adaFilter = request()->hasAny(['q', 'tanggal_mulai', 'tanggal_akhir', 'jenis_izin', 'status_approval', 'status', 'magang_id']);
     $namaDepan = fn ($n) => \Illuminate\Support\Str::of((string) $n)->trim()->before(' ')->toString();
 
     $formatPeriode = function ($item) {
@@ -50,23 +50,12 @@
 
     <div class="grid grid-cols-2 gap-2.5">
         <label class="block">
-            <span class="sr-only">Tanggal mulai</span>
-            <input type="date" name="tanggal_mulai" value="{{ request('tanggal_mulai') }}" class="{{ $in }}" title="Tanggal mulai" placeholder="tanggal mulai">
-        </label>
-        <label class="block">
-            <span class="sr-only">Tanggal selesai</span>
-            <input type="date" name="tanggal_akhir" value="{{ request('tanggal_akhir') }}" class="{{ $in }}" title="Tanggal selesai" placeholder="tanggal selesai">
-        </label>
-    </div>
-
-    <div class="grid grid-cols-2 gap-2.5">
-        <label class="block">
-            <span class="sr-only">Jenis</span>
-            <select name="jenis_izin" class="{{ $in }}">
-                <option value="">Semua jenis</option>
-                <option value="sakit" @selected(request('jenis_izin') === 'sakit')>Sakit</option>
-                <option value="izin" @selected(request('jenis_izin') === 'izin')>Izin</option>
-                <option value="cuti" @selected(request('jenis_izin') === 'cuti')>Cuti</option>
+            <span class="sr-only">Pilih Peserta</span>
+            <select name="magang_id" class="{{ $in }}">
+                <option value="">Semua peserta</option>
+                @foreach ($magangList as $sm)
+                    <option value="{{ $sm->id }}" @selected(request('magang_id') == $sm->id)>{{ $sm->nama_lengkap }}</option>
+                @endforeach
             </select>
         </label>
         <label class="block">
@@ -79,6 +68,27 @@
             </select>
         </label>
     </div>
+
+    <div class="grid grid-cols-2 gap-2.5">
+        <label class="block">
+            <span class="sr-only">Tanggal mulai</span>
+            <input type="date" name="tanggal_mulai" value="{{ request('tanggal_mulai') }}" class="{{ $in }}" title="Tanggal mulai" placeholder="tanggal mulai">
+        </label>
+        <label class="block">
+            <span class="sr-only">Tanggal selesai</span>
+            <input type="date" name="tanggal_akhir" value="{{ request('tanggal_akhir') }}" class="{{ $in }}" title="Tanggal selesai" placeholder="tanggal selesai">
+        </label>
+    </div>
+
+    <label class="block">
+        <span class="sr-only">Jenis</span>
+        <select name="jenis_izin" class="{{ $in }}">
+            <option value="">Semua jenis</option>
+            <option value="sakit" @selected(request('jenis_izin') === 'sakit')>Sakit</option>
+            <option value="izin" @selected(request('jenis_izin') === 'izin')>Izin</option>
+            <option value="cuti" @selected(request('jenis_izin') === 'cuti')>Cuti</option>
+        </select>
+    </label>
 
     <button type="submit" class="w-full rounded-2xl bg-brand py-3.5 text-sm font-extrabold text-white shadow-sm active:scale-[.99]">Terapkan Filter</button>
     @if ($adaFilter)

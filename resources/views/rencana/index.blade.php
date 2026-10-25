@@ -136,24 +136,10 @@
                             </p>
                         @endif
 
-                        <div class="flex items-center justify-between pt-2 border-t border-slate-200/60 text-xs">
+                        <div class="pt-2 border-t border-slate-200/60 text-xs">
                             <span class="text-[11px] font-semibold text-slate-500">
                                 Digunakan pada <b class="text-brand">{{ $item->aktivitas_details_count }}</b> aktivitas
                             </span>
-                            <div class="flex items-center gap-1.5 shrink-0">
-                                <a href="{{ route('rencana.edit', $item->id) }}" class="rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition">
-                                    ✏️ Edit
-                                </a>
-                                @if($item->canBeDeleted())
-                                    <form method="POST" action="{{ route('rencana.destroy', $item->id) }}" onsubmit="return confirm('Apakah Anda yakin ingin menghapus rencana kerja ini?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="rounded-xl border border-rose-300 bg-rose-50/90 hover:bg-rose-100 px-3 py-1.5 text-xs font-bold text-rose-700 shadow-2xs transition cursor-pointer">
-                                            Hapus
-                                        </button>
-                                    </form>
-                                @endif
-                            </div>
                         </div>
                     </div>
                 @endforeach

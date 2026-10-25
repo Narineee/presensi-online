@@ -1048,7 +1048,7 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         $htmlResponse->assertStatus(200);
         $htmlResponse->assertSee('SERTIFIKAT');
         $htmlResponse->assertSee($magang->nama_lengkap);
-        $htmlResponse->assertSee('Nomor Induk:');
+        $htmlResponse->assertSee('Nomor Induk');
         $htmlResponse->assertSee('Praktik Kerja Lapangan (PKL)');
         $htmlResponse->assertSee('Dinas Komunikasi dan Informatika');
         $htmlResponse->assertSee('memperoleh nilai akhir dengan kualifikasi');

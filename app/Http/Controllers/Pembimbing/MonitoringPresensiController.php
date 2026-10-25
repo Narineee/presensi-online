@@ -129,7 +129,7 @@ class MonitoringPresensiController extends Controller
             $presensi->getCollection()->map(fn ($p) => $this->susunCatatan($p, $izinPerUser->get($p->pengguna_id, collect())))
         );
 
-        return view('pembimbing.presensi.index', compact('pembimbing', 'presensi'));
+        return view('pembimbing.presensi.index', compact('pembimbing', 'presensi', 'magangList'));
     }
 
     /**

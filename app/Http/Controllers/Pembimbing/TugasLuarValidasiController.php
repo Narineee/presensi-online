@@ -29,10 +29,23 @@ class TugasLuarValidasiController extends Controller
      */
     public function index(Request $request)
     {
+        $pembimbing = Auth::user()->pembimbing;
+        $magangList = $pembimbing
+            ? $pembimbing->getSupervisedMagangQuery()->with('divisi')->orderBy('nama_lengkap', 'asc')->get()
+            : collect();
+
         $supervisedIds = $this->getSupervisedUserIds();
 
         $query = PengajuanTugasLuar::whereIn('pengguna_id', $supervisedIds)
             ->with(['pengguna.magang.divisi', 'presensi', 'validator.pembimbing']);
+
+        // Filter peserta magang tertentu
+        if ($request->filled('magang_id')) {
+            $selectedMagang = $magangList->firstWhere('id', (int) $request->magang_id);
+            if ($selectedMagang && $selectedMagang->pengguna_id) {
+                $query->where('pengguna_id', $selectedMagang->pengguna_id);
+            }
+        }
 
         // Filter pencarian nama / no induk / keperluan / tujuan
         if ($request->filled('q')) {
@@ -83,7 +96,7 @@ class TugasLuarValidasiController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return view('pembimbing.tugas-luar.index', compact('menunggu', 'keputusan'));
+        return view('pembimbing.tugas-luar.index', compact('menunggu', 'keputusan', 'magangList'));
     }
 
     /**

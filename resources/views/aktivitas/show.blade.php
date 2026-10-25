@@ -68,6 +68,12 @@
                         <div class="whitespace-pre-line rounded-xl bg-white/90 p-3 text-xs font-medium leading-relaxed text-slate-800 border border-slate-100 break-words">
                             @if (in_array(strtolower(trim($detail->progres)), ['selesai', 'belum']))
                                 Status progres: <strong class="{{ strtolower(trim($detail->progres)) === 'selesai' ? 'text-emerald-700 font-black' : 'text-amber-700 font-black' }}">{{ $detail->progres }}</strong>
+                                @if (strtolower(trim($detail->progres)) === 'belum' && $detail->alasan)
+                                    <div class="mt-2.5 pt-2 border-t border-slate-200/80">
+                                        <span class="font-extrabold text-amber-900 block text-[11px] mb-0.5">Alasan Belum Selesai:</span>
+                                        <p class="text-slate-700 leading-relaxed italic bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/60">{{ $detail->alasan }}</p>
+                                    </div>
+                                @endif
                             @else
                                 {{ $detail->progres }}
                             @endif

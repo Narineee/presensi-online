@@ -6,7 +6,7 @@
     $dariPresensi = request('redirect_to') === 'presensi';
     $in = 'mt-1.5 w-full rounded-2xl border border-slate-300 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-900 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 transition shadow-2xs';
     $adaRencana = $rencanaKerjaList->isNotEmpty();
-    $oldItems = old('items', [['rencana_kerja_id' => '', 'progres' => '']]);
+    $oldItems = old('items', [['rencana_kerja_id' => '', 'progres' => '', 'alasan' => '']]);
 @endphp
 
 {{-- Header --}}
@@ -55,7 +55,7 @@
           busy: false,
           items: {{ Js::from($oldItems) }},
           addItem() {
-              this.items.push({ rencana_kerja_id: '', progres: '' });
+              this.items.push({ rencana_kerja_id: '', progres: '', alasan: '' });
           },
           removeItem(index) {
               if (this.items.length > 1) {
@@ -154,6 +154,21 @@
                             </label>
                         </div>
                     </div>
+
+                    {{-- Input Alasan Jika Belum Selesai --}}
+                    <div x-show="item.progres === 'Belum'" x-cloak class="space-y-1.5 pt-1">
+                        <label class="block text-xs font-bold text-amber-950">
+                            Alasan Belum Selesai <span class="text-rose-500">*</span>
+                        </label>
+                        <textarea :name="'items[' + index + '][alasan]'"
+                                  x-model="item.alasan"
+                                  :required="item.progres === 'Belum'"
+                                  :disabled="item.progres !== 'Belum'"
+                                  rows="2"
+                                  placeholder="Tuliskan kendala atau alasan mengapa rencana kerja ini belum selesai..."
+                                  class="{{ $in }}"></textarea>
+                        <p class="text-[11px] text-amber-800 font-medium">Wajib diisi untuk menjelaskan alasan atau kendala progres.</p>
+                    </div>
                 </div>
             </template>
         </div>
@@ -163,7 +178,7 @@
             <button type="button"
                     @click="addItem()"
                     class="w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 hover:border-brand hover:bg-slate-50 py-3 text-xs sm:text-sm font-extrabold text-slate-700 hover:text-brand transition cursor-pointer">
-                <span>+ Tambah Rencana Kerja Lainnya</span>
+                <span>Rencana Kerja Lainnya</span>
             </button>
         @endif
     </section>

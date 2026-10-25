@@ -29,10 +29,23 @@ class PengajuanIzinValidasiController extends Controller
      */
     public function index(Request $request)
     {
+        $pembimbing = Auth::user()->pembimbing;
+        $magangList = $pembimbing
+            ? $pembimbing->getSupervisedMagangQuery()->with('divisi')->orderBy('nama_lengkap', 'asc')->get()
+            : collect();
+
         $supervisedIds = $this->getSupervisedUserIds();
 
         $query = PengajuanIzin::whereIn('pengguna_id', $supervisedIds)
             ->with(['pengguna.magang.divisi', 'validator.pembimbing']);
+
+        // Filter peserta magang tertentu
+        if ($request->filled('magang_id')) {
+            $selectedMagang = $magangList->firstWhere('id', (int) $request->magang_id);
+            if ($selectedMagang && $selectedMagang->pengguna_id) {
+                $query->where('pengguna_id', $selectedMagang->pengguna_id);
+            }
+        }
 
         // Filter pencarian nama / no induk peserta
         if ($request->filled('q')) {
@@ -81,7 +94,7 @@ class PengajuanIzinValidasiController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return view('pembimbing.izin.index', compact('menunggu', 'keputusan'));
+        return view('pembimbing.izin.index', compact('menunggu', 'keputusan', 'magangList'));
     }
 
     /**

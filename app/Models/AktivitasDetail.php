@@ -14,6 +14,7 @@ class AktivitasDetail extends Model
         'rencana_kerja_id',
         'rencana_kerja_snapshot',
         'progres',
+        'alasan',
     ];
 
     /**

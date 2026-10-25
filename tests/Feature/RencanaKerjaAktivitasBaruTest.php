@@ -351,6 +351,25 @@ class RencanaKerjaAktivitasBaruTest extends TestCase
         $response->assertSee('Kembali ke Presensi');
     }
 
+    public function test_rencana_kerja_index_does_not_render_edit_and_delete_buttons(): void
+    {
+        [$pUser, $pembimbing] = $this->createPembimbingWithUser('pem10b');
+        [$user, $intern] = $this->createIntern($pembimbing, 'Peserta JB', 'peserta_jb');
+
+        $rk = RencanaKerja::create([
+            'magang_id' => $intern->id,
+            'judul' => 'Rencana Uji Tampilan Tanpa Tombol Edit Delete',
+            'status' => 'aktif',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('rencana.index'));
+        $response->assertStatus(200);
+        $response->assertSee('Rencana Uji Tampilan Tanpa Tombol Edit Delete');
+        $response->assertDontSee('✏️ Edit');
+        $response->assertDontSee(route('rencana.edit', $rk->id));
+        $response->assertDontSee(route('rencana.destroy', $rk->id));
+    }
+
     public function test_activity_create_form_renders_selesai_and_belum_selection_buttons(): void
     {
         [$pUser, $pembimbing] = $this->createPembimbingWithUser('pem11');
@@ -367,6 +386,7 @@ class RencanaKerjaAktivitasBaruTest extends TestCase
         $response->assertSee('Status Progres');
         $response->assertSee('✓ Selesai');
         $response->assertSee('⏳ Belum');
+        $response->assertSee('Alasan Belum Selesai');
         $response->assertDontSee('Uraian Progres Pekerjaan');
     }
 
@@ -386,12 +406,12 @@ class RencanaKerjaAktivitasBaruTest extends TestCase
             'status' => 'aktif',
         ]);
 
-        // Simpan aktivitas dengan status Selesai & Belum
+        // Simpan aktivitas dengan status Selesai & Belum (dengan alasan wajib)
         $response = $this->actingAs($user)->post(route('aktivitas.store'), [
             'tanggal' => '2026-10-15',
             'items' => [
                 ['rencana_kerja_id' => $rk1->id, 'progres' => 'Selesai'],
-                ['rencana_kerja_id' => $rk2->id, 'progres' => 'Belum'],
+                ['rencana_kerja_id' => $rk2->id, 'progres' => 'Belum', 'alasan' => 'Masih menunggu aset gambar dari desainer'],
             ],
         ]);
 
@@ -399,21 +419,24 @@ class RencanaKerjaAktivitasBaruTest extends TestCase
         $this->assertDatabaseHas('aktivitas_detail', [
             'rencana_kerja_id' => $rk1->id,
             'progres' => 'Selesai',
+            'alasan' => null,
         ]);
         $this->assertDatabaseHas('aktivitas_detail', [
             'rencana_kerja_id' => $rk2->id,
             'progres' => 'Belum',
+            'alasan' => 'Masih menunggu aset gambar dari desainer',
         ]);
 
         $aktivitas = Aktivitas::where('pengguna_id', $user->id)->first();
         $this->assertStringContainsString('• [Desain ERD]: Selesai', $aktivitas->isi);
-        $this->assertStringContainsString('• [Slicing UI Dashboard]: Belum', $aktivitas->isi);
+        $this->assertStringContainsString('• [Slicing UI Dashboard]: Belum (Alasan: Masih menunggu aset gambar dari desainer)', $aktivitas->isi);
 
         // Akses form edit
         $editResponse = $this->actingAs($user)->get(route('aktivitas.edit', $aktivitas->id));
         $editResponse->assertStatus(200);
         $editResponse->assertSee('✓ Selesai');
         $editResponse->assertSee('⏳ Belum');
+        $editResponse->assertSee('Alasan Belum Selesai');
 
         // Update menjadi Selesai semua
         $updateResponse = $this->actingAs($user)->put(route('aktivitas.update', $aktivitas->id), [
@@ -428,6 +451,47 @@ class RencanaKerjaAktivitasBaruTest extends TestCase
         $this->assertDatabaseHas('aktivitas_detail', [
             'rencana_kerja_id' => $rk2->id,
             'progres' => 'Selesai',
+            'alasan' => null,
+        ]);
+    }
+
+    public function test_alasan_is_required_when_progres_is_belum(): void
+    {
+        [$pUser, $pembimbing] = $this->createPembimbingWithUser('pem13');
+        [$user, $intern] = $this->createIntern($pembimbing, 'Peserta M', 'peserta_m');
+
+        $rk = RencanaKerja::create([
+            'magang_id' => $intern->id,
+            'judul' => 'Membuat Modul Autentikasi',
+            'status' => 'aktif',
+        ]);
+
+        // Coba simpan tanpa alasan ketika progres Belum
+        $response = $this->actingAs($user)->post(route('aktivitas.store'), [
+            'tanggal' => '2026-10-15',
+            'items' => [
+                ['rencana_kerja_id' => $rk->id, 'progres' => 'Belum', 'alasan' => ''],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors(['items.0.alasan']);
+        $this->assertDatabaseMissing('aktivitas_detail', [
+            'rencana_kerja_id' => $rk->id,
+        ]);
+
+        // Coba simpan DENGAN alasan ketika progres Belum
+        $successResp = $this->actingAs($user)->post(route('aktivitas.store'), [
+            'tanggal' => '2026-10-15',
+            'items' => [
+                ['rencana_kerja_id' => $rk->id, 'progres' => 'Belum', 'alasan' => 'Terkendala server LDAP down'],
+            ],
+        ]);
+
+        $successResp->assertRedirect(route('presensi.index'));
+        $this->assertDatabaseHas('aktivitas_detail', [
+            'rencana_kerja_id' => $rk->id,
+            'progres' => 'Belum',
+            'alasan' => 'Terkendala server LDAP down',
         ]);
     }
 }

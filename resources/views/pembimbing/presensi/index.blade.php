@@ -4,7 +4,7 @@
 @section('content')
 @php
     $in = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25';
-    $adaFilter = request()->hasAny(['q', 'tanggal_mulai', 'tanggal_akhir', 'status']);
+    $adaFilter = request()->hasAny(['q', 'tanggal_mulai', 'tanggal_akhir', 'status', 'magang_id']);
 
     $cetakUrl = route('pembimbing.presensi.cetak', request()->only(['q', 'tanggal_mulai', 'tanggal_akhir', 'status', 'magang_id']));
     $fmt = fn ($d) => \Carbon\Carbon::parse($d)->locale('id')->isoFormat('D MMM Y');
@@ -38,12 +38,30 @@
 
 {{-- Filter --}}
 <form method="GET" action="{{ route('pembimbing.presensi.index') }}" class="space-y-2.5">
-    @if (request('magang_id'))<input type="hidden" name="magang_id" value="{{ request('magang_id') }}">@endif
     <label class="relative block">
         <span class="sr-only">Cari peserta</span>
         <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
         <input type="search" name="q" value="{{ request('q') }}" placeholder="Cari peserta" class="{{ $in }} pl-9">
     </label>
+    <div class="grid grid-cols-2 gap-2.5">
+        <label class="block">
+            <span class="sr-only">Pilih Peserta</span>
+            <select name="magang_id" class="{{ $in }}">
+                <option value="">Semua peserta</option>
+                @foreach ($magangList as $sm)
+                    <option value="{{ $sm->id }}" @selected(request('magang_id') == $sm->id)>{{ $sm->nama_lengkap }}</option>
+                @endforeach
+            </select>
+        </label>
+        <label class="block"><span class="sr-only">Status</span>
+            <select name="status" class="{{ $in }}">
+                <option value="">Semua status</option>
+                @foreach (['hadir' => 'Hadir', 'tl' => 'Tugas Luar (TL)', 'sakit' => 'Sakit', 'izin' => 'Izin', 'cuti' => 'Cuti', 'alpa' => 'Alpa'] as $k => $l)
+                    <option value="{{ $k }}" @selected(request('status') === $k)>{{ $l }}</option>
+                @endforeach
+            </select>
+        </label>
+    </div>
     <div class="grid grid-cols-2 gap-2.5">
         <label class="block"><span class="sr-only">Tanggal mulai</span>
             <input type="date" name="tanggal_mulai" value="{{ request('tanggal_mulai') }}" class="{{ $in }}" title="Tanggal mulai">
@@ -52,14 +70,6 @@
             <input type="date" name="tanggal_akhir" value="{{ request('tanggal_akhir') }}" class="{{ $in }}" title="Tanggal selesai">
         </label>
     </div>
-    <label class="block"><span class="sr-only">Status</span>
-        <select name="status" class="{{ $in }}">
-            <option value="">Semua status</option>
-            @foreach (['hadir' => 'Hadir', 'tl' => 'Tugas Luar (TL)', 'sakit' => 'Sakit', 'izin' => 'Izin', 'cuti' => 'Cuti', 'alpa' => 'Alpa'] as $k => $l)
-                <option value="{{ $k }}" @selected(request('status') === $k)>{{ $l }}</option>
-            @endforeach
-        </select>
-    </label>
 
     <button type="submit" class="w-full rounded-2xl bg-brand py-3.5 text-sm font-extrabold text-white shadow-sm active:scale-[.99]">Terapkan Filter</button>
     @if ($adaFilter)

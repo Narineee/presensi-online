@@ -104,7 +104,10 @@
                             </span>
                         </div>
                         <div class="whitespace-pre-line rounded-xl bg-white p-3 text-xs leading-relaxed text-slate-800 border border-slate-100 break-words">
-{{ $detail->progres }}
+Status: {{ $detail->progres }}
+@if (strtolower(trim($detail->progres)) === 'belum' && $detail->alasan)
+Alasan: {{ $detail->alasan }}
+@endif
                         </div>
                     </div>
                 @endforeach

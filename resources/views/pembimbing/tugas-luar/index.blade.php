@@ -4,7 +4,7 @@
 @section('content')
 @php
     $in = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25';
-    $adaFilter = request()->hasAny(['q', 'tanggal_mulai', 'tanggal_akhir', 'tanggal', 'status_verifikasi', 'status']);
+    $adaFilter = request()->hasAny(['q', 'tanggal_mulai', 'tanggal_akhir', 'tanggal', 'status_verifikasi', 'status', 'magang_id']);
     $namaDepan = fn ($n) => \Illuminate\Support\Str::of((string) $n)->trim()->before(' ')->toString();
     $fmtJam = fn ($w) => $w ? str_replace(':', '.', substr($w, 0, 5)) : null;
 
@@ -72,15 +72,26 @@
         </label>
     </div>
 
-    <label class="block">
-        <span class="sr-only">Status</span>
-        <select name="status_verifikasi" class="{{ $in }}">
-            <option value="">Semua status</option>
-            <option value="menunggu" @selected(request('status_verifikasi', request('status')) === 'menunggu')>Menunggu verifikasi</option>
-            <option value="disetujui" @selected(request('status_verifikasi', request('status')) === 'disetujui')>Disetujui</option>
-            <option value="ditolak" @selected(request('status_verifikasi', request('status')) === 'ditolak')>Ditolak</option>
-        </select>
-    </label>
+    <div class="grid grid-cols-2 gap-2.5">
+        <label class="block">
+            <span class="sr-only">Pilih Peserta</span>
+            <select name="magang_id" class="{{ $in }}">
+                <option value="">Semua peserta</option>
+                @foreach ($magangList as $sm)
+                    <option value="{{ $sm->id }}" @selected(request('magang_id') == $sm->id)>{{ $sm->nama_lengkap }}</option>
+                @endforeach
+            </select>
+        </label>
+        <label class="block">
+            <span class="sr-only">Status</span>
+            <select name="status_verifikasi" class="{{ $in }}">
+                <option value="">Semua status</option>
+                <option value="menunggu" @selected(request('status_verifikasi', request('status')) === 'menunggu')>Menunggu verifikasi</option>
+                <option value="disetujui" @selected(request('status_verifikasi', request('status')) === 'disetujui')>Disetujui</option>
+                <option value="ditolak" @selected(request('status_verifikasi', request('status')) === 'ditolak')>Ditolak</option>
+            </select>
+        </label>
+    </div>
 
     <button type="submit" class="w-full rounded-2xl bg-brand py-3.5 text-sm font-extrabold text-white shadow-sm active:scale-[.99]">Terapkan Filter</button>
     @if ($adaFilter)
