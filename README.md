@@ -1,58 +1,133 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistem Informasi Presensi Digital & Monitoring Aktivitas Magang
+### Dinas Komunikasi dan Informatika Provinsi Kalimantan Selatan
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Platform presensi digital dan pemantauan aktivitas peserta magang/PKL berbasis web yang mengintegrasikan validasi lokasi fisik (**Geofencing GPS**) dan verifikasi biometrik wajah (**AI Face Recognition & Liveness Detection**).
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🚀 Tumpukan Teknologi (Technology Stack)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Sistem ini dibangun dengan arsitektur modern berkinerja tinggi:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Backend Framework**: Laravel 11 / 12 (PHP 8.3)
+- **Basis Data**: MySQL / MariaDB (InnoDB Engine)
+- **Frontend & Styling**: Blade Templating, Tailwind CSS, Glassmorphism UI
+- **State Management & UI**: Alpine.js & Vanilla JavaScript
+- **Geolokasi & Pemetaan**: HTML5 Geolocation API, Leaflet.js v1.9.4, OpenStreetMap, Nominatim Reverse Geocoding API, Formula Haversine
+- **Biometrik & Computer Vision**: HTML5 MediaDevices API, Canvas API, Face-API.js (`@vladmandic/face-api` v1.7.13 / WebGL TensorFlow.js), Tiny Face Detector, Face Landmark 68 Net, Face Recognition Net (ResNet-34 FaceNet)
+- **Sinkronisasi Hari Libur**: API Indonesia (`use.apiindonesia.id/api/v1/libur`) via HTTP Header `x-api-key`
+- **Mesin Cetak Dokumen Kedinasan**: mPDF Engine (Standar Dokumen A4 Resmi Pemprov Kalsel)
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 📍 1. Teknologi Geolokasi & Geofencing GPS
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Fitur geolokasi memastikan presensi hanya dapat dilakukan jika peserta berada di lokasi yang ditentukan (kantor Diskominfo atau titik divisi terkait):
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+1. **HTML5 Geolocation API (`navigator.geolocation`)**:
+   - Berjalan dengan opsi `enableHighAccuracy: true` untuk memprioritaskan hardware GPS dan sinyal WiFi berpresisi tinggi.
+   - Dilengkapi `maximumAge: 0` untuk menolak penggunaan titik lokasi *cache* lama.
+2. **Leaflet.js (v1.9.4) & OpenStreetMap**:
+   - Merender visualisasi peta interaktif ringan tanpa ketergantungan API berbayar.
+   - Menampilkan marker titik pengguna (`L.circleMarker`) dan zona radius kantor (`L.circle`).
+3. **Nominatim Reverse Geocoding API**:
+   - Mengonversi titik koordinat $(lat, lng)$ menjadi nama alamat jalan dan kelurahan fisik yang mudah dibaca dan diaudit.
+4. **Formula Haversine (Great-Circle Distance)**:
+   - Menghitung jarak terpendek antara titik koordinat pengguna dengan titik kantor dinas:
+     $$d = 2R \arcsin\left(\sqrt{\sin^2\left(\frac{\Delta \phi}{2}\right) + \cos(\phi_1)\cos(\phi_2)\sin^2\left(\frac{\Delta \lambda}{2}\right)}\right)$$
+     (dengan $R = 6.371.000\text{ meter}$).
+   - **Validasi Ganda**: Dihitung di sisi frontend (peringatan visual real-time) dan divalidasi ulang di backend (`PresensiController::calculateDistance`) sebelum presensi tersimpan ke database.
+5. **Kebijakan Radius Presensi**:
+   - **ONSITE**: Wajib berada dalam radius batas ($\le 40\text{ meter}$). Tombol presensi otomatis terkunci jika di luar radius.
+   - **WFH**: Radius dilewati, namun koordinat riil tetap dicatat ke sistem.
+   - **Tugas Luar**: Mengharuskan pengisian surat tugas dan persetujuan pembimbing lapangan.
 
-## Agentic Development
+---
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## 👤 2. Teknologi Verifikasi Wajah Biometrik (AI Face Recognition)
 
-```bash
-composer require laravel/boost --dev
+Fitur verifikasi wajah memastikan bahwa yang melakukan absensi adalah peserta yang bersangkutan (mencegah titip absen) dan dilakukan secara langsung:
 
-php artisan boost:install
-```
+1. **HTML5 MediaDevices & Canvas API**:
+   - Mengakses feed video kamera depan (`facingMode: 'user'`) secara real-time melalui protokol HTTPS.
+   - Mengambil cuplikan (*snapshot frame*) dan mengompresinya menjadi foto JPEG berkualitas 80% (base64).
+2. **Face-API.js (`@vladmandic/face-api` v1.7.13)**:
+   - Menjalankan inferensi *deep learning* langsung di peramban klien (*client-side AI*) menggunakan akselerasi grafis WebGL / TensorFlow.js, menghemat daya komputasi server.
+   - Menggunakan 3 model neural network terlatih:
+     - **Tiny Face Detector**: Model berbasis MobileNet-SSD ringan (~190 KB) untuk mendeteksi kotak batas wajah (*bounding box*) dengan FPS tinggi ($15 - 30\text{ FPS}$).
+     - **Face Landmark 68 Net**: Memetakan 68 titik kontur anatomis wajah (mata, hidung, bibir, rahang) secara presisi.
+     - **Face Recognition Net**: Jaringan konvolusional (ResNet-34 FaceNet) yang mengekstrak geometri citra wajah menjadi **Vektor Embedding 128 Dimensi (*128-D Descriptors*)**.
+3. **Pemeriksaan Keaktifan / Liveness Detection (Anti-Spoofing)**:
+   - Mencegah manipulasi presensi menggunakan foto cetak atau foto dari layar HP lain.
+   - Menggunakan perhitungan rasio landmark ujung hidung (#30) terhadap tepi kiri (#0) dan kanan (#16) rahang:
+     $$\text{Rasio Pose} = \frac{X_{\text{landmarks}[30]} - X_{\text{landmarks}[0]}}{X_{\text{landmarks}[16]} - X_{\text{landmarks}[0]}}$$
+   - **Tantangan 3 Pose Sekuensial**:
+     1. Menghadap lurus ke kamera (`pose === 'front'`, skor $> 0.6$).
+     2. Menolehkan kepala ke kanan (`pose === 'right'`, rasio $< 0.38$).
+     3. Kembali menghadap ke depan (`pose === 'front'`, rasio $0.42 - 0.58$).
+4. **Pencocokan Biometrik di Server (`FaceVerificationService`)**:
+   - Backend menghitung **Jarak Euclidean (*Euclidean Distance*)** antara vektor presensi (*probe*) dengan 4 sampel wajah yang didaftarkan saat orientasi:
+     $$D(A, B) = \sqrt{\sum_{i=1}^{128} (A_i - B_i)^2}$$
+   - Jika jarak minimum $D_{min} \le 0.50$ (ambang batas `config('face.threshold')`), wajah dinyatakan **cocok dan sah**.
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## 📅 3. Sinkronisasi Hari Libur Nasional & Cuti Bersama (API Indonesia)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Sistem mengintegrasikan data hari libur nasional dan cuti bersama resmi pemerintah RI untuk dispensasi hari kerja presensi:
 
-## Code of Conduct
+1. **Penyedia API**: **API Indonesia** (`https://docs.apiindonesia.id/docs/#hari-libur`)
+2. **Endpoint**: `GET https://use.apiindonesia.id/api/v1/libur?tahun={tahun}`
+3. **Autentikasi**: Header `x-api-key: {API_KEY}` via konfigurasi `.env` (`HARI_LIBUR_API_KEY`).
+4. **Resilient Local Database (Single Source of Truth)**:
+   - Presensi harian dan perhitungan menit kerja (`PresensiScoreService`) **tidak pernah memanggil API secara langsung**. Data tersimpan di tabel lokal `hari_libur`, sehingga sistem tetap bekerja 100% normal meski koneksi internet terputus atau server API eksternal sedang down.
+5. **Proteksi Data Libur Manual Admin**:
+   - Hari libur lokal kedinasan (misal: HUT Pemprov Kalsel) yang diinput manual oleh admin (`sumber = 'manual'`) diproteksi agar tidak tertimpa saat sinkronisasi API dijalankan.
+6. **Kalkulasi Jam Kerja Magang**:
+   - Tanggal merah resmi secara otomatis memotong target hari kerja magang, sehingga peserta tidak diwajibkan hadir dan terhindar dari penalti alpa/mangkir.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## 🔑 Fitur Utama Sistem
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- **Multi-Penempatan & Riwayat Rotasi Magang**: Mendukung peserta berpindah divisi dan pembimbing tanpa merusak riwayat presensi maupun aktivitas sebelumnya.
+- **Log Aktivitas Harian Format Baru (6 Kolom)**: Pelaporan berbasis rencana kerja dengan output terukur (**Selesai** / **Belum**) dan alasan kendala.
+- **Kalkulasi Otomatis Skor Presensi Kedinasan (`PresensiScoreService`)**: Menghitung jam kerja efektif, toleransi keterlambatan, penalti lupa checkout, dan kehadiran tugas luar (skala 0 - 100).
+- **Evaluasi Penilaian Akhir Terintegrasi**: Menggabungkan penilaian kedisiplinan objektif dari log absensi dengan penilaian kompetensi teknis dari pembimbing lapangan (*Weighted Average*).
+- **Standarisasi Dokumen Cetak Kedinasan (mPDF)**: Format cetak PDF A4 presisi sesuai tata naskah dinas Pemprov Kalsel (Kop Surat resmi, tanda tangan ganda pembimbing & kepala bidang, serta sertifikat kelulusan).
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 📋 Panduan Seminar Hasil / Sidang Akhir
+
+Dokumen spesifikasi lengkap, alur bisnis, formula matematis, serta daftar pertanyaan penguji dan jawaban solutif tersedia pada file:  
+👉 [`app/PRD/RANGKUMAN_SISTEM_SEMINAR_HASIL.md`](app/PRD/RANGKUMAN_SISTEM_SEMINAR_HASIL.md)
+
+---
+
+## 🛠️ Instalasi & Menjalankan Aplikasi
+
+1. Clone repositori dan masuk ke direktori:
+   ```bash
+   git clone <repository-url>
+   cd presensi-digital
+   ```
+2. Pasang dependensi PHP dan Node.js:
+   ```bash
+   composer install
+   npm install
+   ```
+3. Konfigurasi file lingkungan:
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+4. Jalankan migrasi dan seeder:
+   ```bash
+   php artisan migrate --seed
+   ```
+5. Jalankan server lokal:
+   ```bash
+   npm run build
+   php artisan serve
+   ```

@@ -302,6 +302,7 @@ class RiwayatPresensiTugasLuarTest extends TestCase
 
     public function test_pengajuan_tugas_luar_setelah_absen_masuk_menampilkan_jam_pengajuan_tl_dan_dihitung_full_8_jam(): void
     {
+        Carbon::setTestNow('2026-10-14 09:30:00');
         $data = $this->setupData();
         $date = Carbon::today()->toDateString();
 
@@ -368,6 +369,7 @@ class RiwayatPresensiTugasLuarTest extends TestCase
 
     public function test_pulang_awal_sakit_atau_izin_menampilkan_label_sakit_atau_izin_dan_mengurangi_menit_kerja(): void
     {
+        Carbon::setTestNow('2026-10-14 09:30:00');
         $data = $this->setupData();
         $date = Carbon::today()->toDateString();
 

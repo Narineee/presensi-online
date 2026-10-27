@@ -19,6 +19,7 @@ class RencanaKerjaController extends Controller
         $magang = $user->magang;
 
         $query = RencanaKerja::where('magang_id', $magang?->id)
+            ->with(['pembimbing.divisi'])
             ->withCount('aktivitasDetails');
 
         if ($request->filled('status')) {

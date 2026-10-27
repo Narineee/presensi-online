@@ -9,7 +9,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Monitoring Aktivitas Harian</h1>
-            <p class="text-sm text-slate-500 mt-1">Pantau seluruh catatan pekerjaan, capaian progres, dan status validasi Peserta Magang.</p>
+            <p class="text-sm text-slate-500 mt-1">Pantau seluruh catatan rencana kerja, hasil/progres, dan status validasi Peserta Magang.</p>
         </div>
         <div class="flex items-center gap-2">
             <a href="{{ route('admin.aktivitas.cetak', request()->all()) }}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition cursor-pointer">
@@ -155,10 +155,10 @@
                         <th class="px-6 py-4">No</th>
                         <th class="px-6 py-4">Peserta Magang</th>
                         <th class="px-6 py-4">Pembimbing Lapangan</th>
-                        <th class="px-6 py-4">Pekerjaan</th>
+                        <th class="px-6 py-4">Rencana Kerja</th>
                         <th class="px-6 py-4">Tanggal</th>
                         <th class="px-6 py-4">Uraian Aktivitas</th>
-                        <th class="px-6 py-4">Progres</th>
+                        <th class="px-6 py-4">Hasil</th>
                         <th class="px-6 py-4">Status</th>
                         <th class="px-6 py-4">Validator & Catatan</th>
                     </tr>
@@ -187,13 +187,24 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4 max-w-xs">
-                                @if($item->pekerjaan)
-                                    <div class="font-bold text-slate-900 text-xs">{{ $item->pekerjaan->judul }}</div>
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold {{ $item->pekerjaan->isProyek() ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-700' }}">
-                                        {{ $item->pekerjaan->isProyek() ? 'Proyek' : 'Rutin' }}
-                                    </span>
+                                @if($item->details && $item->details->isNotEmpty())
+                                    @if($item->details->count() > 1)
+                                        <div class="space-y-1">
+                                            @foreach($item->details as $idx => $d)
+                                                <div class="text-xs font-semibold text-slate-800">
+                                                    {{ $idx + 1 }}. {{ $d->judul_rencana }}
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="font-semibold text-slate-800 text-xs">
+                                            {{ $item->details->first()->judul_rencana }}
+                                        </div>
+                                    @endif
+                                @elseif($item->pekerjaan)
+                                    <div class="font-semibold text-slate-800 text-xs">{{ $item->pekerjaan->judul }}</div>
                                 @else
-                                    <span class="text-slate-400 italic">Umum</span>
+                                    <div class="font-semibold text-slate-800 text-xs">{{ $item->judul ?? 'Aktivitas Harian' }}</div>
                                 @endif
                             </td>
                             <td class="px-6 py-4 font-mono whitespace-nowrap text-slate-700">
@@ -203,15 +214,43 @@
                                 <p class="text-slate-800 line-clamp-3 leading-relaxed font-medium">{{ $item->isi }}</p>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                @if($item->pekerjaan && $item->pekerjaan->isRutin())
-                                    <span class="text-slate-400 text-xs font-semibold">&mdash;</span>
-                                @else
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-16 bg-slate-100 rounded-full h-2 overflow-hidden">
-                                            <div class="bg-blue-600 h-2 rounded-full" style="width: {{ $item->progress }}%"></div>
+                                @if($item->details && $item->details->isNotEmpty())
+                                    @if($item->details->count() > 1)
+                                        <div class="space-y-1.5">
+                                            @foreach($item->details as $idx => $d)
+                                                @php
+                                                    $isSelesai = strcasecmp(trim($d->progres), 'selesai') === 0;
+                                                @endphp
+                                                <div>
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold {{ $isSelesai ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200' }}">
+                                                        {{ $idx + 1 }}. {{ $isSelesai ? 'Selesai' : 'Belum' }}
+                                                    </span>
+                                                    @if(! $isSelesai && $d->alasan)
+                                                        <div class="text-[10px] text-slate-500 italic mt-0.5 truncate max-w-xs" title="{{ $d->alasan }}">
+                                                            Alasan: {{ $d->alasan }}
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            @endforeach
                                         </div>
-                                        <span class="font-mono text-xs font-bold text-slate-700">{{ $item->progress }}%</span>
-                                    </div>
+                                    @else
+                                        @php
+                                            $d = $item->details->first();
+                                            $isSelesai = strcasecmp(trim($d->progres), 'selesai') === 0;
+                                        @endphp
+                                        <div>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold {{ $isSelesai ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200' }}">
+                                                {{ $isSelesai ? 'Selesai' : 'Belum' }}
+                                            </span>
+                                            @if(! $isSelesai && $d->alasan)
+                                                <div class="text-[11px] text-slate-500 italic mt-0.5 truncate max-w-xs" title="{{ $d->alasan }}">
+                                                    Alasan: {{ $d->alasan }}
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endif
+                                @else
+                                    <span class="text-slate-400 text-xs font-semibold">&mdash;</span>
                                 @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">

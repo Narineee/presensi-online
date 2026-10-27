@@ -123,6 +123,9 @@
                                 </h3>
                                 <p class="text-[11px] text-slate-400 mt-0.5">
                                     Dibuat {{ $item->created_at->locale('id')->isoFormat('D MMMM Y') }}
+                                    @if($item->pembimbing)
+                                        &bull; Pembimbing: <strong class="text-slate-600">{{ $item->pembimbing->nama_lengkap }}</strong> ({{ $item->pembimbing->divisi->nama_divisi ?? 'Unit' }})
+                                    @endif
                                 </p>
                             </div>
                             <span class="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold border {{ $badge[1] }}">

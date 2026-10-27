@@ -8,6 +8,7 @@ use App\Models\KriteriaPenilaian;
 use App\Models\Magang;
 use App\Models\Pembimbing;
 use App\Models\PengajuanIzin;
+use App\Models\PengajuanTugasLuar;
 use App\Models\Pengguna;
 use App\Models\Penilaian;
 use App\Models\Presensi;
@@ -169,7 +170,7 @@ class PresensiScoreServiceTest extends TestCase
         $this->assertEquals('Tidak Baik', $score['predikat']);
     }
 
-    public function test_approved_sick_or_leave_counts_as_full_four_hundred_eighty_minutes(): void
+    public function test_approved_sick_or_leave_does_not_count_as_masuk_and_earns_zero_minutes(): void
     {
         $user = Pengguna::create([
             'username' => 'magang5',
@@ -198,11 +199,65 @@ class PresensiScoreServiceTest extends TestCase
 
         $score = $this->service->calculateScore($magang);
 
-        // Izin resmi dihitung hadir penuh = 480 menit
-        $this->assertEquals(480, $score['total_menit_realisasi']);
+        // Sakit dan izin tidak terhitung masuk: realisasi menit = 0, hari hadir = 0
+        $this->assertEquals(0, $score['total_menit_realisasi']);
         $this->assertEquals(1, $score['total_hari_izin']);
+        $this->assertEquals(0, $score['total_hari_hadir']);
+        $this->assertEquals(0.0, $score['skor_presensi']);
+        $this->assertEquals('Tidak Baik', $score['predikat']);
+        $this->assertStringContainsString('Tidak Terhitung Masuk', $score['rincian_harian'][0]['keterangan']);
+    }
+
+    public function test_tugas_luar_tetap_dihitung_masuk_sesuai_jam_kerja(): void
+    {
+        $user = Pengguna::create([
+            'username' => 'magang_tl',
+            'password' => 'secret123',
+            'role' => 'magang',
+            'is_active' => true,
+        ]);
+
+        $magang = Magang::create([
+            'pengguna_id' => $user->id,
+            'nama_lengkap' => 'Bambang Tugas Luar',
+            'tanggal_mulai' => '2026-08-04', // Selasa
+            'tanggal_selesai' => '2026-08-04', // Selasa
+            'status' => 'aktif',
+        ]);
+
+        $presensi = Presensi::create([
+            'pengguna_id' => $user->id,
+            'tanggal' => '2026-08-04',
+            'jam_masuk' => '08:00:00',
+            'jam_keluar' => '16:00:00',
+            'mode_kerja' => 'tugas_luar',
+            'status' => 'hadir',
+        ]);
+
+        // Pengajuan tugas luar yang disetujui pembimbing
+        PengajuanTugasLuar::create([
+            'presensi_id' => $presensi->id,
+            'pengguna_id' => $user->id,
+            'magang_id' => $magang->id,
+            'tanggal' => '2026-08-04',
+            'tanggal_mulai' => '2026-08-04',
+            'tanggal_selesai' => '2026-08-04',
+            'tujuan' => 'Dinas Pendidikan',
+            'keperluan' => 'Sosialisasi sistem',
+            'waktu_mulai' => '08:00:00',
+            'waktu_selesai' => '16:00:00',
+            'status_verifikasi' => 'disetujui',
+        ]);
+
+        $score = $this->service->calculateScore($magang);
+
+        // Tugas luar tetap dihitung masuk sesuai jam kerja (penuh 480 menit)
+        $this->assertEquals(480, $score['total_menit_realisasi']);
+        $this->assertEquals(1, $score['total_hari_hadir']);
+        $this->assertEquals(0, $score['total_hari_izin']);
         $this->assertEquals(100.0, $score['skor_presensi']);
         $this->assertEquals('Sangat Baik', $score['predikat']);
+        $this->assertStringContainsString('Tugas Luar', $score['rincian_harian'][0]['keterangan']);
     }
 
     public function test_national_holiday_and_weekend_do_not_penalize_intern(): void

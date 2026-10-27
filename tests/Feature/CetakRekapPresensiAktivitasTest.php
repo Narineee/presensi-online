@@ -125,10 +125,9 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         $response->assertSee('Izin');
         $response->assertSee('Alfa');
         $response->assertSee('Tugas Luar');
-        $pengaturan = Pengaturan::getPengaturan();
-        $response->assertSee($pengaturan->nama_kepala_dinas);
-        $response->assertSee($pengaturan->jabatan_kepala_dinas);
-        $response->assertSee($pengaturan->nip_kepala_dinas);
+        // Rekap presensi admin tidak memiliki kop dan ttd
+        $response->assertDontSee('kop-table');
+        $response->assertDontSee('ttd-table');
         $response->assertDontSee('Pembimbing Lapangan');
     }
 
@@ -188,7 +187,7 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         $response->assertSee('Pembimbing');
         $response->assertSee('Periode');
         $response->assertSee('Rencana Kerja');
-        $response->assertSee('Progres');
+        $response->assertSee('Hasil');
         $response->assertSeeInOrder(['<th style="width: 20%;">Nama</th>', '<th style="width: 20%;">Pembimbing</th>'], false);
 
         // Verifikasi nama peserta & pembimbing
@@ -200,14 +199,12 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         $response->assertSee('2. Desain Basis Data dan Antarmuka');
         $response->assertSee('3. Pengembangan Modul Laporan');
 
-        // Verifikasi progres akhir dalam format persentase (90%)
-        $response->assertSee('90%');
+        // Verifikasi progres/hasil akhir berupa status Selesai
+        $response->assertSee('Selesai');
 
-        // Verifikasi tanda tangan kepala dinas
-        $pengaturan = Pengaturan::getPengaturan();
-        $response->assertSee($pengaturan->nama_kepala_dinas);
-        $response->assertSee($pengaturan->jabatan_kepala_dinas);
-        $response->assertSee($pengaturan->nip_kepala_dinas);
+        // Rekap aktivitas admin tidak memiliki kop dan ttd
+        $response->assertDontSee('kop-table');
+        $response->assertDontSee('ttd-table');
     }
 
     public function test_magang_can_access_personal_presensi_cetak(): void
@@ -239,7 +236,7 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         ]));
 
         $response->assertStatus(200);
-        $response->assertSee('Laporan Rekapitulasi Presensi Siswa/Mahasiswa Magang');
+        $response->assertSee('LAPORAN REKAPITULASI PRESENSI MAGANG');
         $response->assertSee('Ahmad Magang');
         $response->assertSee('MG-2026-001');
         $response->assertSee('Teknik Informatika');
@@ -247,13 +244,13 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         $response->assertSee('Teknologi Informasi');
         $response->assertSee('Dr. Pembimbing, M.Kom');
         $response->assertSee('08:05 WITA');
-        $response->assertSee('Sehubungan dengan telah berakhirnya pelaksanaan kegiatan magang');
-        $response->assertSee('Hormat kami,');
-        $response->assertSee('(tanda tangan dan stempel)');
 
-        $pengaturan = Pengaturan::getPengaturan();
-        $response->assertSee($pengaturan->nama_kepala_dinas);
-        $response->assertSee($pengaturan->jabatan_kepala_dinas);
+        // Rekap presensi magang tidak memiliki kalimat pengantar surat, kop, dan ttd
+        $response->assertDontSee('Sehubungan dengan telah berakhirnya pelaksanaan kegiatan magang');
+        $response->assertDontSee('Hormat kami,');
+        $response->assertDontSee('(tanda tangan dan stempel)');
+        $response->assertDontSee('kop-table');
+        $response->assertDontSee('ttd-table');
     }
 
     public function test_magang_can_access_personal_aktivitas_cetak(): void
@@ -286,23 +283,23 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('LAPORAN AKTIVITAS HARIAN MAGANG');
         $response->assertSee('No');
-        $response->assertSee('Unit Penempatan');
-        $response->assertSee('Pembimbing');
-        $response->assertSee('Rencana Kerja');
+        $response->assertSee('Nama');
         $response->assertSee('Hari / Tanggal');
-        $response->assertSee('Progres');
+        $response->assertSee('Rencana Kerja');
+        $response->assertSee('Hasil');
+        $response->assertSee('Keterangan');
         $response->assertSee('Periode Magang');
         $response->assertSee('Ahmad Magang');
         $response->assertSee('Membuat unit test untuk fitur laporan cetak');
-        $response->assertSee('100%');
-        $response->assertSee('Dr. Pembimbing, M.Kom');
-        $response->assertSee('Ir. H. Budi Santoso, M.T.');
-        $response->assertSee('Pembimbing Lapangan');
-        $response->assertSee('Kepala Sub-Bagian IT');
+
+        // Rekap aktivitas magang tidak memiliki kop dan ttd
+        $response->assertDontSee('kop-table');
+        $response->assertDontSee('Pembimbing Lapangan');
+        $response->assertDontSee('Mengetahui & Mengesahkan,');
         $response->assertDontSee('Catatan:');
     }
 
-    public function test_magang_aktivitas_cetak_renders_merged_cells_per_rencana_kerja(): void
+    public function test_magang_aktivitas_cetak_renders_format_enam_kolom_dan_nomor_berbaris(): void
     {
         $magangUser = $this->createMagangUser();
         $magang = $magangUser->magang;
@@ -320,19 +317,26 @@ class CetakRekapPresensiAktivitasTest extends TestCase
             'status' => 'aktif',
         ]);
 
-        // 2 progress items under RK 1
+        // Aktivitas hari 1: memiliki 2 rencana kerja (multi detail)
         $a1 = Aktivitas::create([
             'pengguna_id' => $magangUser->id,
             'tanggal' => '2026-10-12',
-            'isi' => 'Analisis format cetak',
+            'isi' => 'Mengerjakan 2 rencana kerja',
             'status' => 'approve',
         ]);
         AktivitasDetail::create([
             'aktivitas_id' => $a1->id,
             'rencana_kerja_id' => $rk1->id,
-            'progres' => 'Analisis format cetak',
+            'progres' => 'Selesai',
+        ]);
+        AktivitasDetail::create([
+            'aktivitas_id' => $a1->id,
+            'rencana_kerja_id' => $rk2->id,
+            'progres' => 'Belum',
+            'alasan' => 'Menunggu review code',
         ]);
 
+        // Aktivitas hari 2: 1 rencana kerja
         $a2 = Aktivitas::create([
             'pengguna_id' => $magangUser->id,
             'tanggal' => '2026-10-13',
@@ -342,20 +346,7 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         AktivitasDetail::create([
             'aktivitas_id' => $a2->id,
             'rencana_kerja_id' => $rk1->id,
-            'progres' => 'Implementasi blade template',
-        ]);
-
-        // 1 progress item under RK 2
-        $a3 = Aktivitas::create([
-            'pengguna_id' => $magangUser->id,
-            'tanggal' => '2026-10-14',
-            'isi' => 'Menjalankan unit test',
-            'status' => 'pending',
-        ]);
-        AktivitasDetail::create([
-            'aktivitas_id' => $a3->id,
-            'rencana_kerja_id' => $rk2->id,
-            'progres' => 'Menjalankan unit test',
+            'progres' => 'Selesai',
         ]);
 
         $response = $this->actingAs($magangUser)->get(route('aktivitas.cetak', [
@@ -366,18 +357,19 @@ class CetakRekapPresensiAktivitasTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('LAPORAN AKTIVITAS HARIAN MAGANG');
-        $response->assertSee('Pengembangan Fitur Rekap');
-        $response->assertSee('Deskripsi fitur rekap');
-        $response->assertSee('Pengujian dan Evaluasi');
-        $response->assertSee('Analisis format cetak');
-        $response->assertSee('Implementasi blade template');
-        $response->assertSee('Menjalankan unit test');
-        $response->assertSee('(Menunggu Validasi)');
+        $response->assertSee('No');
+        $response->assertSee('Nama');
+        $response->assertSee('Hari / Tanggal');
+        $response->assertSee('Rencana Kerja');
+        $response->assertSee('Hasil');
+        $response->assertSee('Keterangan');
 
-        // Unit Penempatan & Pembimbing same -> rowspan="3"
-        $response->assertSee('rowspan="3"', false);
-        // RK 1 has 2 items -> rowspan="2"
-        $response->assertSee('rowspan="2"', false);
+        // Verifikasi format nomor 1. dan 2. untuk rencana kerja, hasil, dan keterangan
+        $response->assertSee('1. Pengembangan Fitur Rekap');
+        $response->assertSee('2. Pengujian dan Evaluasi');
+        $response->assertSee('1. Selesai');
+        $response->assertSee('2. Belum');
+        $response->assertSee('2. Alasan: Menunggu review code');
     }
 
     public function test_presensi_index_shows_cetak_button(): void
@@ -479,7 +471,7 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         $resAktivitas->assertSee('tanggal_akhir=2026-09-30');
     }
 
-    public function test_admin_cetak_signature_only_for_ketua_instansi_from_pengaturan(): void
+    public function test_rekap_presensi_dan_aktivitas_admin_tidak_memiliki_kop_dan_ttd(): void
     {
         $admin = $this->createAdminUser();
         $pengaturan = Pengaturan::getPengaturan();
@@ -491,26 +483,19 @@ class CetakRekapPresensiAktivitasTest extends TestCase
             'kota_surat' => 'Jakarta Selatan',
         ]);
 
-        // 1. Presensi Cetak
+        // 1. Presensi Cetak (bebas kop dan bebas ttd)
         $resPresensi = $this->actingAs($admin)->get(route('admin.presensi.cetak', ['format' => 'html']));
         $resPresensi->assertStatus(200);
-        $resPresensi->assertSee('Dr. H. Bambang Hermanto, M.M.');
-        $resPresensi->assertSee('196805201994031005');
-        $resPresensi->assertSee('Kepala Badan Pengelola');
-        $resPresensi->assertSee('Badan Pengelola Sistem Informasi');
-        $resPresensi->assertSee('Jakarta Selatan');
-        $resPresensi->assertDontSee('Pembimbing Lapangan');
+        $resPresensi->assertDontSee('kop-table');
+        $resPresensi->assertDontSee('ttd-table');
+        $resPresensi->assertDontSee('Dr. H. Bambang Hermanto, M.M.');
 
-        // 2. Aktivitas Cetak
+        // 2. Aktivitas Cetak (bebas kop dan bebas ttd)
         $resAktivitas = $this->actingAs($admin)->get(route('admin.aktivitas.cetak', ['format' => 'html']));
         $resAktivitas->assertStatus(200);
-        $resAktivitas->assertSee('Dr. H. Bambang Hermanto, M.M.');
-        $resAktivitas->assertSee('196805201994031005');
-        $resAktivitas->assertSee('Kepala Badan Pengelola');
-        $resAktivitas->assertSee('Badan Pengelola Sistem Informasi');
-        $resAktivitas->assertSee('Jakarta Selatan');
-        $resAktivitas->assertDontSee('Mengetahui & Mengesahkan,');
-        $resAktivitas->assertDontSee('Kepala Sub-Bagian');
+        $resAktivitas->assertDontSee('kop-table');
+        $resAktivitas->assertDontSee('ttd-table');
+        $resAktivitas->assertDontSee('Dr. H. Bambang Hermanto, M.M.');
     }
 
     public function test_admin_penilaian_show_uses_print_layout_without_system_chrome(): void
@@ -841,7 +826,7 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         $htmlPenilaian->assertSee('Ahmad Magang');
     }
 
-    public function test_pembimbing_aktivitas_cetak_renders_merged_cells_per_peserta_and_rencana_kerja(): void
+    public function test_pembimbing_aktivitas_cetak_renders_enam_kolom_dan_nomor_berbaris(): void
     {
         $magangUser = $this->createMagangUser();
         $magang = $magangUser->magang;
@@ -865,56 +850,36 @@ class CetakRekapPresensiAktivitasTest extends TestCase
             'status' => 'aktif',
         ]);
 
-        // Aktivitas Hari 1: RK 1
+        // Aktivitas Hari 1: 2 Rencana Kerja (multi detail)
         $a1 = Aktivitas::create([
             'pengguna_id' => $magangUser->id,
             'tanggal' => '2026-10-12',
-            'isi' => 'Membuat mockup wireframe Figma',
+            'isi' => 'Mengerjakan desain UI dan modul auth',
             'status' => 'approve',
         ]);
         AktivitasDetail::create([
             'aktivitas_id' => $a1->id,
             'rencana_kerja_id' => $rk1->id,
-            'progres' => 'Membuat mockup wireframe Figma',
+            'progres' => 'Selesai',
+        ]);
+        AktivitasDetail::create([
+            'aktivitas_id' => $a1->id,
+            'rencana_kerja_id' => $rk2->id,
+            'progres' => 'Belum',
+            'alasan' => 'Terkendala koneksi API',
         ]);
 
-        // Aktivitas Hari 2: RK 1
+        // Aktivitas Hari 2: RK 3
         $a2 = Aktivitas::create([
             'pengguna_id' => $magangUser->id,
             'tanggal' => '2026-10-13',
-            'isi' => 'Revisi komponen UI dan ikon',
-            'status' => 'approve',
-        ]);
-        AktivitasDetail::create([
-            'aktivitas_id' => $a2->id,
-            'rencana_kerja_id' => $rk1->id,
-            'progres' => 'Revisi komponen UI dan ikon',
-        ]);
-
-        // Aktivitas Hari 3: RK 2
-        $a3 = Aktivitas::create([
-            'pengguna_id' => $magangUser->id,
-            'tanggal' => '2026-10-14',
-            'isi' => 'Membuat controller dan request auth',
-            'status' => 'approve',
-        ]);
-        AktivitasDetail::create([
-            'aktivitas_id' => $a3->id,
-            'rencana_kerja_id' => $rk2->id,
-            'progres' => 'Membuat controller dan request auth',
-        ]);
-
-        // Aktivitas Hari 4: RK 3
-        $a4 = Aktivitas::create([
-            'pengguna_id' => $magangUser->id,
-            'tanggal' => '2026-10-15',
             'isi' => 'Menjalankan automated test',
             'status' => 'approve',
         ]);
         AktivitasDetail::create([
-            'aktivitas_id' => $a4->id,
+            'aktivitas_id' => $a2->id,
             'rencana_kerja_id' => $rk3->id,
-            'progres' => 'Menjalankan automated test',
+            'progres' => 'Selesai',
         ]);
 
         // Request format HTML
@@ -926,28 +891,24 @@ class CetakRekapPresensiAktivitasTest extends TestCase
 
         $response->assertStatus(200);
 
-        // Header tabel: No, Nama, Rencana Kerja, Hari / Tanggal, Progres
+        // Header tabel: No, Nama, Hari / Tanggal, Rencana Kerja, Hasil, Keterangan
         $response->assertSee('No');
         $response->assertSee('Nama');
-        $response->assertSee('Rencana Kerja');
         $response->assertSee('Hari / Tanggal');
-        $response->assertSee('Progres');
+        $response->assertSee('Rencana Kerja');
+        $response->assertSee('Hasil');
+        $response->assertSee('Keterangan');
 
-        // Merged cells:
-        // Peserta Hasnia total 4 rows (rowspan="4")
-        $response->assertSee('rowspan="4"', false);
-        // RK 1 memiliki 2 item (rowspan="2")
-        $response->assertSee('rowspan="2"', false);
-
-        // Pastikan nama dan seluruh progres pekerjaan tercantum
+        // Pastikan nama dan seluruh rencana kerja tercantum
         $response->assertSee('Hasnia Magang');
-        $response->assertSee('Penyusunan Desain UI');
-        $response->assertSee('Membuat mockup wireframe Figma');
-        $response->assertSee('Revisi komponen UI dan ikon');
-        $response->assertSee('Implementasi Modul Auth');
-        $response->assertSee('Membuat controller dan request auth');
+        $response->assertSee('1. Penyusunan Desain UI');
+        $response->assertSee('2. Implementasi Modul Auth');
         $response->assertSee('Pengujian Sistem');
-        $response->assertSee('Menjalankan automated test');
+
+        // Verifikasi hasil & alasan
+        $response->assertSee('1. Selesai');
+        $response->assertSee('2. Belum');
+        $response->assertSee('2. Alasan: Terkendala koneksi API');
 
         // Request format PDF (default)
         $pdfResponse = $this->actingAs($pembimbingUser)->get(route('pembimbing.aktivitas.cetak', [
@@ -1007,7 +968,17 @@ class CetakRekapPresensiAktivitasTest extends TestCase
         // 2. HTML format
         $htmlResponse = $this->actingAs($magangUser)->get(route('magang.penilaian.cetak', ['format' => 'html']));
         $htmlResponse->assertStatus(200);
-        $htmlResponse->assertSee('LEMBAR PENILAIAN AKHIR MAGANG');
+        $htmlResponse->assertSee('Tabel Penilaian Akhir Magang');
+        $htmlResponse->assertSee('Sehubungan dengan telah berakhirnya pelaksanaan kegiatan magang');
+        $htmlResponse->assertSee('Lembar Penilaian Akhir Siswa/Mahasiswa Magang');
+        $htmlResponse->assertSee('Hormat kami,');
+        $htmlResponse->assertDontSee('(tanda tangan dan stempel)');
+        $htmlResponse->assertDontSee('<h3>LEMBAR PENILAIAN AKHIR MAGANG</h3>', false);
+        $htmlResponse->assertDontSee('Praktik Kerja Lapangan (PKL) / Program Internship');
+        $pengaturan = Pengaturan::getPengaturan();
+        $htmlResponse->assertSee('Kepala Dinas Komunikasi dan Informatika');
+        $htmlResponse->assertSee($pengaturan->nama_kepala_dinas);
+        $htmlResponse->assertSee($pengaturan->jabatan_kepala_dinas);
         $htmlResponse->assertSee('Inisiatif dan Kreativitas');
         $htmlResponse->assertSee('Kedisiplinan');
         $htmlResponse->assertSee('86');

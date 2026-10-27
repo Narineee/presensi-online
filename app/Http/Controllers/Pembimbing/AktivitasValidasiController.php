@@ -90,6 +90,8 @@ class AktivitasValidasiController extends Controller
         }
 
         $keputusanQuery = clone $query;
+        // Riwayat validasi hanya menampilkan keputusan yang dibuat oleh pembimbing yang sedang login
+        $keputusanQuery->where('validated_by', Auth::id());
         if ($status === 'approve' || $status === 'revisi') {
             $keputusanQuery->where('status', $status);
         } elseif ($status === 'pending') {
@@ -208,29 +210,38 @@ class AktivitasValidasiController extends Controller
             }
         }
 
-        $tanggalMulai = $request->input('tanggal_mulai');
-        $tanggalAkhir = $request->input('tanggal_akhir');
+        $tanggalMulai = $request->input('tanggal_mulai') ?: $request->input('tanggal_awal');
+        $tanggalAkhir = $request->input('tanggal_akhir') ?: $request->input('tanggal_selesai');
         $singleTanggal = $request->input('tanggal');
         $bulan = $request->input('bulan');
 
         if ($tanggalMulai && $tanggalAkhir && strtotime($tanggalMulai) && strtotime($tanggalAkhir)) {
             $query->whereBetween('tanggal', [$tanggalMulai, $tanggalAkhir]);
-            $periodeText = Carbon::parse($tanggalMulai)->isoFormat('D MMMM Y').' s/d '.Carbon::parse($tanggalAkhir)->isoFormat('D MMMM Y');
+            $d1 = Carbon::parse($tanggalMulai)->locale('id');
+            $d2 = Carbon::parse($tanggalAkhir)->locale('id');
+            if ($d1->isSameDay($d2)) {
+                $periodeText = $d1->isoFormat('D MMMM Y');
+            } else {
+                $periodeText = $d1->isoFormat('D MMMM Y').' s/d '.$d2->isoFormat('D MMMM Y');
+            }
         } elseif ($tanggalMulai && strtotime($tanggalMulai)) {
             $query->where('tanggal', '>=', $tanggalMulai);
-            $periodeText = 'Mulai '.Carbon::parse($tanggalMulai)->isoFormat('D MMMM Y');
+            $periodeText = 'Mulai '.Carbon::parse($tanggalMulai)->locale('id')->isoFormat('D MMMM Y');
         } elseif ($tanggalAkhir && strtotime($tanggalAkhir)) {
             $query->where('tanggal', '<=', $tanggalAkhir);
-            $periodeText = 'Sampai '.Carbon::parse($tanggalAkhir)->isoFormat('D MMMM Y');
+            $periodeText = 'Sampai '.Carbon::parse($tanggalAkhir)->locale('id')->isoFormat('D MMMM Y');
         } elseif ($singleTanggal && strtotime($singleTanggal)) {
             $query->whereDate('tanggal', $singleTanggal);
-            $periodeText = Carbon::parse($singleTanggal)->isoFormat('D MMMM Y');
+            $periodeText = Carbon::parse($singleTanggal)->locale('id')->isoFormat('dddd, D MMMM Y');
         } elseif ($bulan && preg_match('/^\d{4}-\d{2}$/', $bulan)) {
             $query->whereYear('tanggal', substr($bulan, 0, 4))->whereMonth('tanggal', substr($bulan, 5, 2));
-            $periodeText = Carbon::createFromFormat('Y-m-d', $bulan.'-01')->isoFormat('MMMM Y');
+            $bDate = Carbon::createFromFormat('Y-m-d', $bulan.'-01')->locale('id');
+            $periodeText = $bDate->startOfMonth()->isoFormat('D MMMM Y').' s/d '.$bDate->endOfMonth()->isoFormat('D MMMM Y');
         } else {
             $query->whereYear('tanggal', Carbon::today()->year)->whereMonth('tanggal', Carbon::today()->month);
-            $periodeText = Carbon::today()->isoFormat('MMMM Y');
+            $tglAwal = Carbon::today()->startOfMonth()->locale('id')->isoFormat('D MMMM Y');
+            $tglAkhir = Carbon::today()->endOfMonth()->locale('id')->isoFormat('D MMMM Y');
+            $periodeText = $tglAwal.' s/d '.$tglAkhir;
         }
 
         if ($request->filled('status')) {
@@ -238,6 +249,13 @@ class AktivitasValidasiController extends Controller
         }
 
         $aktivitas = $query->orderBy('tanggal', 'asc')->orderBy('id', 'asc')->get();
+
+        if (! $selectedMagang) {
+            $aktivitas = $aktivitas->sortBy([
+                fn ($a, $b) => strcasecmp($a->pengguna?->magang?->nama_lengkap ?? '', $b->pengguna?->magang?->nama_lengkap ?? ''),
+                fn ($a, $b) => strcmp($a->tanggal->toDateString(), $b->tanggal->toDateString()),
+            ])->values();
+        }
 
         $stats = [
             'total' => $aktivitas->count(),

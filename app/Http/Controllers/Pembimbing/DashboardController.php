@@ -50,28 +50,31 @@ class DashboardController extends Controller
             ->get();
 
         $hari = [
-            'hadir' => $presensiHariIni->where('status', 'hadir')->count(),
+            'hadir' => $presensiHariIni->filter(fn ($p) => ($p->status === 'hadir' || $p->is_tugas_luar) && ! in_array($p->status, ['sakit', 'izin', 'cuti']))->count(),
             'sakit' => $presensiHariIni->where('status', 'sakit')->count(),
             'izin' => $presensiHariIni->where('status', 'izin')->count(),
             'cuti' => $presensiHariIni->where('status', 'cuti')->count(),
-            'tl' => $presensiHariIni->filter(fn ($p) => $p->status === 'hadir' && $p->is_tugas_luar)->count(),
+            'tl' => $presensiHariIni->filter(fn ($p) => $p->is_tugas_luar && ! in_array($p->status, ['sakit', 'izin', 'cuti']))->count(),
         ];
 
         // ---- Perlu ditindaklanjuti ----
-        $aktivitasPending = Aktivitas::whereIn('pengguna_id', $semuaIds)
+        $aktivitasPendingQuery = Aktivitas::whereIn('pengguna_id', $semuaIds)
             ->where('status', 'pending')
-            ->with('pengguna.magang')
-            ->get();
+            ->with('pengguna.magang');
+        $pembimbing->applyPeriodConstraint($aktivitasPendingQuery, 'aktivitas.tanggal', 'aktivitas.pengguna_id');
+        $aktivitasPending = $aktivitasPendingQuery->get();
 
-        $izinPending = PengajuanIzin::whereIn('pengguna_id', $semuaIds)
+        $izinPendingQuery = PengajuanIzin::whereIn('pengguna_id', $semuaIds)
             ->where('status_approval', 'pending')
-            ->with('pengguna.magang')
-            ->get();
+            ->with('pengguna.magang');
+        $pembimbing->applyPeriodConstraint($izinPendingQuery, 'pengajuan_izin.tanggal_mulai', 'pengajuan_izin.pengguna_id');
+        $izinPending = $izinPendingQuery->get();
 
-        $tlMenunggu = PengajuanTugasLuar::whereIn('pengguna_id', $semuaIds)
+        $tlMenungguQuery = PengajuanTugasLuar::whereIn('pengguna_id', $semuaIds)
             ->where('status_verifikasi', 'menunggu')
-            ->with('pengguna.magang')
-            ->get();
+            ->with('pengguna.magang');
+        $pembimbing->applyPeriodConstraint($tlMenungguQuery, 'pengajuan_tugas_luar.tanggal', 'pengajuan_tugas_luar.pengguna_id');
+        $tlMenunggu = $tlMenungguQuery->get();
 
         // Perlu dinilai: belum ada penilaian, dan magang sudah selesai / berakhir dalam 14 hari
         $perluNilai = $binaan->filter(fn ($m) => ! $m->penilaian
@@ -106,8 +109,14 @@ class DashboardController extends Controller
         ];
 
         // ---- Rencana Kerja binaan terbaru ----
-        $supervisedIds = $aktif->pluck('id');
-        $rencanaTerbaru = RencanaKerja::whereIn('magang_id', $supervisedIds)
+        $pId = $pembimbing->id;
+        $rencanaTerbaru = RencanaKerja::where(function ($q) use ($pId) {
+            $q->where('pembimbing_id', $pId)
+                ->orWhere(function ($fallback) use ($pId) {
+                    $fallback->whereNull('pembimbing_id')
+                        ->whereIn('magang_id', Magang::where('pembimbing_id', $pId)->pluck('id'));
+                });
+        })
             ->where('status', 'aktif')
             ->with('magang')
             ->orderBy('id', 'desc')

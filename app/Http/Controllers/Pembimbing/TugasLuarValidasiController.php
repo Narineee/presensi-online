@@ -21,7 +21,7 @@ class TugasLuarValidasiController extends Controller
             return collect();
         }
 
-        return $pembimbing->magang()->pluck('pengguna_id');
+        return $pembimbing->getSupervisedMagangQuery()->pluck('pengguna_id');
     }
 
     /**
@@ -38,6 +38,10 @@ class TugasLuarValidasiController extends Controller
 
         $query = PengajuanTugasLuar::whereIn('pengguna_id', $supervisedIds)
             ->with(['pengguna.magang.divisi', 'presensi', 'validator.pembimbing']);
+
+        if ($pembimbing) {
+            $pembimbing->applyPeriodConstraint($query, 'pengajuan_tugas_luar.tanggal', 'pengajuan_tugas_luar.pengguna_id');
+        }
 
         // Filter peserta magang tertentu
         if ($request->filled('magang_id')) {
@@ -82,6 +86,8 @@ class TugasLuarValidasiController extends Controller
         }
 
         $keputusanQuery = clone $query;
+        // Riwayat validasi tugas luar hanya menampilkan keputusan yang dibuat oleh pembimbing yang sedang login
+        $keputusanQuery->where('verified_by', Auth::id());
         if ($status === 'disetujui' || $status === 'ditolak') {
             $keputusanQuery->where('status_verifikasi', $status);
         } elseif ($status === 'menunggu') {
@@ -104,10 +110,13 @@ class TugasLuarValidasiController extends Controller
      */
     public function validasi(Request $request, $id)
     {
-        $supervisedIds = $this->getSupervisedUserIds();
+        $pembimbing = Auth::user()->pembimbing;
+        abort_if(! $pembimbing, 403, 'Akses khusus pembimbing lapangan.');
 
-        $tugasLuar = PengajuanTugasLuar::whereIn('pengguna_id', $supervisedIds)
-            ->findOrFail($id);
+        $query = PengajuanTugasLuar::where('id', $id);
+        $pembimbing->applyPeriodConstraint($query, 'pengajuan_tugas_luar.tanggal', 'pengajuan_tugas_luar.pengguna_id');
+
+        $tugasLuar = $query->firstOrFail();
 
         $request->validate([
             'status_verifikasi' => 'required|in:disetujui,ditolak',

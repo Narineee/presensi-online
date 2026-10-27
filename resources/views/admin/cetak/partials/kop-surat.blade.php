@@ -2,8 +2,8 @@
      Kop resmi mengikuti format views/admin/presensi/cetak.blade.php
      Logo di: storage/app/public/images/logo-kalsel.png (butuh php artisan storage:link) --}}
 <style>
-    .print-sheet { font-family: Arial, Helvetica, sans-serif; color:#000; background:#fff; }
-    .kop-table { width:100%; border-collapse:collapse; border-bottom:2.5px solid #000; padding-bottom:5px; font-family: Arial, Helvetica, sans-serif; }
+    .print-sheet { font-family: 'Times New Roman', Times, serif; color:#000; background:#fff; }
+    .kop-table { width:100%; border-collapse:collapse; border-bottom:2.5px solid #000; padding-bottom:5px; font-family: 'Times New Roman', Times, serif; }
     .kop-table td { vertical-align:middle; padding:0 0 5px 0; border:0; }
     .kop-logo { width:75px; text-align:center; }
     .kop-text { text-align:center; line-height:1.3; }

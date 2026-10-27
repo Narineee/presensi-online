@@ -98,8 +98,19 @@ class AktivitasController extends Controller
         $user = Auth::user();
         $magang = $user->magang;
 
+        $activeMentor = $magang ? ($magang->getPembimbingAt(Carbon::today()) ?? $magang->pembimbing) : null;
+
         $rencanaKerjaList = $magang
-            ? $magang->rencanaKerja()->where('status', 'aktif')->orderBy('judul', 'asc')->get()
+            ? $magang->rencanaKerja()
+                ->where('status', 'aktif')
+                ->when($activeMentor, function ($q) use ($activeMentor) {
+                    $q->where(function ($sub) use ($activeMentor) {
+                        $sub->where('pembimbing_id', $activeMentor->id)
+                            ->orWhereNull('pembimbing_id');
+                    });
+                })
+                ->orderBy('judul', 'asc')
+                ->get()
             : collect();
 
         return view('aktivitas.create', compact('rencanaKerjaList'));
@@ -114,7 +125,18 @@ class AktivitasController extends Controller
         $magang = $user->magang;
         abort_if(! $magang, 403, 'Akses khusus peserta magang.');
 
-        $allowedRencana = $magang->rencanaKerja()->where('status', 'aktif')->get();
+        $targetDate = $request->input('tanggal', Carbon::today()->toDateString());
+        $activeMentor = $magang->getPembimbingAt($targetDate) ?? $magang->pembimbing;
+
+        $allowedRencana = $magang->rencanaKerja()
+            ->where('status', 'aktif')
+            ->when($activeMentor, function ($q) use ($activeMentor) {
+                $q->where(function ($sub) use ($activeMentor) {
+                    $sub->where('pembimbing_id', $activeMentor->id)
+                        ->orWhereNull('pembimbing_id');
+                });
+            })
+            ->get();
         $allowedRencanaIds = $allowedRencana->pluck('id')->toArray();
 
         $request->validate([
@@ -361,9 +383,9 @@ class AktivitasController extends Controller
         $query = Aktivitas::where('pengguna_id', $user->id)
             ->with(['details.rencanaKerja', 'pekerjaan', 'validator.pembimbing']);
 
-        $bulan = $request->input('bulan', Carbon::today()->format('Y-m'));
-        $tanggalMulai = $request->input('tanggal_mulai');
-        $tanggalAkhir = $request->input('tanggal_akhir');
+        $bulan = $request->input('bulan');
+        $tanggalMulai = $request->input('tanggal_mulai') ?: $request->input('tanggal_awal');
+        $tanggalAkhir = $request->input('tanggal_akhir') ?: $request->input('tanggal_selesai');
 
         if ($tanggalMulai && $tanggalAkhir && strtotime($tanggalMulai) && strtotime($tanggalAkhir)) {
             $query->whereBetween('tanggal', [$tanggalMulai, $tanggalAkhir]);
@@ -372,26 +394,27 @@ class AktivitasController extends Controller
 
             if ($d1->isSameDay($d2)) {
                 $periodeText = $d1->isoFormat('D MMMM Y');
-            } elseif ($d1->year === $d2->year && $d1->month === $d2->month) {
-                if ($d1->day === 1 && $d2->day === $d2->copy()->endOfMonth()->day) {
-                    $periodeText = $d1->isoFormat('MMMM Y');
-                } else {
-                    $periodeText = $d1->isoFormat('D').' sampai '.$d2->isoFormat('D MMMM Y');
-                }
-            } elseif ($d1->year === $d2->year) {
-                $periodeText = $d1->isoFormat('D MMMM').' sampai '.$d2->isoFormat('D MMMM Y');
             } else {
-                $periodeText = $d1->isoFormat('D MMMM Y').' sampai '.$d2->isoFormat('D MMMM Y');
+                $periodeText = $d1->isoFormat('D MMMM Y').' s/d '.$d2->isoFormat('D MMMM Y');
             }
+        } elseif ($tanggalMulai && strtotime($tanggalMulai)) {
+            $query->where('tanggal', '>=', $tanggalMulai);
+            $periodeText = 'Mulai '.Carbon::parse($tanggalMulai)->locale('id')->isoFormat('D MMMM Y');
+        } elseif ($tanggalAkhir && strtotime($tanggalAkhir)) {
+            $query->where('tanggal', '<=', $tanggalAkhir);
+            $periodeText = 'Sampai '.Carbon::parse($tanggalAkhir)->locale('id')->isoFormat('D MMMM Y');
         } elseif ($bulan && preg_match('/^\d{4}-\d{2}$/', $bulan)) {
             $query->whereYear('tanggal', substr($bulan, 0, 4))
                 ->whereMonth('tanggal', substr($bulan, 5, 2));
-            $periodeText = Carbon::createFromFormat('Y-m-d', $bulan.'-01')->locale('id')->isoFormat('MMMM Y');
+            $bDate = Carbon::createFromFormat('Y-m-d', $bulan.'-01')->locale('id');
+            $periodeText = $bDate->startOfMonth()->isoFormat('D MMMM Y').' s/d '.$bDate->endOfMonth()->isoFormat('D MMMM Y');
         } else {
             $bulan = Carbon::today()->format('Y-m');
             $query->whereYear('tanggal', Carbon::today()->year)
                 ->whereMonth('tanggal', Carbon::today()->month);
-            $periodeText = Carbon::today()->locale('id')->isoFormat('MMMM Y');
+            $tglAwal = Carbon::today()->startOfMonth()->locale('id')->isoFormat('D MMMM Y');
+            $tglAkhir = Carbon::today()->endOfMonth()->locale('id')->isoFormat('D MMMM Y');
+            $periodeText = $tglAwal.' s/d '.$tglAkhir;
         }
 
         if ($request->filled('status')) {
@@ -407,7 +430,7 @@ class AktivitasController extends Controller
             'revisi' => $aktivitas->where('status', 'revisi')->count(),
         ];
 
-        $targetDate = $tanggalMulai ?? ($bulan ? Carbon::parse($bulan.'-01')->toDateString() : Carbon::today()->toDateString());
+        $targetDate = $tanggalMulai ?? ($bulan && preg_match('/^\d{4}-\d{2}$/', (string) $bulan) ? Carbon::parse($bulan.'-01')->toDateString() : Carbon::today()->toDateString());
         $divisi = $user->magang?->getDivisiAt($targetDate) ?? $user->magang?->divisi ?? Divisi::first();
         $pembimbing = $user->magang?->getPembimbingAt($targetDate) ?? $user->magang?->pembimbing ?? Pembimbing::first();
         $pengaturan = Pengaturan::getPengaturan();

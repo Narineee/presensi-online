@@ -158,13 +158,12 @@ class PresensiScoreService
 
             $presensi = $presensiRecords->get($dateStr);
 
-            // KASUS A: Izin / Sakit Resmi Disetujui Pembimbing -> DIHITUNG HADIR PENUH (480 menit)
-            if ($isApprovedIzin || ($presensi && in_array($presensi->status, ['izin', 'sakit', 'cuti']))) {
+            // KASUS A: Izin / Sakit Resmi Disetujui Pembimbing -> TIDAK TERHITUNG MASUK (0 Menit)
+            if (($isApprovedIzin && ! ($presensi && $presensi->jam_masuk)) || ($presensi && in_array($presensi->status, ['izin', 'sakit', 'cuti']))) {
                 $jenisIzin = $presensi ? ucfirst($presensi->status) : 'Izin Resmi Disetujui';
-                $menit = self::MENIT_PER_HARI;
+                $menit = 0;
 
-                $totalMenitRealisasi += $menit;
-                $menitIzinResmi += $menit;
+                // Sakit dan izin tidak terhitung jam masuk/realisasi menit
                 $totalHariIzin++;
 
                 $rincianHarian[] = [
@@ -175,7 +174,7 @@ class PresensiScoreService
                     'jam_keluar' => '-',
                     'menit' => $menit,
                     'is_hitung_target' => true,
-                    'keterangan' => $jenisIzin.' (Disetujui Pembimbing - Hadir Penuh 480 Menit)',
+                    'keterangan' => $jenisIzin.' (Disetujui Pembimbing - Tidak Terhitung Masuk)',
                 ];
 
                 $current->addDay();

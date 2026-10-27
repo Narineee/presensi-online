@@ -239,13 +239,15 @@ class BinaanController extends Controller
 
         $allHolidays = $this->getHolidaysLookup();
 
-        $userPresensi = Presensi::where('pengguna_id', $magang->pengguna_id)
-            ->get()
+        $presensiQuery = Presensi::where('pengguna_id', $magang->pengguna_id);
+        $pembimbing->applyPeriodConstraint($presensiQuery, 'presensi.tanggal', 'presensi.pengguna_id');
+        $userPresensi = $presensiQuery->get()
             ->keyBy(fn ($item) => Carbon::parse($item->tanggal)->toDateString());
 
-        $userApprovedIzin = PengajuanIzin::where('pengguna_id', $magang->pengguna_id)
-            ->where('status_approval', 'disetujui')
-            ->get();
+        $userApprovedIzinQuery = PengajuanIzin::where('pengguna_id', $magang->pengguna_id)
+            ->where('status_approval', 'disetujui');
+        $pembimbing->applyPeriodConstraint($userApprovedIzinQuery, 'pengajuan_izin.tanggal_mulai', 'pengajuan_izin.pengguna_id');
+        $userApprovedIzin = $userApprovedIzinQuery->get();
 
         $rekap = $this->calculateRekapPresensi($magang, $allHolidays, $userPresensi, $userApprovedIzin);
 
@@ -253,12 +255,20 @@ class BinaanController extends Controller
             ->whereDate('tanggal', Carbon::today())
             ->first();
 
-        $aktivitasPending = Aktivitas::where('pengguna_id', $magang->pengguna_id)
-            ->where('status', 'pending')
-            ->orderBy('tanggal', 'desc')
-            ->get();
+        $aktivitasPendingQuery = Aktivitas::where('pengguna_id', $magang->pengguna_id)
+            ->where('status', 'pending');
+        $pembimbing->applyPeriodConstraint($aktivitasPendingQuery, 'aktivitas.tanggal', 'aktivitas.pengguna_id');
+        $aktivitasPending = $aktivitasPendingQuery->orderBy('tanggal', 'desc')->get();
 
+        $pId = $pembimbing->id;
         $rencanaAktif = RencanaKerja::where('magang_id', $magang->id)
+            ->where(function ($q) use ($pId) {
+                $q->where('pembimbing_id', $pId)
+                    ->orWhere(function ($fallback) use ($pId) {
+                        $fallback->whereNull('pembimbing_id')
+                            ->whereIn('magang_id', Magang::where('pembimbing_id', $pId)->pluck('id'));
+                    });
+            })
             ->where('status', 'aktif')
             ->orderBy('id', 'desc')
             ->get();
@@ -294,14 +304,16 @@ class BinaanController extends Controller
                 });
         })->findOrFail($id);
 
-        $presensi = Presensi::where('pengguna_id', $magang->pengguna_id)
+        $presensiQuery = Presensi::where('pengguna_id', $magang->pengguna_id)
             ->with('pengajuanTugasLuar')
-            ->orderBy('tanggal', 'desc')
-            ->paginate(10);
+            ->orderBy('tanggal', 'desc');
+        $pembimbing->applyPeriodConstraint($presensiQuery, 'presensi.tanggal', 'presensi.pengguna_id');
+        $presensi = $presensiQuery->paginate(10);
 
-        $izin = PengajuanIzin::where('pengguna_id', $magang->pengguna_id)
-            ->where('status_approval', 'disetujui')
-            ->get();
+        $izinQuery = PengajuanIzin::where('pengguna_id', $magang->pengguna_id)
+            ->where('status_approval', 'disetujui');
+        $pembimbing->applyPeriodConstraint($izinQuery, 'pengajuan_izin.tanggal_mulai', 'pengajuan_izin.pengguna_id');
+        $izin = $izinQuery->get();
 
         $jam = fn ($t) => $t ? str_replace(':', '.', substr($t, 0, 5)) : '-';
 

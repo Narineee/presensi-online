@@ -54,9 +54,28 @@ class MonitoringPresensiController extends Controller
         // Hitung ringkasan hari ini
         $today = Carbon::today()->toDateString();
         $statsToday = [
-            'total_hadir' => Presensi::where('tanggal', $today)->where('status', 'hadir')->count(),
-            'total_onsite' => Presensi::where('tanggal', $today)->where('mode_kerja', 'onsite')->count(),
-            'total_wfh' => Presensi::where('tanggal', $today)->where('mode_kerja', 'wfh')->count(),
+            'total_hadir' => Presensi::where('tanggal', $today)
+                ->whereNotIn('status', ['sakit', 'izin', 'cuti'])
+                ->where(function ($q) {
+                    $q->where('status', 'hadir')
+                        ->orWhereNotNull('jam_masuk')
+                        ->orWhere('mode_kerja', 'tugas_luar');
+                })
+                ->count(),
+            'total_onsite' => Presensi::where('tanggal', $today)
+                ->where('mode_kerja', 'onsite')
+                ->whereNotIn('status', ['sakit', 'izin', 'cuti'])
+                ->where(function ($q) {
+                    $q->where('status', 'hadir')->orWhereNotNull('jam_masuk');
+                })
+                ->count(),
+            'total_wfh' => Presensi::where('tanggal', $today)
+                ->where('mode_kerja', 'wfh')
+                ->whereNotIn('status', ['sakit', 'izin', 'cuti'])
+                ->where(function ($q) {
+                    $q->where('status', 'hadir')->orWhereNotNull('jam_masuk');
+                })
+                ->count(),
             'total_sudah_pulang' => Presensi::where('tanggal', $today)->whereNotNull('jam_keluar')->count(),
         ];
 

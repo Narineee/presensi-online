@@ -12,10 +12,24 @@ class RencanaKerja extends Model
 
     protected $fillable = [
         'magang_id',
+        'pembimbing_id',
         'judul',
         'deskripsi',
         'status',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (RencanaKerja $rencana) {
+            if (empty($rencana->pembimbing_id) && ! empty($rencana->magang_id)) {
+                $magang = $rencana->relationLoaded('magang') ? $rencana->magang : Magang::find($rencana->magang_id);
+                if ($magang) {
+                    $activeMentor = $magang->getPembimbingAt(now());
+                    $rencana->pembimbing_id = $activeMentor?->id ?? $magang->pembimbing_id;
+                }
+            }
+        });
+    }
 
     /**
      * Relasi ke peserta magang pemilik rencana kerja ini.
@@ -23,6 +37,14 @@ class RencanaKerja extends Model
     public function magang(): BelongsTo
     {
         return $this->belongsTo(Magang::class, 'magang_id');
+    }
+
+    /**
+     * Relasi ke pembimbing lapangan saat rencana kerja dibuat / unit berlaku.
+     */
+    public function pembimbing(): BelongsTo
+    {
+        return $this->belongsTo(Pembimbing::class, 'pembimbing_id');
     }
 
     /**

@@ -29,7 +29,14 @@ class DashboardController extends Controller
             'total_pembimbing' => Pembimbing::count(),
             'total_magang' => Magang::count(),
             'total_kriteria' => KriteriaPenilaian::count(),
-            'presensi_today' => Presensi::whereDate('tanggal', $today)->count(),
+            'presensi_today' => Presensi::whereDate('tanggal', $today)
+                ->whereNotIn('status', ['sakit', 'izin', 'cuti'])
+                ->where(function ($q) {
+                    $q->where('status', 'hadir')
+                        ->orWhereNotNull('jam_masuk')
+                        ->orWhere('mode_kerja', 'tugas_luar');
+                })
+                ->count(),
             'aktivitas_today' => Aktivitas::whereDate('tanggal', $today)->count(),
             'izin_pending' => PengajuanIzin::where('status_approval', 'pending')->count(),
         ];

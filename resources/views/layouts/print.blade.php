@@ -81,6 +81,10 @@
                 border: 1px solid #cbd5e1;
                 padding: 14mm 12mm;
                 box-sizing: border-box;
+                font-family: 'Times New Roman', Times, serif;
+            }
+            .print-sheet, .print-sheet * {
+                font-family: 'Times New Roman', Times, serif;
             }
         }
 
@@ -96,6 +100,7 @@
             }
 
             html, body {
+                font-family: 'Times New Roman', Times, serif !important;
                 background-color: #ffffff !important;
                 color: #0f172a !important;
                 margin: 0 !important;

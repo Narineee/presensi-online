@@ -712,7 +712,7 @@
                         <tr>
                             <th class="py-3 px-4">Tanggal</th>
                             <th class="py-3 px-4">Divisi Terkait</th>
-                            <th class="py-3 px-4">Tugas / Pekerjaan</th>
+                            <th class="py-3 px-4">Rencana Kerja</th>
                             <th class="py-3 px-4">Uraian Ringkas</th>
                             <th class="py-3 px-4 text-center">Status</th>
                         </tr>
@@ -725,7 +725,13 @@
                             <tr class="hover:bg-slate-50/70">
                                 <td class="py-3 px-4 font-semibold text-slate-800 whitespace-nowrap">{{ \Carbon\Carbon::parse($a->tanggal)->format('d M Y') }}</td>
                                 <td class="py-3 px-4 text-slate-700 font-medium whitespace-nowrap">{{ $divisiAktivitas?->nama_divisi ?? '-' }}</td>
-                                <td class="py-3 px-4 font-semibold text-slate-900">{{ $a->pekerjaan?->judul ?? 'Pekerjaan Umum' }}</td>
+                                <td class="py-3 px-4 font-semibold text-slate-900">
+                                    @if($a->details && $a->details->isNotEmpty())
+                                        {{ $a->details->pluck('judul_rencana')->implode(', ') }}
+                                    @else
+                                        {{ $a->pekerjaan?->judul ?? ($a->judul ?? 'Aktivitas Harian') }}
+                                    @endif
+                                </td>
                                 <td class="py-3 px-4 text-slate-600 max-w-xs truncate">{{ $a->isi }}</td>
                                 <td class="py-3 px-4 text-center whitespace-nowrap">
                                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $a->status === 'approve' ? 'bg-emerald-100 text-emerald-800' : ($a->status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800') }}">

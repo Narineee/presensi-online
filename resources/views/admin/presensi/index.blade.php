@@ -161,7 +161,11 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4">
-                                @if($item->is_tugas_luar || $item->mode_kerja === 'tugas_luar')
+                                @if(in_array($item->status, ['sakit', 'izin', 'cuti']))
+                                    <span class="inline-flex items-center gap-1 font-bold text-rose-700">
+                                        🩺 {{ ucfirst($item->status) }}
+                                    </span>
+                                @elseif($item->is_tugas_luar || $item->mode_kerja === 'tugas_luar')
                                     <span class="inline-flex items-center gap-1 font-bold text-indigo-700">
                                         🚗 Tugas Luar
                                     </span>

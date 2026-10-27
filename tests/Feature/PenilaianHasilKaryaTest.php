@@ -272,5 +272,14 @@ class PenilaianHasilKaryaTest extends TestCase
         $this->assertTrue($akumulasi->is_akumulasi);
         $this->assertCount(3, $akumulasi->hasil_karya);
         $this->assertEquals(['Aplikasi Absensi', 'Desain Poster', 'Dokumentasi API'], $akumulasi->hasil_karya);
+
+        // Test tampilan index magang: menampilkan rincian per pembimbing dan gabungan
+        $resMagangIndex = $this->actingAs($data['magangUser'])->get(route('magang.penilaian.index'));
+        $resMagangIndex->assertOk();
+        $resMagangIndex->assertSee('Riwayat Nilai per Pembimbing &amp; Unit', false);
+        $resMagangIndex->assertSee('Hasil Karya pada Unit / Pembimbing Ini:');
+        $resMagangIndex->assertSee('Desain Poster');
+        $resMagangIndex->assertSee('Dokumentasi API');
+        $resMagangIndex->assertSee('Hasil Karya Gabungan (Seluruh Unit / Pembimbing)');
     }
 }

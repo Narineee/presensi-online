@@ -5,7 +5,7 @@
     <title>Laporan Rekapitulasi Penilaian Magang</title>
     <style>
         body {
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: 'Times New Roman', Times, serif;
             color: #000000;
             font-size: 9pt;
             line-height: 1.35;

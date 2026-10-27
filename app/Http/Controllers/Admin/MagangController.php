@@ -153,7 +153,7 @@ class MagangController extends Controller
         $presensiList = (clone $presensiQuery)->orderBy('tanggal', 'desc')->take(10)->get();
 
         // Data aktivitas peserta
-        $aktivitasQuery = Aktivitas::where('pengguna_id', $magang->pengguna_id)->with('pekerjaan');
+        $aktivitasQuery = Aktivitas::where('pengguna_id', $magang->pengguna_id)->with(['pekerjaan', 'details']);
         $aktivitasStats = [
             'total' => (clone $aktivitasQuery)->count(),
             'approve' => (clone $aktivitasQuery)->where('status', 'approve')->count(),
@@ -237,6 +237,7 @@ class MagangController extends Controller
         $pembimbing = Pembimbing::findOrFail($request->pembimbing_id);
         $divisiId = $pembimbing->divisi_id ?? $request->divisi_id ?? $magang->divisi_id;
         $isActive = $request->has('is_active');
+        $oldPembimbingId = $magang->pembimbing_id;
 
         // 1. Update data profil magang
         $magangData = [
@@ -255,6 +256,40 @@ class MagangController extends Controller
         ];
 
         $magang->update($magangData);
+
+        // Jika pembimbing berganti, sinkronkan penempatan agar riwayat pembimbing lama terisolasi rapi
+        if ((int) $oldPembimbingId !== (int) $pembimbing->id) {
+            $penempatanAktif = $magang->penempatanAktif;
+            $today = Carbon::today()->toDateString();
+            if ($penempatanAktif) {
+                if ($penempatanAktif->tanggal_mulai->toDateString() === $today) {
+                    $penempatanAktif->update([
+                        'pembimbing_id' => $pembimbing->id,
+                        'divisi_id' => $divisiId,
+                    ]);
+                } else {
+                    $kemarin = Carbon::yesterday()->toDateString();
+                    $selesaiLama = $penempatanAktif->tanggal_selesai ? $penempatanAktif->tanggal_selesai->toDateString() : $today;
+                    $penempatanAktif->update(['tanggal_selesai' => $kemarin]);
+
+                    PenempatanMagang::create([
+                        'magang_id' => $magang->id,
+                        'divisi_id' => $divisiId,
+                        'pembimbing_id' => $pembimbing->id,
+                        'tanggal_mulai' => $today,
+                        'tanggal_selesai' => $selesaiLama >= $today ? $selesaiLama : $today,
+                    ]);
+                }
+            } else {
+                PenempatanMagang::create([
+                    'magang_id' => $magang->id,
+                    'divisi_id' => $divisiId,
+                    'pembimbing_id' => $pembimbing->id,
+                    'tanggal_mulai' => $today,
+                    'tanggal_selesai' => $magang->tanggal_selesai ? $magang->tanggal_selesai->toDateString() : $today,
+                ]);
+            }
+        }
 
         // 2. Update akun login di tabel pengguna
         $userData = [

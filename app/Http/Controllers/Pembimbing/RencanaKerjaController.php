@@ -24,9 +24,15 @@ class RencanaKerjaController extends Controller
         $pembimbing = $this->getPembimbing();
         abort_if(! $pembimbing, 403, 'Akses khusus pembimbing lapangan.');
 
-        $supervisedMagangIds = Magang::where('pembimbing_id', $pembimbing->id)->pluck('id');
+        $pId = $pembimbing->id;
 
-        $query = RencanaKerja::whereIn('magang_id', $supervisedMagangIds)
+        $query = RencanaKerja::where(function ($q) use ($pId) {
+            $q->where('pembimbing_id', $pId)
+                ->orWhere(function ($fallback) use ($pId) {
+                    $fallback->whereNull('pembimbing_id')
+                        ->whereIn('magang_id', Magang::where('pembimbing_id', $pId)->pluck('id'));
+                });
+        })
             ->with(['magang.divisi'])
             ->withCount('aktivitasDetails');
 
@@ -55,7 +61,7 @@ class RencanaKerjaController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        $supervisedMagang = Magang::where('pembimbing_id', $pembimbing->id)
+        $supervisedMagang = $pembimbing->getSupervisedMagangQuery()
             ->orderBy('nama_lengkap', 'asc')
             ->get();
 
@@ -70,9 +76,15 @@ class RencanaKerjaController extends Controller
         $pembimbing = $this->getPembimbing();
         abort_if(! $pembimbing, 403, 'Akses khusus pembimbing lapangan.');
 
-        $supervisedMagangIds = Magang::where('pembimbing_id', $pembimbing->id)->pluck('id');
+        $pId = $pembimbing->id;
 
-        $rencana = RencanaKerja::whereIn('magang_id', $supervisedMagangIds)
+        $rencana = RencanaKerja::where(function ($q) use ($pId) {
+            $q->where('pembimbing_id', $pId)
+                ->orWhere(function ($fallback) use ($pId) {
+                    $fallback->whereNull('pembimbing_id')
+                        ->whereIn('magang_id', Magang::where('pembimbing_id', $pId)->pluck('id'));
+                });
+        })
             ->with(['magang.divisi', 'magang.pengguna'])
             ->findOrFail($id);
 

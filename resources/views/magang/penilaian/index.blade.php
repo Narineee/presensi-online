@@ -135,21 +135,6 @@
                     </div>
                 </div>
 
-                {{-- Hasil Karya Peserta Magang (Opsional) --}}
-                @if(!empty($penilaian->hasil_karya) && count(array_filter($penilaian->hasil_karya)) > 0)
-                    <div class="rounded-2xl glass-subcard p-4 border border-white space-y-2 text-xs">
-                        <div class="flex items-center gap-1.5">
-                            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
-                            <p class="font-extrabold text-slate-900">Hasil Karya Peserta Magang</p>
-                        </div>
-                        <ol class="list-decimal list-inside space-y-1 text-slate-700 bg-white/70 p-3 rounded-xl border border-white">
-                            @foreach(array_filter($penilaian->hasil_karya) as $karya)
-                                <li class="font-medium leading-relaxed">{{ $karya }}</li>
-                            @endforeach
-                        </ol>
-                    </div>
-                @endif
-
                 {{-- Riwayat Evaluasi Masing-Masing Pembimbing (Khusus Multi-Pembimbing) --}}
                 @if ($penilaian->is_akumulasi && isset($evaluasiList) && $evaluasiList->count() > 1)
                     <div class="rounded-2xl glass-subcard p-4 border border-white space-y-3">
@@ -187,12 +172,42 @@
                                             </div>
                                         @endforeach
                                     </div>
+
+                                    {{-- Rincian Hasil Karya per Pembimbing / Unit --}}
+                                    @if(!empty($ev->hasil_karya) && count(array_filter($ev->hasil_karya)) > 0)
+                                        <div class="pt-2 border-t border-slate-100 text-[11px] space-y-1">
+                                            <span class="font-bold text-slate-700 block">Hasil Karya pada Unit / Pembimbing Ini:</span>
+                                            <ol class="list-decimal list-inside space-y-0.5 text-slate-600 pl-1">
+                                                @foreach(array_filter($ev->hasil_karya) as $hk)
+                                                    <li class="font-medium leading-relaxed">{{ $hk }}</li>
+                                                @endforeach
+                                            </ol>
+                                        </div>
+                                    @endif
+
                                     <div class="text-[10px] text-slate-400 text-right">
                                         Dinilai: {{ $ev->created_at ? $ev->created_at->format('d M Y') : '-' }}
                                     </div>
                                 </div>
                             @endforeach
                         </div>
+                    </div>
+                @endif
+
+                {{-- Hasil Karya Peserta Magang (Gabungan / Tunggal) --}}
+                @if(!empty($penilaian->hasil_karya) && count(array_filter($penilaian->hasil_karya)) > 0)
+                    <div class="rounded-2xl glass-subcard p-4 border border-white space-y-2 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                            <p class="font-extrabold text-slate-900">
+                                {{ ($penilaian->is_akumulasi && isset($evaluasiList) && $evaluasiList->count() > 1) ? 'Hasil Karya Gabungan (Seluruh Unit / Pembimbing)' : 'Hasil Karya Peserta Magang' }}
+                            </p>
+                        </div>
+                        <ol class="list-decimal list-inside space-y-1 text-slate-700 bg-white/70 p-3 rounded-xl border border-white">
+                            @foreach(array_filter($penilaian->hasil_karya) as $karya)
+                                <li class="font-medium leading-relaxed">{{ $karya }}</li>
+                            @endforeach
+                        </ol>
                     </div>
                 @endif
 
@@ -300,15 +315,11 @@
         </div>
 
         {{-- Cetak Penilaian Action Button --}}
-        <div class="no-print pt-1 flex flex-col sm:flex-row gap-2">
+        <div class="no-print pt-1">
             <a href="{{ route('magang.penilaian.cetak') }}" target="_blank"
-               class="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-brand hover:bg-brand-dark py-3.5 text-sm font-extrabold text-white shadow-xs transition active:scale-[.99]">
+               class="w-full flex items-center justify-center gap-2 rounded-2xl bg-brand hover:bg-brand-dark py-3.5 text-sm font-extrabold text-white shadow-xs transition active:scale-[.99]">
                 <span>📄 Cetak Lembar Penilaian (PDF)</span>
             </a>
-            <button type="button" onclick="window.print()"
-                    class="flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white hover:bg-slate-50 py-3.5 px-6 text-sm font-bold text-slate-800 shadow-xs transition active:scale-[.99] cursor-pointer">
-                <span>🖨️ Cetak Cepat</span>
-            </button>
         </div>
     @endif
 

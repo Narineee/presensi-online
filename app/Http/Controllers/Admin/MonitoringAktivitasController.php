@@ -223,9 +223,27 @@ class MonitoringAktivitasController extends Controller
                 $rencanaKerjaList = $userAktivitas->pluck('pekerjaan.judul')->filter()->unique()->values()->all();
             }
 
-            // Progres akhir (mengambil nilai progres maksimal berupa persenan, semisal max 90 maka 90%)
-            $maxProgress = $userAktivitas->isNotEmpty() ? (int) $userAktivitas->max('progress') : 0;
-            $progresTeks = $maxProgress.'%';
+            // Status hasil pekerjaan / rencana kerja (Selesai / Belum)
+            $allDetails = $userAktivitas->flatMap(function ($akt) {
+                return $akt->details ?? collect();
+            });
+
+            if ($allDetails->isNotEmpty()) {
+                $totalDetails = $allDetails->count();
+                $selesaiCount = $allDetails->filter(fn ($d) => strcasecmp(trim($d->progres), 'selesai') === 0)->count();
+                if ($selesaiCount === $totalDetails) {
+                    $progresTeks = 'Selesai';
+                } elseif ($selesaiCount > 0) {
+                    $progresTeks = 'Sebagian Selesai';
+                } else {
+                    $progresTeks = 'Belum';
+                }
+            } elseif ($userAktivitas->isNotEmpty()) {
+                $hasApproved = $userAktivitas->contains('status', 'approve');
+                $progresTeks = $hasApproved ? 'Selesai' : 'Belum';
+            } else {
+                $progresTeks = '-';
+            }
 
             return (object) [
                 'id' => $magang->id,
@@ -236,20 +254,16 @@ class MonitoringAktivitasController extends Controller
                 'pembimbing_nip' => $pembimbingNip,
                 'periode_teks' => $periodeMagangTeks,
                 'rencana_kerja_list' => $rencanaKerjaList,
-                'max_progress' => $maxProgress,
                 'progres_akhir' => $progresTeks,
                 'total_aktivitas' => $userAktivitas->count(),
             ];
         });
 
         $totalAktivitasAll = $rekapList->sum('total_aktivitas');
-        $avgProgress = $rekapList->isNotEmpty() ? round($rekapList->avg('max_progress'), 1) : 0;
-        $maxProgressAll = $rekapList->isNotEmpty() ? $rekapList->max('max_progress') : 0;
 
         $stats = [
             'total_peserta' => $rekapList->count(),
-            'rata_rata_progres' => $avgProgress.'%',
-            'progres_tertinggi' => $maxProgressAll.'%',
+            'total_selesai' => $rekapList->where('progres_akhir', 'Selesai')->count(),
             'total_aktivitas' => $totalAktivitasAll,
         ];
 

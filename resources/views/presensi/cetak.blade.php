@@ -7,109 +7,38 @@
         body {
             font-family: 'Times New Roman', Times, serif;
             color: #000000;
-            font-size: 11pt;
+            font-size: 10pt;
             line-height: 1.35;
             background: #ffffff;
             margin: 0;
             padding: 0;
         }
 
-        .kop-table {
-            width: 100%;
-            border-collapse: collapse;
-            border-bottom: 2.5px solid #000000;
-            font-family: Arial, Helvetica, sans-serif;
-        }
-        .kop-table td {
-            vertical-align: middle;
-            padding-bottom: 5px;
-            border: none;
-        }
-        .kop-logo {
-            width: 75px;
+        .judul-laporan {
             text-align: center;
+            margin-bottom: 16px;
         }
-        .kop-text {
-            text-align: center;
-            line-height: 1.3;
-        }
-        .kop-text .l1 {
-            font-size: 11pt;
-            text-transform: uppercase;
-        }
-        .kop-text .l2 {
+        .judul-laporan h3 {
             font-size: 13pt;
             font-weight: bold;
+            text-decoration: underline;
             text-transform: uppercase;
+            margin: 0 0 4px 0;
         }
-        .kop-text .l3 {
-            font-size: 8pt;
-            color: #222222;
-        }
-        .kop-spacer {
-            border-bottom: 1px solid #000000;
-            margin-top: 2px;
-            margin-bottom: 12px;
-        }
-
-
-
-
-
-        .surat-header-date {
-            text-align: right;
-            font-size: 11pt;
-            margin-top: 4px;
-            margin-bottom: 8px;
-        }
-
-        .meta-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11pt;
-            margin-bottom: 12px;
-        }
-        .meta-table td {
-            padding: 1.5px 0;
-            vertical-align: top;
-            border: none;
-        }
-        .meta-table td.col-label {
-            width: 80px;
-        }
-        .meta-table td.col-sep {
-            width: 16px;
-        }
-
-        .tujuan-surat {
-            margin-bottom: 14px;
-            font-size: 11pt;
-            line-height: 1.35;
-        }
-
-        .salam-pembuka {
-            margin-bottom: 10px;
-            font-size: 11pt;
-            line-height: 1.35;
-        }
-
-        .paragraf-surat {
-            text-align: justify;
-            text-indent: 36px;
-            margin: 0 0 10px 0;
-            font-size: 11pt;
-            line-height: 1.35;
+        .judul-laporan p {
+            font-size: 10pt;
+            margin: 0;
+            color: #111827;
         }
 
         .identitas-table {
             width: 100%;
             border-collapse: collapse;
-            margin-left: 20px;
-            margin-bottom: 12px;
-            font-size: 11pt;
+            margin-bottom: 14px;
+            font-size: 10pt;
         }
         .identitas-table td {
-            padding: 2px 0;
+            padding: 2.5px 0;
             vertical-align: top;
             border: none;
         }
@@ -151,33 +80,12 @@
             display: table-header-group;
         }
 
-        .ttd-table {
-            width: 100%;
-            border-collapse: collapse;
-            border: none;
-            margin-top: 20px;
-            page-break-inside: avoid;
-            font-size: 11pt;
+        .ringkasan {
+            font-size: 9.5pt;
+            margin: 12px 0 6px;
         }
-        .ttd-table td {
-            border: none;
-            vertical-align: top;
-        }
-        .ttd-box {
-            text-align: center;
-            line-height: 1.35;
-        }
-        .ttd-space {
-            height: 60px;
-        }
-        .ttd-nama {
+        .ringkasan strong {
             font-weight: bold;
-            text-decoration: underline;
-        }
-        .ttd-note {
-            font-size: 8.5pt;
-            color: #333333;
-            margin-top: 2px;
         }
 
         @media screen {
@@ -245,69 +153,11 @@
 
 <div class="surat-container">
 
-    {{-- Kop Surat (Sesuai views/admin/cetak/partials/kop-surat.blade.php) --}}
-        <!-- Kop Surat (Sesuai views/admin/presensi/cetak.blade.php) -->
-    <table class="kop-table">
-        <tr>
-            <td class="kop-logo">
-                @if(!empty($logoBase64))
-                    <img src="{{$logoBase64}}" width="65" alt="Logo Kalsel">
-                @else
-                    <img src="{{ asset('storage/images/logo-kalsel.png') }}" width="65" alt="Logo Kalsel">
-                @endif
-            </td>
-            <td class="kop-text">
-                <div class="l1">Pemerintah Provinsi Kalimantan Selatan</div>
-                <div class="l2">{{ $pengaturan->nama_instansi ?? 'Dinas Komunikasi dan Informatika' }}</div>
-                <div class="l3">{{ $pengaturan->alamat_instansi ?? 'Jl. Dharma Praja II No. 2 Banjarbaru, Kalimantan Selatan' }}</div>
-                <div class="l3">(Kawasan Perkantoran Pemerintah Provinsi Kalimantan Selatan)</div>
-                <div class="l3">Telepon 0511-6749844; Pos-el <i>diskominfo@kalselprov.go.id</i></div>
-                <div class="l3">Laman <i>diskominfo.kalselprov.go.id;</i> instagram <i>@diskominfokalselprov</i></div>
-            </td>
-            <td class="kop-logo"></td>
-        </tr>
-    </table>
-    <div class="kop-spacer"></div>
-
-    {{-- Tanggal Keluar Surat (di bawah kop surat sebelah kanan) --}}
-    <div class="surat-header-date">
-        {{ $pengaturan->kota_surat ?? 'Banjarbaru' }}, {{ $tanggalSurat ?? \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}
+    {{-- Judul & Periode Laporan --}}
+    <div class="judul-laporan">
+        <h3>LAPORAN REKAPITULASI PRESENSI MAGANG</h3>
+        <p>Periode: {{ $periodeMagangText ?? $periodeText }}</p>
     </div>
-
-    {{-- Nomor dan Perihal Surat --}}
-    <table class="meta-table">
-        <tr>
-            <td class="col-label">Nomor</td>
-            <td class="col-sep">:</td>
-            <td>{{ (!empty($nomorSurat) && $nomorSurat !== '-') ? $nomorSurat : '' }}</td>
-        </tr>
-        <tr>
-            <td class="col-label">Perihal</td>
-            <td class="col-sep">:</td>
-            <td>Laporan Rekapitulasi Presensi Siswa/Mahasiswa Magang</td>
-        </tr>
-    </table>
-
-    {{-- Kepada Yth. --}}
-    <div class="tujuan-surat">
-        <div>Kepada Yth.</div>
-        <div><strong>{{ $user->magang?->instansi_pendidikan ?? '(nama instansi Pendidikan)' }}</strong></div>
-    </div>
-
-    {{-- Salam Pembuka --}}
-    <div class="salam-pembuka">
-        <div>Assalamu’alaikum warahmatullahi wabarakatuh.</div>
-        <div>Dengan hormat,</div>
-    </div>
-
-    {{-- Paragraf Pengantar --}}
-    <p class="paragraf-surat">
-        Sehubungan dengan telah berakhirnya pelaksanaan kegiatan magang di <strong>{{ $pengaturan->nama_instansi ?? 'Dinas Komunikasi dan Informatika Provinsi Kalimantan Selatan' }}</strong>, bersama ini kami sampaikan laporan rekapitulasi presensi siswa/mahasiswa sebagai bentuk dokumentasi dan pertanggungjawaban atas pelaksanaan kegiatan magang tersebut.
-    </p>
-
-    <p style="text-align: justify; margin: 0 0 8px 0; font-size: 11pt; line-height: 1.35;">
-        Adapun yang bersangkutan adalah sebagai berikut:
-    </p>
 
     {{-- Tabel Identitas Peserta Magang --}}
     <table class="identitas-table">
@@ -338,12 +188,7 @@
         </tr>
     </table>
 
-    {{-- Paragraf Pengantar Tabel Rekap --}}
-    <p class="paragraf-surat">
-        Selama periode tersebut, mahasiswa yang bersangkutan telah melaksanakan kegiatan magang di <strong>{{ $pengaturan->nama_instansi ?? 'Dinas Komunikasi dan Informatika Provinsi Kalimantan Selatan' }}</strong>. Berdasarkan hasil rekapitulasi presensi, diperoleh rincian kehadiran sebagai berikut:
-    </p>
-
-    {{-- Tabel Rekapitulasi Presensi (9 Kolom sesuai contoh-rekap.docx) --}}
+    {{-- Tabel Rekapitulasi Presensi (9 Kolom) --}}
     <table class="rekap-table">
         <thead>
             <tr>
@@ -393,38 +238,14 @@
         </tbody>
     </table>
 
-    {{-- Paragraf Penutup Surat --}}
-    <p class="paragraf-surat">
-        Rekapitulasi presensi secara lengkap terlampir bersama surat ini sebagai bahan dokumentasi dan evaluasi bagi pihak terkait.
-    </p>
-    <p class="paragraf-surat">
-        Demikian surat penyampaian rekapitulasi presensi ini kami sampaikan. Atas perhatian dan kerja sama yang baik, kami ucapkan terima kasih.
-    </p>
-
-    <div style="margin-bottom: 16px; font-size: 11pt; line-height: 1.35;">
-        Wassalamu’alaikum warahmatullahi wabarakatuh.
+    {{-- Ringkasan --}}
+    <div class="ringkasan">
+        <strong>Ringkasan Presensi:</strong>
+        Total Hadir {{ $stats['total_hadir'] }};
+        Onsite {{ $stats['total_onsite'] }};
+        WFH {{ $stats['total_wfh'] }};
+        Tugas Luar {{ $stats['total_tugas_luar'] }}.
     </div>
-
-    {{-- Bagian Tanda Tangan (sesuai contoh-rekap.docx) --}}
-    <table class="ttd-table">
-        <tr>
-            <td style="width: 52%;"></td>
-            <td style="width: 48%;">
-                <div class="ttd-box">
-                    <div>{{ $pengaturan->kota_surat ?? 'Banjarbaru' }}, {{ $tanggalSurat ?? \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}</div>
-                    <div style="margin-top: 2px;">Hormat kami,</div>
-                    <div style="font-weight: bold;">{{ $pengaturan->nama_instansi ?? 'Dinas Komunikasi dan Informatika' }}</div>
-                    <div class="ttd-space"></div>
-                    <div class="ttd-nama">{{ $pengaturan->nama_kepala_dinas ?? '( .................................................. )' }}</div>
-                    <div>{{ $pengaturan->jabatan_kepala_dinas ?? 'Kepala Dinas' }}</div>
-                    @if(!empty($pengaturan->nip_kepala_dinas))
-                        <div>NIP. {{ $pengaturan->nip_kepala_dinas }}</div>
-                    @endif
-                    <div class="ttd-note">(tanda tangan dan stempel)</div>
-                </div>
-            </td>
-        </tr>
-    </table>
 
 </div>
 

@@ -21,7 +21,7 @@ class PengajuanIzinValidasiController extends Controller
             return collect();
         }
 
-        return $pembimbing->magang()->pluck('pengguna_id');
+        return $pembimbing->getSupervisedMagangQuery()->pluck('pengguna_id');
     }
 
     /**
@@ -38,6 +38,10 @@ class PengajuanIzinValidasiController extends Controller
 
         $query = PengajuanIzin::whereIn('pengguna_id', $supervisedIds)
             ->with(['pengguna.magang.divisi', 'validator.pembimbing']);
+
+        if ($pembimbing) {
+            $pembimbing->applyPeriodConstraint($query, 'pengajuan_izin.tanggal_mulai', 'pengajuan_izin.pengguna_id');
+        }
 
         // Filter peserta magang tertentu
         if ($request->filled('magang_id')) {
@@ -80,6 +84,8 @@ class PengajuanIzinValidasiController extends Controller
         }
 
         $keputusanQuery = clone $query;
+        // Riwayat validasi izin hanya menampilkan keputusan yang dibuat oleh pembimbing yang sedang login
+        $keputusanQuery->where('validated_by', Auth::id());
         if ($status === 'disetujui' || $status === 'ditolak') {
             $keputusanQuery->where('status_approval', $status);
         } elseif ($status === 'pending') {
@@ -102,10 +108,13 @@ class PengajuanIzinValidasiController extends Controller
      */
     public function validasi(Request $request, $id)
     {
-        $supervisedIds = $this->getSupervisedUserIds();
+        $pembimbing = Auth::user()->pembimbing;
+        abort_if(! $pembimbing, 403, 'Akses khusus pembimbing lapangan.');
 
-        $izin = PengajuanIzin::whereIn('pengguna_id', $supervisedIds)
-            ->findOrFail($id);
+        $query = PengajuanIzin::where('id', $id);
+        $pembimbing->applyPeriodConstraint($query, 'pengajuan_izin.tanggal_mulai', 'pengajuan_izin.pengguna_id');
+
+        $izin = $query->firstOrFail();
 
         $request->validate([
             'status_approval' => 'required|in:disetujui,ditolak',

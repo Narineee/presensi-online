@@ -735,12 +735,12 @@ class PresensiController extends Controller
             ->orderBy('jam_masuk', 'asc')
             ->get();
 
-        $totalTL = $presensi->filter(fn ($p) => $p->is_tugas_luar || $p->mode_kerja === 'tugas_luar')->count();
-        $totalOnsite = $presensi->filter(fn ($p) => $p->mode_kerja === 'onsite' && ! $p->is_tugas_luar)->count();
-        $totalWfh = $presensi->filter(fn ($p) => $p->mode_kerja === 'wfh')->count();
+        $totalTL = $presensi->filter(fn ($p) => ($p->is_tugas_luar || $p->mode_kerja === 'tugas_luar') && ! in_array($p->status, ['sakit', 'izin', 'cuti']))->count();
+        $totalOnsite = $presensi->filter(fn ($p) => $p->mode_kerja === 'onsite' && ! $p->is_tugas_luar && ! in_array($p->status, ['sakit', 'izin', 'cuti']))->count();
+        $totalWfh = $presensi->filter(fn ($p) => $p->mode_kerja === 'wfh' && ! in_array($p->status, ['sakit', 'izin', 'cuti']))->count();
 
         $stats = [
-            'total_hadir' => $presensi->where('status', 'hadir')->count(),
+            'total_hadir' => $presensi->filter(fn ($p) => ($p->status === 'hadir' || $p->is_tugas_luar) && ! in_array($p->status, ['sakit', 'izin', 'cuti']))->count(),
             'total_onsite' => $totalOnsite,
             'total_wfh' => $totalWfh,
             'total_tugas_luar' => $totalTL,
@@ -907,8 +907,8 @@ class PresensiController extends Controller
             $cur->addDay();
         }
 
-        $totalOnsite = $presensiList->where('mode_kerja', 'onsite')->count();
-        $totalWfh = $presensiList->where('mode_kerja', 'wfh')->count();
+        $totalOnsite = $presensiList->where('mode_kerja', 'onsite')->whereNotIn('status', ['sakit', 'izin', 'cuti'])->count();
+        $totalWfh = $presensiList->where('mode_kerja', 'wfh')->whereNotIn('status', ['sakit', 'izin', 'cuti'])->count();
 
         return [
             'total_hadir' => $totalHadir,

@@ -5,49 +5,13 @@
     <title>Laporan Aktivitas Magang</title>
     <style>
         body {
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: 'Times New Roman', Times, serif;
             color: #000000;
             font-size: 9pt;
             line-height: 1.35;
             background: #ffffff;
             margin: 0;
             padding: 0;
-        }
-        .kop-table {
-            width: 100%;
-            border-collapse: collapse;
-            border-bottom: 2.5px solid #000000;
-        }
-        .kop-table td {
-            vertical-align: middle;
-            padding-bottom: 5px;
-            border: none;
-        }
-        .kop-logo {
-            width: 75px;
-            text-align: center;
-        }
-        .kop-text {
-            text-align: center;
-            line-height: 1.3;
-        }
-        .kop-text .l1 {
-            font-size: 11pt;
-            text-transform: uppercase;
-        }
-        .kop-text .l2 {
-            font-size: 13pt;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        .kop-text .l3 {
-            font-size: 8pt;
-            color: #222222;
-        }
-        .kop-spacer {
-            border-bottom: 1px solid #000000;
-            margin-top: 2px;
-            margin-bottom: 12px;
         }
         .judul-laporan {
             text-align: center;
@@ -128,53 +92,9 @@
             background-color: #f8fafc;
             border: 1px solid #cbd5e1;
         }
-        .ttd-table {
-            width: 100%;
-            border-collapse: collapse;
-            border: none;
-            margin-top: 18px;
-            page-break-inside: avoid;
-        }
-        .ttd-table td {
-            border: none;
-            vertical-align: top;
-        }
-        .ttd-box {
-            text-align: center;
-            font-size: 9pt;
-            line-height: 1.35;
-        }
-        .ttd-space {
-            height: 55px;
-        }
-        .ttd-nama {
-            font-weight: bold;
-            text-decoration: underline;
-        }
     </style>
 </head>
 <body>
-
-    <!-- Kop Surat -->
-    <table class="kop-table">
-        <tr>
-            <td class="kop-logo">
-                @if(!empty($logoBase64))
-                    <img src="{{ $logoBase64 }}" width="65" alt="Logo Kalsel">
-                @endif
-            </td>
-            <td class="kop-text">
-                <div class="l1">Pemerintah Provinsi Kalimantan Selatan</div>
-                <div class="l2">{{ $pengaturan->nama_instansi ?? 'Dinas Komunikasi dan Informatika' }}</div>
-                <div class="l3">{{ $pengaturan->alamat_instansi ?? 'Jl. Dharma Praja II No. 2 Banjarbaru, Kalimantan Selatan' }}</div>
-                <div class="l3">(Kawasan Perkantoran Pemerintah Provinsi Kalimantan Selatan)</div>
-                <div class="l3">Telepon 0511-6749844; Pos-el <i>diskominfo@kalselprov.go.id</i></div>
-                <div class="l3">Laman <i>diskominfo.kalselprov.go.id;</i> instagram <i>@diskominfokalselprov</i></div>
-            </td>
-            <td class="kop-logo"></td>
-        </tr>
-    </table>
-    <div class="kop-spacer"></div>
 
     <!-- Judul & Periode -->
     <div class="judul-laporan">
@@ -196,7 +116,7 @@
         </tr>
     </table>
 
-    <!-- Tabel Rekap Aktivitas (6 Kolom: No, Nama, Pembimbing, Periode, Rencana Kerja, Progres) -->
+    <!-- Tabel Rekap Aktivitas (6 Kolom: No, Nama, Pembimbing, Periode, Rencana Kerja, Hasil) -->
     <table class="rekap-table">
         <thead>
             <tr>
@@ -204,8 +124,8 @@
                 <th style="width: 20%;">Nama</th>
                 <th style="width: 20%;">Pembimbing</th>
                 <th style="width: 18%;">Periode</th>
-                <th style="width: 27%;">Rencana Kerja</th>
-                <th style="width: 10%;">Progres</th>
+                <th style="width: 25%;">Rencana Kerja</th>
+                <th style="width: 12%;">Hasil</th>
             </tr>
         </thead>
         <tbody>
@@ -236,7 +156,7 @@
                             <div class="c" style="color: #64748b;">-</div>
                         @endif
                     </td>
-                    <td class="c" style="font-weight: bold; font-size: 9.5pt;">
+                    <td class="c" style="font-weight: bold; font-size: 9.5pt; color: {{ $item->progres_akhir === 'Selesai' ? '#15803d' : ($item->progres_akhir === '-' ? '#64748b' : '#b45309') }};">
                         {{ $item->progres_akhir }}
                     </td>
                 </tr>
@@ -252,30 +172,9 @@
     <div class="ringkasan">
         <strong>Ringkasan:</strong>
         Total Peserta {{ $stats['total_peserta'] }};
-        Rata-rata Progres {{ $stats['rata_rata_progres'] }};
-        Progres Tertinggi {{ $stats['progres_tertinggi'] }};
+        Peserta Selesai {{ $stats['total_selesai'] ?? 0 }};
         Total Catatan Aktivitas {{ $stats['total_aktivitas'] }}.
     </div>
-
-    <!-- Tanda Tangan Kepala Dinas -->
-    <table class="ttd-table">
-        <tr>
-            <td style="width: 58%;"></td>
-            <td style="width: 42%;">
-                <div class="ttd-box">
-                    <div>{{ $pengaturan->kota_surat ?? 'Banjarbaru' }}, {{ \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}</div>
-                    <div>{{ $pengaturan->jabatan_kepala_dinas ?? 'Kepala Dinas' }}</div>
-                    <div>{{ $pengaturan->nama_instansi ?? 'Dinas Komunikasi dan Informatika' }}</div>
-                    <div class="ttd-space"></div>
-                    <div class="ttd-nama">{{ $pengaturan->nama_kepala_dinas ?? '( .................................................. )' }}</div>
-                    @if(!empty($pengaturan->pangkat_golongan))
-                        <div>{{ $pengaturan->pangkat_golongan }}</div>
-                    @endif
-                    <div>NIP. {{ $pengaturan->nip_kepala_dinas ?? '-' }}</div>
-                </div>
-            </td>
-        </tr>
-    </table>
 
 </body>
 </html>
